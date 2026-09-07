@@ -15,8 +15,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: config.name ?? 'Quick-RN-Supabase',
-    slug: config.slug ?? 'Quick-RN-Supabase',
+    name: config.name ?? 'Mobile Merchant',
+    slug: config.slug ?? 'mobile-merchant',
     // Bundle ID and Android package live in app.json — Google's OAuth clients are registered
     // against that exact package, so overriding it here silently breaks native Google Sign-In.
     plugins: [

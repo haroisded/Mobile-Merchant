@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "Quick-RN-Supabase",
-    "slug": "Quick-RN-Supabase",
+    "name": "Mobile Merchant",
+    "slug": "mobile-merchant",
+    "owner": "haroised",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "quickrnsupabase",
+    "scheme": "mobilemerchant",
     "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.merchant.quickrnsupabase",
+      "package": "com.haroised.mobilemerchant",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,14 +33,20 @@
         }
       ],
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "ios": {
-      "bundleIdentifier": "com.merchant.quickrnsupabase"
+      "bundleIdentifier": "com.haroised.mobilemerchant"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "dd79ccd8-f7e4-4347-a4f6-6ea098e5c814"
+      }
     }
   }
 }

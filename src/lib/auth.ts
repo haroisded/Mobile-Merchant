@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
 /**
- * Native: quickrnsupabase://  — allow-list this in Supabase as `quickrnsupabase://**`.
+ * Native: mobilemerchant://  — allow-list this in Supabase as `mobilemerchant://**`.
  * Web:    http://localhost:8081 (createURL.web.js:15 strips the trailing slash).
  * Log it rather than assume it: createURL returns a different string per environment.
  */

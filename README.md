@@ -98,7 +98,7 @@ Never put the secret key (`sb_secret_…`) in an `EXPO_PUBLIC_` variable — it 
 **Authentication → URL Configuration → Redirect URLs** — add both:
 
 ```
-quickrnsupabase://**
+mobilemerchant://**
 http://localhost:8081/**
 ```
 
@@ -165,7 +165,7 @@ In the [Google Cloud console](https://console.cloud.google.com/apis/credentials)
 | --- | --- |
 | **Web** | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, **and** Supabase → Auth → Providers → Google (Client ID + secret) |
 | **iOS** | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` — also derives the app's iOS URL scheme in `app.config.ts` |
-| **Android** | needs your package name `com.merchant.quickrnsupabase` and the signing-certificate SHA-1 |
+| **Android** | needs your package name `com.haroised.mobilemerchant` and the signing-certificate SHA-1 |
 
 Android has no separate ID in `.env`: the native module sends an ID token that Google issues
 against the **web** client ID, which is what Supabase verifies.
@@ -198,7 +198,7 @@ Supabase → Auth → Providers → Facebook.
 
 Nothing goes in `.env` — the client never touches the App ID, Supabase hosts the handshake.
 Facebook never sees this app's scheme either; it only ever redirects to Supabase, and Supabase
-redirects on to `quickrnsupabase://`.
+redirects on to `mobilemerchant://`.
 
 ### Development mode
 
@@ -252,7 +252,7 @@ End-to-end, on web:
 On a dev build, before debugging any redirect:
 
 ```bash
-npx uri-scheme open quickrnsupabase:// --android    # or --ios
+npx uri-scheme open mobilemerchant:// --android    # or --ios
 ```
 
 This opens the app through its scheme with **no OAuth involved**. If the app opens, native
