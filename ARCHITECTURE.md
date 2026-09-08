@@ -20,23 +20,31 @@ configuration live in [README.md](./README.md).
 ## File map
 
 ```
-src/lib/supabase.ts        client: secure storage, PKCE, debug, AppState auto-refresh
+src/lib/supabase.ts        client: typed with <Database>, secure storage, PKCE, AppState refresh
 src/lib/secure-storage.ts  storage adapter: Keychain / Keystore native, AsyncStorage web
 src/lib/auth.ts            signInWithGoogle / signInWithFacebook / signOut / deleteAccount
+src/lib/query.ts           QueryClient factory, STALE constants, onlineManager + focusManager
+src/lib/columns.ts         useColumns — column count from a container's measured width
+src/lib/database.types.ts  generated from the schema; regenerate whenever a migration lands
 src/Store/StoreUser.ts     the session handler — one onAuthStateChange subscription
 src/themes.js              MD3 light/dark palettes; the only colors in the project
-src/app/_layout.tsx        PaperProvider + the two-state route guard
+src/features/merchants/    schema, queries, SystemCard, CreateSystemModal
+src/features/profiles/     the profile read
+src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        provider buttons
-src/app/(app)/_layout.tsx  layout for the signed-in group
-src/app/(app)/index.tsx    signed-in screen: account card, sign out, delete account
+src/app/(app)/_layout.tsx  layout for the signed-in group: the tabs, and systems/ beside them
+src/app/(app)/(tabs)/      home, notifications, settings, account + the Paper bottom bar
+src/app/(app)/systems/     [id] — where a SystemCard tap lands
 app.config.ts              derives the Google iOS URL scheme from .env
-supabase/migrations/       profiles table, its policies, the signup trigger, delete_current_user,
-                           and the event trigger that auto-enables RLS on new public tables
-docs/                      conventions for code not written yet — structure, data layer, tenancy,
-                           layout, typography. See CLAUDE.md §2
+supabase/migrations/       profiles and merchants with their policies, the signup trigger,
+                           delete_current_user, current_merchant_ids, and the event trigger that
+                           auto-enables RLS on new public tables
+docs/                      conventions for what is built on the scaffold — structure, data layer,
+                           tenancy, layout, typography. See CLAUDE.md §2
 patches/                   patch-package diffs, applied by the postinstall hook
 .oxlintrc.json             oxlint config: rule list + the local plugin it loads
 tools/oxlint/anti-slop/    that plugin — TypeScript rules, not shipped in the app bundle
+tools/check-history-paths.mjs  npm run check:history — fails when a page index names a moved file
 ```
 
 ---
@@ -46,7 +54,7 @@ tools/oxlint/anti-slop/    that plugin — TypeScript rules, not shipped in the 
 One client for every platform:
 
 ```ts
-export const supabase = createClient(url, publishableKey, {
+export const supabase = createClient<Database>(url, publishableKey, {
   auth: {
     storage: secureStorage,  // Keychain / Keystore on native, localStorage on web
     flowType: 'pkce',        // default is 'implicit' — this is what returns ?code=
@@ -54,6 +62,11 @@ export const supabase = createClient(url, publishableKey, {
   },
 });
 ```
+
+The `<Database>` generic comes from the generated `src/lib/database.types.ts`, and it is what makes
+every `.from('merchants').select()` typed end to end from the real schema — which is why no Zod
+schema mirrors a migration anywhere in this project ([docs/data-layer.md §4](./docs/data-layer.md)).
+Regenerate it whenever a migration lands.
 
 Three options, and every one of them does work. `storage` is load-bearing twice over: without it
 the client falls back to an in-memory adapter and the session dies with the process, and what it
@@ -141,9 +154,16 @@ The session has **three** states, not two:
 <Stack.Protected guard={!!session}><Stack.Screen name="(app)" /></Stack.Protected>
 ```
 
-No `router.replace` calls anywhere in the app: sign-in and sign-out just change the session, and
-the guards move the user. The layout renders `null` while the session is unknown, so the splash
-screen covers the restore and the sign-in screen never flashes.
+**No router call ever crosses that boundary.** Sign-in and sign-out only change the session, and the
+guards move the user; there is no `router.replace` to a signed-in route anywhere. Ordinary
+navigation *inside* the signed-in tree is normal — tapping a SystemCard pushes `systems/[id]`, the
+app bar navigates to the account tab — but nothing navigates its way past the guard. The layout
+renders `null` while the session is unknown, so the splash screen covers the restore and the sign-in
+screen never flashes.
+
+Under the `(app)` guard the tree splits once more: `(tabs)` owns the four bottom-bar destinations,
+and `systems/[id]` sits beside it rather than inside it, so opening a system pushes *over* the bar
+instead of becoming a fifth tab.
 
 The guard is **UX, not security** — expo-router evaluates it client-side only, and the signed-in
 bundle is on the device either way. Supabase RLS is the real boundary, which is what the policies
@@ -193,13 +213,53 @@ It arrives two different ways, and both are handled.
 
 ## The database — `supabase/`
 
-One migration. It creates `public.profiles` — `id` referencing `auth.users` with
-`on delete cascade`, `display_name`, `avatar_url`, `created_at` — plus its policies, a trigger that
-fills the row on signup, and the function behind the **Delete account** button.
+Two tables — `public.profiles`, the person, and `public.merchants`, the tenant — plus the event
+trigger that auto-enables RLS, and one migration that only drops leftovers from an unrelated
+project.
+
+`public.profiles` has `id` referencing `auth.users` with `on delete cascade`, `display_name`,
+`avatar_url`, `created_at` — plus its policies, a trigger that fills the row on signup, and the
+function behind the **Delete account** button.
 
 There is no `email` column. `auth.users.email` is the source of truth and the client already holds
 it as `session.user.email`; a copy would go stale on the first address change and need a second
 trigger to keep in step.
+
+### `public.merchants` — the tenant
+
+`owner_id` referencing `auth.users` with `on delete cascade`, `name`, `description`, a
+`public.store_category` enum, `created_at`, and length checks on the two text columns. The cascade
+is what lets `delete_current_user()` stay one statement: deleting the `auth.users` row takes the
+profile and every merchant with it.
+
+**A merchant is a business, not a person**, and each one is what the UI calls a "system" — the cards
+on the home screen are this table. Today a merchant has exactly one user and `owner_id` *is* the
+membership; `merchant_members` and roles are still ahead, and the shape they take is in
+[docs/tenancy.md](./docs/tenancy.md).
+
+`category` is a Postgres enum rather than `text` + a check constraint, because the enum generates a
+real union in `database.types.ts`. That union is what lets `CATEGORY_META[row.category]` compile with
+no type assertion — and `.oxlintrc.json` rejects assertions. Adding a value later is
+`alter type … add value` **in a migration of its own**: Postgres will not let the same transaction
+use a value it just added.
+
+Its four policies key on `owner_id`, not on `current_merchant_ids()` below, and that is deliberate.
+The rule against `auth.uid() = row.user_id` governs *business* tables — the ones carrying a
+`merchant_id`. This is the tenant root itself, and routing its policies through the function that
+reads the tenant root is a self-reference. When `merchant_members` lands, only the select policy
+changes.
+
+Unlike `profiles`, it has a delete policy: removing one of your own businesses is an ordinary
+action, not account deletion.
+
+### `private.current_merchant_ids()` — the seam, with no caller yet
+
+`security definer`, `stable`, returning the merchant ids the caller owns. **Nothing calls it today.**
+It exists early on purpose: every business table added later gets policies shaped
+`using (merchant_id in (select private.current_merchant_ids()))`, and staff support then arrives by
+rewriting this one function body — no policy rewrites, no table alterations. Writing it now is what
+stops the first business table shipping an `auth.uid() = owner_id` policy "just for now" that then
+has to be undone on every table.
 
 ### The policies
 
@@ -215,11 +275,12 @@ The table is deliberately **not** `force row level security`. Forcing it subject
 to the policies too, and the signup trigger inserts as the owner at a moment when there is no JWT,
 so `auth.uid()` is null and `profiles_insert_own` would reject the row signup exists to create.
 
-### The two `security definer` functions
+### The `security definer` functions
 
 `private.handle_new_user()` creates the profile row on signup, reading `full_name` and `avatar_url`
 out of `raw_user_meta_data` where both providers land them. `public.delete_current_user()` deletes
-the caller's own `auth.users` row, which cascades.
+the caller's own `auth.users` row, which cascades. `private.current_merchant_ids()` is the third,
+described above.
 
 `security definer` means the body runs with the *owner's* privileges, not the caller's — a
 deliberate privilege escalation, which is why all three of these are mandatory every time:
@@ -239,8 +300,8 @@ is *created*, not each time it fires.
 
 ### RLS is per-table, and still written by hand
 
-`alter table … enable row level security` is set explicitly for `profiles`, and every migration
-added later must carry that line for its own tables. A new table in `public` is served over HTTP by
+`alter table … enable row level security` is set explicitly for `profiles` and again for
+`merchants`, and every migration added later must carry that line for its own tables. A new table in `public` is served over HTTP by
 PostgREST the moment it exists. The dashboard's Security Advisor reports the ones missing it under
 `rls_disabled_in_public`.
 
@@ -263,9 +324,27 @@ The UI rules themselves are in [CLAUDE.md §3](./CLAUDE.md#3-the-ui). What follo
 tree is put together.
 
 `src/themes.js` holds the two MD3 palettes and reaches every screen through `PaperProvider`, so a
-color is read from the theme rather than written at a call site. The **Delete account** button in
-`src/app/(app)/index.tsx` is the single place a color is chosen by hand — `useTheme().colors.error`,
-the MD3 `error` role.
+color is read from the theme rather than written at a call site. The handful of places a color is
+chosen by hand are all destructive or category actions reading `useTheme().colors.error` /
+`onError` — **Delete account** and **Sign Out** in `src/app/(app)/(tabs)/account.tsx`, and
+**Remove** on `src/features/merchants/SystemCard.tsx`.
+
+### The data layer
+
+`src/lib/query.ts` builds the `QueryClient` (`retry: false`, `refetchOnWindowFocus: false`) and, at
+module scope, wires the two managers React Native has no events for: `onlineManager` from
+`expo-network`, and `focusManager` from `AppState`. That `AppState` listener is **not** the one in
+`supabase.ts` — this one reports foreground to React Query, that one starts and stops token refresh.
+Both exist.
+
+`src/app/_layout.tsx` mounts `QueryProvider` **keyed on `session?.user.id`**. The key is the whole
+point: switching accounts remounts the provider, which builds a new client and drops the old cache.
+RLS does not help here — cached rows are already on the device and render before any request goes
+out.
+
+Feature folders are keyed on the **resource**, never on the page or screen that happens to use them
+([docs/structure.md §3](./docs/structure.md)). `src/features/merchants/queries.ts` is the only file
+in the app that knows the table is called `merchants`.
 
 Paper's icons are wired to `@expo/vector-icons` through `PaperProvider`'s `settings` prop in
 `src/app/_layout.tsx`. Paper's own default goes through `react-native-vector-icons`, whose font

@@ -8,7 +8,7 @@ MCP servers, skills, and plugins installed in this Claude Code environment, with
 | --- | --- | --- | --- |
 | `sgai` (ScrapeGraphAI) | user | http | `https://mcp.scrapegraphai.com/mcp`, `Authorization: Bearer ${SGAI_API_KEY}` |
 | `obscura` | user | stdio | `obscura mcp` |
-| `supabase` | project (`Quick-RN-Supabase`, not this repo) | http | `https://mcp.supabase.com/mcp?project_ref=<ref>&read_only=true` |
+| `supabase` | project (**this** repo, via `.mcp.json`) | http | `https://mcp.supabase.com/mcp?project_ref=<ref>&features=docs,account,database,debugging,development,functions,branching` |
 | `Lucid` | claude.ai account connector | http | added in claude.ai → Settings → Connectors, not in `~/.claude.json` |
 
 ### Install
@@ -21,9 +21,12 @@ claude mcp add --transport http --scope user sgai https://mcp.scrapegraphai.com/
 # obscura — binary must be on PATH
 claude mcp add --scope user obscura obscura mcp
 
-# supabase — swap in the project ref; drop --scope for the current project only
+# supabase — swap in the project ref; drop --scope for the current project only.
+# `.mcp.json` in this repo already declares it, pointed at this project's ref and NOT read-only —
+# apply_migration and generate_typescript_types both work through it, which is the way round the
+# CLI's "Initialising login role…" stall (README.md, Database schema).
 claude mcp add --transport http --scope project supabase \
-  "https://mcp.supabase.com/mcp?project_ref=<project_ref>&read_only=true"
+  "https://mcp.supabase.com/mcp?project_ref=<project_ref>&features=docs,account,database,debugging,development,functions,branching"
 ```
 
 Lucid: claude.ai → Settings → Connectors → Add → Lucid → authorize. Nothing to install locally.

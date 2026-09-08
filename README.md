@@ -119,10 +119,12 @@ session back to the app. The second is the Expo web dev server.
 
 ### Database schema
 
-`supabase/migrations/` holds one migration: a `profiles` table keyed to `auth.users`, its RLS
+`supabase/migrations/` holds two tables. `profiles` is keyed to `auth.users` and carries its RLS
 policies, a trigger that creates the profile row on signup, and `delete_current_user()` — the
 function behind the **Delete account** button, since the App Store requires in-app account deletion
-(Guideline 5.1.1(v)) and no client-side key may write to `auth.users`.
+(Guideline 5.1.1(v)) and no client-side key may write to `auth.users`. `merchants` is the tenant
+table — one business per row — with its own policies and `private.current_merchant_ids()`, the
+function every future business table's policies will call.
 
 ```bash
 supabase link --project-ref <ref>

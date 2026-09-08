@@ -1,0 +1,50 @@
+# FOR AI-AGENTS
+- If instructed to create a page, you may visit the directories here, if not, don't
+- Interactives ( Priority ).md is served as a Filter during Creation Process, Interactives.md is served as the full context
+- After Creating a Page, Create a history.md in the system-context/*PageName-Page, fill this out
+• Components and Interactives Added
+• Where the code lives
+• Interactives not yet Added
+• Status: In-Complete or Complete
+
+- There is NO features/<page-name>/ folder. A page's code goes in as many src/features/<resource>/
+  folders as it touches, plus its route files in src/app/ - see docs/structure.md section 3.
+  "Where the code lives" is the page -> file index that replaces a page folder, so fill it in and
+  keep it current when files move. Do not create local-features/ or global-features/.
+
+- `npm run check:history` fails if a path in any history.md no longer exists. Run it after creating
+  a page and after moving any file a page index names.
+
+- Working on a page that ALREADY has a history.md? Do NOT overwrite it and do NOT rewrite earlier
+  entries. Add a new version heading inside each log section and write only what changed this pass:
+
+    ## Components and Interactives Added
+    ### version 1
+    ...what the first pass shipped
+    ### version 2
+    ...only what this pass added
+
+  Versioned (they are a log of what happened, so old entries stay):
+  • Components and Interactives Added
+  • Interactives not yet Added
+
+  NOT versioned (they describe the page as it is NOW, so there is one current copy):
+  • Where the code lives
+  • Status
+  Reason: a path left under an old version heading fails `npm run check:history` once the file
+  moves, and two Status lines cannot both be true. Update these in place instead.
+
+- Interactives ( Priority ).md marks every interactive with one of three states. Read them before
+  writing any code, and re-read them on every later pass:
+
+    ✅        implement this now - it is the current priority
+    🏁        already implemented on an earlier pass - leave it alone, do not rebuild it
+    (blank)   do NOT implement yet - still RENDER the control so the page matches the mockup, but
+              wire no behaviour to it: no onPress, no handler, no navigation
+
+  A blank is not permission to omit the control. It is rendered and inert, so the page looks
+  finished and the next pass only has to add behaviour.
+
+  After finishing a pass, change every ✅ you implemented to 🏁, so the next agent can tell what is
+  already done apart from what is newly prioritised. Leave blanks alone - only the human promotes a
+  blank to ✅.

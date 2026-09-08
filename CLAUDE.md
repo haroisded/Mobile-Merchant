@@ -77,9 +77,10 @@ Three files at the root, and a change usually touches more than one:
 | `ARCHITECTURE.md` | the file map and how the session flows through it |
 | `CLAUDE.md` | this file: the rules, and findings that contradict published docs |
 
-`docs/` holds the conventions for code that does not exist yet. **Read the relevant one before
-writing in its area** — each opens with its rules, and the rest of the file is the reasoning behind
-them:
+`docs/` holds the conventions for the code built on top of the scaffold. **Read the relevant one
+before writing in its area** — each opens with its rules, and the rest of the file is the reasoning
+behind them. Where a rule is already satisfied by something in the tree, the file names what exists
+so you use it rather than build a second one:
 
 | File | Governs |
 | --- | --- |
@@ -258,9 +259,11 @@ removes.
 
 ## 6. The database
 
-`supabase/migrations/` holds one migration: `public.profiles`, its policies, the signup trigger, and
-`public.delete_current_user()`. `ARCHITECTURE.md` describes what they do. The rules below are what
-must not be broken when adding to them.
+`supabase/migrations/` holds two tables — `public.profiles` (the person) and `public.merchants` (the
+tenant) — with their policies, the signup trigger, `public.delete_current_user()`,
+`private.current_merchant_ids()`, and the event trigger that auto-enables RLS.
+`ARCHITECTURE.md` describes what they do; `docs/tenancy.md` covers the tenancy model and what is
+still ahead of it. The rules below are what must not be broken when adding to them.
 
 ### 6.1 Every new table needs its own RLS line
 

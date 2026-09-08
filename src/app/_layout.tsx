@@ -1,10 +1,13 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 
+import { makeQueryClient } from '../lib/query';
 import { useIsSessionLoading, useSession } from '../Store/StoreUser';
 import { DarkTheme, LightTheme } from '../themes';
 
@@ -12,6 +15,18 @@ import { DarkTheme, LightTheme } from '../themes';
 // Module scope, not awaited, and deliberately so: called from inside a component or hook it can
 // run after the splash has already auto-hidden, which is too late to prevent anything.
 SplashScreen.preventAutoHideAsync();
+
+
+// One QueryClient per mount. The lazy initialiser is what stops a new client being built on every
+// render — passing makeQueryClient() rather than makeQueryClient would call it each time and throw
+// the cache away constantly.
+//
+// Defined here rather than in lib/query.ts because the factory and the only place it is mounted are
+// the same concern, and a separate file would be five lines with an import on either side.
+function QueryProvider({ children }: { children: ReactNode }) {
+  const [client] = useState(makeQueryClient);
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
 
 
 export default function RootLayout() {
@@ -61,21 +76,31 @@ export default function RootLayout() {
         ),
       }}
     >
-      {/* contentStyle carries the theme background to the navigator's own screen container,
-          which otherwise paints react-navigation's default and flashes white in dark mode. */}
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.background },
-        }}
-      >
-        <Stack.Protected guard={!session}>
-          <Stack.Screen name="sign-in" />
-        </Stack.Protected>
-        <Stack.Protected guard={!!session}>
-          <Stack.Screen name="(app)" />
-        </Stack.Protected>
-      </Stack>
+      {/* Keyed on the user id, which is what makes "sign out, sign in as someone else" structural
+          rather than remembered: the key change remounts the provider, which builds a new client
+          and throws the old cache away entirely.
+
+          RLS does not help here. Cached rows are already on the device and render before any
+          request goes out, so without this the next account sees the previous one's cards for a
+          frame. A queryClient.clear() inside signOut is the version that gets forgotten
+          (docs/data-layer.md §6). */}
+      <QueryProvider key={session?.user.id}>
+        {/* contentStyle carries the theme background to the navigator's own screen container,
+            which otherwise paints react-navigation's default and flashes white in dark mode. */}
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.background },
+          }}
+        >
+          <Stack.Protected guard={!session}>
+            <Stack.Screen name="sign-in" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session}>
+            <Stack.Screen name="(app)" />
+          </Stack.Protected>
+        </Stack>
+      </QueryProvider>
     </PaperProvider>
   );
 }

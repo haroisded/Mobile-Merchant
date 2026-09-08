@@ -2,11 +2,14 @@
 
 How rows are scoped to a business, and the shape every RLS policy on a business table takes.
 
-**Nothing here is implemented.** `supabase/migrations/` holds `profiles` and the RLS event trigger,
-and no merchant table. Read this before writing the first business table — designing that table
-against the wrong model is the one mistake in this area that is expensive to undo. Once the model
-ships, what is true of the running schema belongs in `ARCHITECTURE.md`, and this file keeps only
-what is still ahead.
+**What already exists — use it, do not rebuild it.** `public.merchants` and
+`private.current_merchant_ids()` are in `supabase/migrations/20260908131200_merchants.sql`, and
+[`ARCHITECTURE.md`](../ARCHITECTURE.md#the-database--supabase) describes what they do.
+
+**What this file governs:** `merchant_members`, roles, and every business table that carries a
+`merchant_id`. Read §3 before writing the first of those — designing it against the wrong model is
+the one mistake in this area that is expensive to undo, and the function its policies must call is
+already sitting there with no caller.
 
 ## Rules
 
@@ -14,14 +17,17 @@ what is still ahead.
    business whose rows are being protected.
 2. Every business table carries `merchant_id` from its **first** migration, even while a merchant
    has exactly one user. Not nullable.
-3. RLS policies key on **membership of the row's merchant**, never on `auth.uid() = <row>.user_id`.
-4. Membership is resolved by one `security definer` function in `private`, and every policy calls
-   that function. The function is the seam — what it reads is allowed to change, its signature and
-   its call sites are not.
-5. `public.merchants` and that function land **before** the first business table, in the sitting
-   before it. §3.
-6. Build one table, not two. `merchants.owner_id` *is* the membership for now; `merchant_members`
-   and roles arrive later and change only the function body. §3, §4.
+3. **Business table** policies key on **membership of the row's merchant**, never on
+   `auth.uid() = <row>.user_id`. A business table is one carrying a `merchant_id`. The tenant root
+   itself is the exception: `public.merchants` keys on its own `owner_id`, because routing it
+   through the function that reads it is a self-reference. §3.
+4. Membership is resolved by one `security definer` function in `private`, and every business
+   table's policy calls that function. The function is the seam — what it reads is allowed to
+   change, its signature and its call sites are not.
+5. `public.merchants` and `private.current_merchant_ids()` already exist. Call the function from
+   your business table's policies; never add a second merchant table. §3.
+6. One table, not two. `merchants.owner_id` *is* the membership — do not build `merchant_members`
+   until staff accounts are real, and when you do, change only the function body. §3, §4.
 7. `public.profiles` stays as it is — the person, not the membership. Do not add `merchant_id` to it.
 8. Do not build a permission system, a roles table, or a policy matrix now. §4.
 
@@ -33,7 +39,7 @@ The rest of this file is why.
 2. [Why `merchant_id` cannot wait](#2-why-merchant_id-cannot-wait)
 3. [What must exist first, and the shape the policies take](#3-what-must-exist-first-and-the-shape-the-policies-take)
 4. [Roles come later, deliberately](#4-roles-come-later-deliberately)
-5. [Open questions](#5-open-questions)
+5. [Settled, and still open](#5-settled-and-still-open)
 
 ---
 
@@ -108,6 +114,10 @@ now" — which is exactly the rewrite-every-table cost §2 exists to avoid.
 
 **Trigger condition:** the moment the first business table is being written, the merchant migration
 goes in ahead of it, in the same sitting. Not before then — there is nothing for it to protect.
+
+**Nothing blocks the first business table.** Both prerequisites are in place and
+`current_merchant_ids()` has no caller yet, so go straight to the table: give it a `not null
+merchant_id`, and give every one of its policies the shape below.
 
 ### One table, not two
 
@@ -201,13 +211,16 @@ function, or a client-side permission map. None of them are needed to add the co
 
 ---
 
-## 5. Open questions
+## 5. Settled, and still open
 
-Unanswered, and worth settling before the migration rather than during it:
+**Who creates the merchant row — an explicit onboarding step, never a trigger.**
+`CreateSystemModal` in `src/features/merchants/` inserts it, and its step 1 also writes
+`profiles.display_name`, so one wizard covers both the person and the business. Follow that shape
+for anything else a user must opt into: a trigger would give a staff member joining an existing
+merchant a second one of their own. The invite path is the other half of the first question below.
 
-- **Who creates the merchant row?** `private.handle_new_user()` currently creates a profile on
-  signup. A merchant is not automatic — a staff member joining an existing merchant must not create
-  a second one. Likely an explicit onboarding step plus an invite path, not a trigger.
+Still open, and worth settling before the next migration rather than during it:
+
 - **How does a staff account get created?** An invite consumed by the invitee, or an admin creating
   the account outright. The second needs the service key and therefore an Edge Function; the first
   does not.

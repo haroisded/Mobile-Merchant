@@ -119,13 +119,19 @@ wrap one call is the abstraction to delete, not to add.
 So `queries.ts` holds the key factory, the hooks, and the `supabase.from(...)` / `supabase.rpc(...)`
 calls, and nothing outside that file knows a table name.
 
-**Do generate the client types.** `supabase gen types typescript --local > src/lib/database.types.ts`,
+**Do generate the client types.** `supabase gen types typescript --linked > src/lib/database.types.ts`,
 then `createClient<Database>(...)`. Every `.from('products').select()` becomes typed end to end from
 the real schema. That is the codegen half of the split described next, and it is what makes runtime
 validation of reads unnecessary.
 
 Regenerate whenever a migration lands. A stale `database.types.ts` is worse than none — it type-checks
 against a schema that no longer exists.
+
+`--linked`, not `--local`: `supabase/config.toml` here is the five-line file that only names the
+project, with no local Docker stack behind it, so `--local` has nothing to read. If the CLI stalls at
+`Initialising login role…` — the failure [README.md](../README.md#database-schema) warns about — the
+Supabase MCP server's `generate_typescript_types` returns the same output, and `.mcp.json` already
+points it at this project.
 
 ---
 

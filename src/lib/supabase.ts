@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
+import type { Database } from './database.types';
 import { secureStorage } from './secure-storage';
 
 
@@ -15,7 +16,14 @@ if (!url || !publishableKey) {
 }
 
 
-export const supabase = createClient(url, publishableKey, {
+// Typed from the real schema, which is what makes runtime validation of reads unnecessary: every
+// .from('merchants').select() is checked end to end against the migration rather than against a
+// hand-written Zod mirror of it (docs/data-layer.md §4).
+//
+// Regenerate whenever a migration lands. A stale database.types.ts is worse than none — it
+// type-checks against a schema that no longer exists:
+//   supabase gen types typescript --linked > src/lib/database.types.ts
+export const supabase = createClient<Database>(url, publishableKey, {
   auth: {
     // Keychain / Keystore rather than plaintext AsyncStorage, and still load-bearing: without a
     // `storage` the client falls back to an in-memory adapter (GoTrueClient.js:237-251) and the

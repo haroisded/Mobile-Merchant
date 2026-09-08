@@ -112,6 +112,50 @@ resource lives in one folder* — and makes a toggle map cleanly onto exactly on
 Pages stay in `src/app/`, where expo-router already defines them. A page is a route, not a unit of
 code ownership.
 
+### Where a System-Context page lands
+
+`.claude/context/System-Context/<Name>-Page/` is organised by page, and this directory is not. That
+mismatch is deliberate, and it is the first thing an agent building a page trips on, so:
+
+**Put a page's code in as many resource folders as it touches, plus route files in `src/app/`.**
+Never create a folder named after the page. Home-Page is the worked example — read it as the pattern
+to copy, not as a record:
+
+| The spec calls it | Put it in |
+| --- | --- |
+| SystemCard, CreateSystemModal | `src/features/merchants/` — both are merchant-shaped |
+| ProfileDialog's name and email | `src/features/profiles/` |
+| Home, Account, Notifications, Settings screens | `src/app/(app)/(tabs)/` |
+| the column-count hook | `src/lib/columns.ts` — infrastructure, per rule 5 |
+
+For each new file ask the same question: **what resource does it own?** Not which page asked for it.
+`SystemCard` is a merchant rendered as a card, so it belongs to merchants even though Home-Page is
+its only caller — which is what lets the Systems Page render one without moving anything.
+
+The traceability that a page folder would have given you lives in that page's own `history.md`
+instead, under **Where the code lives**. An index costs one section in a file the page already has;
+a directory costs a migration every time a second page reuses something.
+
+An index nothing checks is an index that rots, and a table that has quietly started lying is worse
+than no table because a reader trusts it. `npm run check:history`
+(`tools/check-history-paths.mjs`) fails if any path named in a `history.md` no longer exists — run
+it after moving a file a page index mentions. It only checks that listed paths exist; it does not
+check that every file is listed, because "belongs to this page" is exactly the definition this
+section refuses to make.
+
+### Rejected: `local-features/` + `global-features/`
+
+Do not add a shared bucket alongside page folders. §2 gives the reasons; the tree gives the
+evidence, and it is worth checking before re-proposing this:
+
+- `features/profiles/queries` has three importers, one of them inside `features/merchants/`.
+- `features/merchants` is imported by `src/app/(app)/systems/[id].tsx`, which belongs to a different
+  page.
+
+Both would therefore be "global" already, leaving a `home/` folder holding two files — one of which
+(`SystemCard`) the Systems Page wants. That is §2's third argument made concrete: almost everything
+ends up global, and the local tree is a near-empty directory with a rename ceremony attached.
+
 ---
 
 ## 4. No layers inside a feature either
@@ -219,9 +263,11 @@ The order the first feature should arrive in, because several of these are painf
 
 ## 9. What is deliberately not here
 
-**No `local-features/` or `global-features/`.** §2.
+**No `local-features/` or `global-features/`.** §2 for the reasoning, §3 for the evidence already
+in the tree.
 
-**No page-keyed feature folders and no `-features` suffix.** §3.
+**No page-keyed feature folders and no `-features` suffix.** §3. A System-Context page maps onto
+however many resource folders it touches; the page → code index lives in that page's `history.md`.
 
 **No `components/`, `modals/`, `navigations/` or `hooks/` inside a feature folder** until it passes
 roughly eight files. §4.
