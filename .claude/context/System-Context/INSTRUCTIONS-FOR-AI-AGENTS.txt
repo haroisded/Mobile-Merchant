@@ -1,5 +1,8 @@
 # FOR AI-AGENTS
-- If instructed to create a page, you may visit the directories here, if not, don't
+- If instructed to create a page, you may visit the directories here, if not, don't.
+  ONE exception: the System-History rule below applies to EVERY pass that changes a file in this
+  repo, including passes that touch no page at all. A tooling or migration pass reads that rule and
+  nothing else on this page - it has no page directory to visit.
 - Interactives ( Priority ).md is served as a Filter during Creation Process, Interactives.md is served as the full context
 - After Creating a Page, Create a history.md in the system-context/*PageName-Page, fill this out
 • Components and Interactives Added
@@ -14,6 +17,60 @@
 
 - `npm run check:history` fails if a path in any history.md no longer exists. Run it after creating
   a page and after moving any file a page index names.
+
+- REVAMPS. A page directory is the CURRENT spec: Interactives.md, Interactives ( Priority ).md and
+  M3-Analysis/ describe the page as it is meant to be now. A revamp is a BRANCH off that spec, kept
+  in <Name>-Page/revamps/<timestamp>/ and MERGED back into the page root once it is built. There are
+  no version-N/ directories any more; a revamp directory is the frozen record one used to be.
+
+  Reading order on every pass against a page:
+  1. the page root files
+  2. revamps/status.txt
+
+  status.txt is BOTH the gate and the ordering authority:
+
+    <timestamp> - implemented      -> do NOT open that directory. What it said is already merged
+                                      into the page root, so reading it re-reads the past and can
+                                      only mislead you.
+    <timestamp> - not implemented  -> open it and get to work.
+
+  Two entries marked not implemented: do them in the order status.txt lists them, top down. The
+  timestamped directory names do NOT sort - Thu_09-10-2026 is day-name first - so the file is the
+  order, never the names.
+
+  A revamp directory holds the same kinds of file as the page root, scoped to what it changes:
+  • interactives.md              the revamped spec. Its FIRST line names what it replaces:
+                                   Replaces: CreateSystemModal
+                                 so the merge is mechanical instead of a judgment call.
+  • *-revamp.md                  the revamped M3 analysis.
+  • additional-instructions.txt  free notes from the human. Read it. It may carry a question
+                                 addressed to you - answer it before building, not after.
+
+  The merge - this is the "branch and merge" the layout is named for:
+
+  1. Build the revamp.
+  2. Overwrite the STALE PARTS of the page root, and only those parts - the ones named on the
+     Replaces line:
+       revamps/*/interactives.md  -> the matching sections of Interactives.md
+                                     and of Interactives ( Priority ).md
+       revamps/*/*-revamp.md      -> the matching file in M3-Analysis/
+     M3-Analysis merges too. Skip it and the root analysis keeps describing a field the code no
+     longer has, which is the same failure as an index that has started lying.
+  3. Add the version heading to history.md, and write the System-History entry (rules below).
+  4. LAST LINE OF THE PASS: flip that timestamp to "implemented" in revamps/status.txt.
+
+  That order is not cosmetic. Stop before step 4 and the next session rebuilds work already
+  shipped; flip it early and a crash leaves a revamp marked done that was never built. The
+  System-History entry is the durable receipt either way.
+
+  Do NOT delete a merged revamp directory, and do not edit one. It is the record of what that
+  branch said at the time.
+
+  Markers on merge: the merge happens AFTER building, so every control the revamp added is
+  genuinely implemented by the time you touch the Priority file - write the done marker, not the
+  implement-now one. A control the revamp specifies but the filter left blank stays blank. A
+  control the revamp DELETES loses its line in both root files; the revamp directory keeps the
+  record of it.
 
 - Working on a page that ALREADY has a history.md? Do NOT overwrite it and do NOT rewrite earlier
   entries. Add a new version heading inside each log section and write only what changed this pass:
@@ -33,6 +90,59 @@
   • Status
   Reason: a path left under an old version heading fails `npm run check:history` once the file
   moves, and two Status lines cannot both be true. Update these in place instead.
+
+- ALSO write a System-History entry. A page's history.md can only describe that one page, so a pass
+  touching three pages would have to be written three times, and a pass touching none — tooling, a
+  migration, a docs rule, a dependency — has nowhere to be written at all. That is the gap this
+  fills.
+
+    .claude/context/System-History/version-N.N.md
+
+  ONE entry per pass, ALWAYS, whether the pass touched many pages, one page, or none. A pass is one
+  unit of work you were asked for, not one file edit: five files changed to do a single thing is one
+  entry.
+
+  Numbering, N.N:
+  • RIGHT digit  +1 for another pass in the SAME session   -> 1.1, 1.2, 1.3
+  • LEFT digit   +1 for the first pass of a NEW session, and the right digit resets to 1
+                                                           -> 1.3 then 2.1, 2.2
+  • The very first entry is version-1.1.md
+
+  How to tell which: read the highest-numbered file already there, then ask whether YOU wrote it,
+  in the conversation you are in right now.
+    • You wrote it, this conversation  -> same session   -> version-N.(M+1).md
+    • You did not, or there are none   -> new session    -> version-(N+1).1.md
+  Do not guess from timestamps. Two passes minutes apart can be two sessions, and one session can
+  span days.
+
+  What goes in one:
+
+    # version N.N - <one line, what this pass did>
+
+    ## Pages touched
+    <links to each page's history.md, or "None - <what this was instead>">
+
+    ## What changed
+    <the change, and WHY. Name the option you rejected and why it lost - the same standard the
+    docs/ files are held to. This is the half a diff cannot show.>
+
+    ## Verification
+    <what you ran and what it said. What is still unverified, and what would verify it.>
+
+  An entry is a LOG. Once written it is never edited, and later passes never rewrite it — they add
+  their own file. Two rules follow from that, and both matter:
+
+  • Do not restate a page's "Where the code lives" table here. That table is current-state and gets
+    edited in place; a copy in an immutable log is a second version of it that cannot be corrected
+    and starts lying the first time a file moves. Link to the page instead.
+  • A path named in an entry records where a file was AT THE TIME. It is not a claim the file is
+    still there. `npm run check:history` therefore does NOT read this directory - it globs
+    System-Context/*/history.md only. Leave it that way. Pointing it at an append-only log would
+    fail the build on every historical entry the moment anything is renamed, which is the exact
+    trap the versioned/not-versioned split above exists to avoid.
+
+  Sort numerically, not alphabetically - version-1.10.md is after version-1.9.md, not before it.
+  The per-pass reasoning lives in the entry; the timeline lives in `git log`.
 
 - Interactives ( Priority ).md marks every interactive with one of three states. Read them before
   writing any code, and re-read them on every later pass:

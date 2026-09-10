@@ -16,28 +16,34 @@ export type Database = {
     Tables: {
       merchants: {
         Row: {
+          address: string | null
           category: Database["public"]["Enums"]["store_category"]
+          contact_email: string | null
           created_at: string
-          description: string | null
           id: string
           name: string
           owner_id: string
+          phone: string | null
         }
         Insert: {
+          address?: string | null
           category: Database["public"]["Enums"]["store_category"]
+          contact_email?: string | null
           created_at?: string
-          description?: string | null
           id?: string
           name: string
           owner_id: string
+          phone?: string | null
         }
         Update: {
+          address?: string | null
           category?: Database["public"]["Enums"]["store_category"]
+          contact_email?: string | null
           created_at?: string
-          description?: string | null
           id?: string
           name?: string
           owner_id?: string
+          phone?: string | null
         }
         Relationships: []
       }

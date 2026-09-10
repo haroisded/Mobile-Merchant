@@ -9,6 +9,7 @@ import {
   Card,
   HelperText,
   Icon,
+  Menu,
   Modal,
   Portal,
   Text,
@@ -19,12 +20,14 @@ import {
 import { useProfileQuery } from '../profiles/queries';
 import { useCreateSystemMutation } from './queries';
 import {
+  ADDRESS_MAX,
   CATEGORY_META,
-  DESCRIPTION_MAX,
+  COUNTRIES,
+  countryFlag,
   createSystemSchema,
   storeCategory,
 } from './schema';
-import type { CreateSystemValues, StoreCategory } from './schema';
+import type { Country, CreateSystemValues, StoreCategory } from './schema';
 
 type Props = {
   /**
@@ -70,6 +73,20 @@ function SelectableCard({
   );
 }
 
+// An icon and a title on one row. Only the combined branch has sections, so it is two elements in
+// a row rather than anything more — no `variant` is passed to Text beyond titleMedium, which is the
+// section-header role in docs/typography.md §2.
+function SectionHeader({ icon, title }: { icon: string; title: string }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.sectionHeader}>
+      <Icon source={icon} size={20} color={colors.onSurfaceVariant} />
+      <Text variant="titleMedium">{title}</Text>
+    </View>
+  );
+}
+
 function UsernameField({ control, label }: { control: Control<CreateSystemValues>; label?: string }) {
   return (
     <Controller
@@ -81,6 +98,36 @@ function UsernameField({ control, label }: { control: Control<CreateSystemValues
           <TextInput
             mode="outlined"
             placeholder="Enter username"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={!!fieldState.error}
+          />
+          <HelperText type="error" visible={!!fieldState.error}>
+            {fieldState.error?.message}
+          </HelperText>
+        </View>
+      )}
+    />
+  );
+}
+
+function EmailField({ control, label }: { control: Control<CreateSystemValues>; label?: string }) {
+  return (
+    <Controller
+      control={control}
+      name="contactEmail"
+      render={({ field, fieldState }) => (
+        <View>
+          {label ? <Text variant="labelMedium">{label}</Text> : null}
+          <TextInput
+            mode="outlined"
+            placeholder="Enter Email Address"
+            // autoCapitalize/autoCorrect are not in the analysis, but a keyboard that capitalises
+            // the first letter of an address is a keyboard that fails z.email() on the first try.
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
@@ -120,11 +167,90 @@ function StoreNameField({ control, label }: { control: Control<CreateSystemValue
   );
 }
 
-function DescriptionField({ control, label }: { control: Control<CreateSystemValues>; label?: string }) {
+// The Phone Input Group: a Menu-anchored country selector beside one editable number input.
+//
+// The country lives in component state, not in the form schema and not in a column. It is an
+// affordance for composing the number — picking one swaps the dial prefix on the front of whatever
+// is already typed — and the country is recoverable from the stored E.164 string, so persisting it
+// would be storing the same fact twice.
+function PhoneField({ control, label }: { control: Control<CreateSystemValues>; label?: string }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Annotated, not inferred: `as const` on COUNTRIES makes COUNTRIES[0] the Philippines literal
+  // type, so an un-annotated useState would refuse every other country.
+  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
+
   return (
     <Controller
       control={control}
-      name="description"
+      name="phone"
+      render={({ field, fieldState }) => {
+        const pick = (next: Country) => {
+          setCountry(next);
+          setMenuOpen(false);
+          // Replace the old dial code rather than appending a second one, so switching country
+          // twice does not leave "+63+44…". Anything that is not a leading dial code is the
+          // national number and survives untouched.
+          const rest = field.value.startsWith(country.dial)
+            ? field.value.slice(country.dial.length)
+            : field.value.replace(/^\+\d{1,4}/, '');
+          field.onChange(`${next.dial}${rest}`);
+        };
+
+        return (
+          <View>
+            {label ? <Text variant="labelMedium">{label}</Text> : null}
+            <View style={styles.phoneRow}>
+              <Menu
+                visible={menuOpen}
+                onDismiss={() => setMenuOpen(false)}
+                anchor={
+                  // A Button, not a TextInput styled to look like a trigger. It is a control that
+                  // opens a menu, so it should be one — a read-only TextInput here would take
+                  // focus, raise a keyboard, and read as an editable field to a screen reader.
+                  <Button
+                    mode="outlined"
+                    icon="chevron-down"
+                    contentStyle={styles.trailingIcon}
+                    onPress={() => setMenuOpen(true)}
+                  >
+                    {countryFlag(country.iso)}
+                  </Button>
+                }
+              >
+                {COUNTRIES.map((option) => (
+                  <Menu.Item
+                    key={option.iso}
+                    onPress={() => pick(option)}
+                    title={`${countryFlag(option.iso)}  ${option.name}  ${option.dial}`}
+                  />
+                ))}
+              </Menu>
+              <TextInput
+                mode="outlined"
+                style={styles.phoneInput}
+                keyboardType="phone-pad"
+                placeholder={country.dial}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                error={!!fieldState.error}
+              />
+            </View>
+            <HelperText type="error" visible={!!fieldState.error}>
+              {fieldState.error?.message}
+            </HelperText>
+          </View>
+        );
+      }}
+    />
+  );
+}
+
+function AddressField({ control, label }: { control: Control<CreateSystemValues>; label?: string }) {
+  return (
+    <Controller
+      control={control}
+      name="address"
       render={({ field, fieldState }) => (
         <View>
           {label ? <Text variant="labelMedium">{label}</Text> : null}
@@ -132,7 +258,7 @@ function DescriptionField({ control, label }: { control: Control<CreateSystemVal
             mode="outlined"
             multiline
             numberOfLines={4}
-            placeholder="Enter store details"
+            placeholder="Enter store details and address"
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
@@ -148,7 +274,7 @@ function DescriptionField({ control, label }: { control: Control<CreateSystemVal
               {fieldState.error?.message}
             </HelperText>
             <HelperText type="info" visible>
-              {`${field.value.length}/${DESCRIPTION_MAX}`}
+              {`${field.value.length}/${ADDRESS_MAX}`}
             </HelperText>
           </View>
         </View>
@@ -208,8 +334,13 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
       // deliberately absent, so the required-enum message fires rather than a category arriving
       // silently preselected.
       displayName: profile?.display_name ?? '',
+      // Left empty on purpose. This is the business's contact address, so seeding it from
+      // session.user.email would quietly turn it into the mirror of auth that merchants.contact_email
+      // exists not to be — and a prefilled field is one nobody reads before tapping Next.
+      contactEmail: '',
       name: '',
-      description: '',
+      phone: '',
+      address: '',
     },
     // onSubmit is the RHF default; on mobile, validating every keystroke while someone thumbs in a
     // store name is noise. onTouched waits until they leave the field.
@@ -222,7 +353,9 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
     createSystem.mutate(values, { onSuccess: onDismiss });
   });
 
-  const goToStep = async (fields: ('displayName' | 'name' | 'description')[]) => {
+  // Typed from the schema rather than by hand: a field renamed in schema.ts is a compile error at
+  // the call sites below, not a step that silently stops validating.
+  const goToStep = async (fields: (keyof CreateSystemValues)[]) => {
     if (await trigger(fields)) setStep((current) => current + 1);
   };
 
@@ -254,10 +387,11 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
             <>
               {step === 1 ? (
                 <>
-                  <Text variant="headlineSmall">Create your username</Text>
-                  <Text variant="bodyMedium">Enter your preferred owner name.</Text>
-                  <UsernameField control={control} />
-                  <Button mode="contained" onPress={() => goToStep(['displayName'])}>
+                  <Text variant="headlineSmall">Create your account</Text>
+                  <Text variant="bodyMedium">Add a username and an email for your account.</Text>
+                  <UsernameField control={control} label="Username" />
+                  <EmailField control={control} label="Email Address" />
+                  <Button mode="contained" onPress={() => goToStep(['displayName', 'contactEmail'])}>
                     Next
                   </Button>
                 </>
@@ -266,10 +400,18 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
               {step === 2 ? (
                 <>
                   <Text variant="headlineSmall">Establish your business</Text>
-                  <Text variant="bodyMedium">Provide details that help customers find you.</Text>
+                  <Text variant="bodyMedium">
+                    Provide details that help categorize and identify your business.
+                  </Text>
                   <StoreNameField control={control} label="Store Name" />
-                  <DescriptionField control={control} label="Store Description" />
-                  <Button mode="contained" onPress={() => goToStep(['name', 'description'])}>
+                  <PhoneField control={control} label="Phone Number" />
+                  <AddressField control={control} label="Store Address" />
+                  {/*
+                    Phone is in the gate even though the schema lets it be empty: empty passes, but
+                    a half-typed number should stop the step rather than surface three screens later
+                    as a check-constraint violation from the database.
+                  */}
+                  <Button mode="contained" onPress={() => goToStep(['name', 'phone', 'address'])}>
                     Next
                   </Button>
                 </>
@@ -278,10 +420,14 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
               {step === 3 ? (
                 <>
                   <Text variant="headlineSmall">Store Category</Text>
-                  <Text variant="bodyMedium">Pick the one that best describes your business.</Text>
+                  <Text variant="bodyMedium">What type of business are you establishing?</Text>
                   <CategoryField control={control} />
                   <Button
                     mode="contained"
+                    // Paper's `icon` is a leading slot; row-reverse is how the same prop becomes a
+                    // trailing one, which is what the analysis asks for. No second component.
+                    icon="arrow-right"
+                    contentStyle={styles.trailingIcon}
                     onPress={submit}
                     loading={createSystem.isPending}
                     disabled={createSystem.isPending}
@@ -294,16 +440,39 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
           ) : (
             <>
               <Text variant="headlineSmall">Set up your business</Text>
-              <Text variant="bodyMedium">Complete each section below.</Text>
+              <Text variant="bodyMedium">
+                Complete each section below to finish setting up your store.
+              </Text>
 
               <Card mode="contained">
                 <Card.Content style={styles.combined}>
                   {/* Card.Content already pads 16 on every side; the gap here is spacing between
                       fields, not padding around them (docs/layout.md §6). */}
-                  <Text variant="titleMedium">Business Identity</Text>
-                  <UsernameField control={control} label="Username" />
-                  <StoreNameField control={control} label="Store Name" />
-                  <DescriptionField control={control} label="Store Details" />
+                  <SectionHeader icon="card-account-details-outline" title="Personal Details" />
+                  {/*
+                    Two fields per row. The modal is capped at 640 (docs/layout.md rule 6), so a
+                    half of it is ~300 — still a sane measure for a single-line input, which is why
+                    this pairing is safe here and the multiline address below stays full width.
+                  */}
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldCell}>
+                      <UsernameField control={control} label="Username" />
+                    </View>
+                    <View style={styles.fieldCell}>
+                      <EmailField control={control} label="Email Address" />
+                    </View>
+                  </View>
+
+                  <SectionHeader icon="storefront-outline" title="Business Identity" />
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldCell}>
+                      <StoreNameField control={control} label="Store Name" />
+                    </View>
+                    <View style={styles.fieldCell}>
+                      <PhoneField control={control} label="Phone Number" />
+                    </View>
+                  </View>
+                  <AddressField control={control} label="Store Address" />
                   <CategoryField control={control} label="Store Category" />
                 </Card.Content>
               </Card>
@@ -340,6 +509,15 @@ const styles = StyleSheet.create({
   sheetCentered: { maxWidth: 640, width: '100%', alignSelf: 'center', margin: 24, borderRadius: 16 },
   body: { gap: 12, padding: 24 },
   combined: { gap: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Two cells per row on the combined branch. flexBasis 0 with flexGrow 1 rather than plain
+  // `flex: 1`, so a long placeholder cannot push its own cell wider than its neighbour.
+  fieldRow: { flexDirection: 'row', gap: 12 },
+  fieldCell: { flexGrow: 1, flexBasis: 0 },
+  phoneRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  // The number takes the rest of the row; the country trigger stays at its own content width.
+  phoneInput: { flexGrow: 1, flexBasis: 0 },
+  trailingIcon: { flexDirection: 'row-reverse' },
   counterRow: { flexDirection: 'row', justifyContent: 'space-between' },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   categoryCard: { width: 150 },

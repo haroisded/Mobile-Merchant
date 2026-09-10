@@ -11,7 +11,8 @@ on a breakpoint is the same reason a card never gets wider on one.
    decision from `useWindowDimensions()`, and never call `Dimensions.get()` at module scope.
 3. On a wider container, grid cards get **more columns**. Row cards get a **second pane** — never
    more width.
-4. Changing `numColumns` on a `FlatList` requires changing its `key` in the same render.
+4. Changing `numColumns` on a `FlatList` requires changing its `key` in the same render. `FlashList`
+   does not, and takes neither `columnWrapperStyle` nor `estimatedItemSize` — §3.
 5. Fix an image's `aspectRatio`, never its pixel height. Cap text with `numberOfLines`.
 6. Give single-column content `maxWidth: 640, alignSelf: 'center'`.
 7. Never use `Card.Cover` in a grid — it hardcodes `height: 195`. Never render `Dialog` without an
@@ -97,6 +98,30 @@ With `FlatList`:
   margin arithmetic.
 - **A final row with fewer items will stretch them across the full width.** Either pad the data with
   blank placeholders, or give the item `flexBasis: \`${100 / columns}%\`` instead of `flex: 1`.
+
+### With `FlashList`, which is what the merchants grid uses
+
+`@shopify/flash-list` 2.x is a different layout system, not a drop-in with the same props. Verified
+against `node_modules/@shopify/flash-list/src/FlashListProps.ts`:
+
+- **There is no `columnWrapperStyle` and no `estimatedItemSize`.** Both were dropped in v2. The prop
+  list is `Omit<ScrollViewProps, 'maintainVisibleContentPosition'>` plus its own, so
+  `contentContainerStyle` survives but the FlatList-only props do not.
+- **Cells are positioned absolutely**, at a width FlashList computes from `numColumns`. A flex `gap`
+  therefore reaches nothing between them. Carry the gutter on the cell instead — half of it each
+  side, so two neighbours meet at the full value, and take the same half off the container's padding
+  so the outer edge is unchanged. `src/app/(app)/(tabs)/index.tsx` names that half `GUTTER`.
+- **A partial last row does not stretch**, so the blank-padding fix above is not needed and should
+  not be carried over. Deleting it is the point of the swap, not a side effect.
+- `key={columns}` stays, but as insurance rather than a requirement — FlashList recomputes on a
+  `numColumns` change on its own, and the key only changes when the container crosses a column
+  boundary, which is already a full relayout.
+- It is **pure JavaScript** in 2.x (no `codegenConfig`, no `android/`), so adding it needs no
+  native rebuild.
+
+**Reach for it on length, not by default.** FlatList is correct for a list whose row count is
+bounded by something small; FlashList earns its place when a list can grow past roughly the screen
+count several times over.
 
 ### The simpler version, when it is enough
 

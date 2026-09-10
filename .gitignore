@@ -2,6 +2,8 @@
 
 # reference material for AI agents — vendored third-party docs, not this project's
 .claude/context/Documentations-for-AI-Agents
+.claude/context/System-Context
+.claude/context/System-History
 
 # dependencies
 node_modules/

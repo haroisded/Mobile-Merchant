@@ -34,6 +34,28 @@ unticked controls still render, so the screens match the mockups.
   `src/lib/columns.ts`; `src/features/merchants/{schema,queries}.ts`;
   `src/features/profiles/queries.ts`. The Supabase client is now typed `createClient<Database>`.
 
+### version 2 — CreateSystemModal revamp (`revamps/Thu_09-10-2026_13.59.58.10`)
+
+Only CreateSystemModal changed. No other component on this page was touched, and no interactive
+outside the modal was added, removed or rewired.
+
+- **AccountStep** (was UsernameStep) — gained an **Email Address** field 🏁 beside the username.
+  The step's Next now gates on both. This is `merchants.contact_email`, the business's published
+  contact address, NOT a mirror of `auth.users.email` — see the deviation table below.
+- **BusinessIdentityStep** (was BusinessDetailsStep) — gained a **Phone Number** field 🏁 and
+  swapped Store Description for **Store Address** 🏁 under the same 0/255 counter.
+- **Phone Input Group** 🏁 — a Paper `Menu`-anchored country selector beside one number input.
+  Picking a country swaps the dial prefix on the front of whatever is already typed. The country
+  list is twelve entries in `src/features/merchants/schema.ts`; no dependency was added.
+- **StoreCategoryStep** — copy only: the subtitle is now "What type of business are you
+  establishing?" and Continue 🏁 carries a trailing arrow.
+- **Tablet combined view** — the single card body is now two labelled sections, **Personal
+  Details** and **Business Identity**, with the paired single-line fields two to a row.
+- **Data layer** — `supabase/migrations/20260910000000_merchants_contact_and_address.sql` renames
+  `merchants.description` to `address` and adds `contact_email` and `phone` with shape checks;
+  `src/lib/database.types.ts` regenerated. `src/app/(app)/systems/[id].tsx` reads `address`, which
+  is the only file outside the feature folder the rename touched.
+
 ## Where the code lives
 
 There is no `features/home/` folder. A page maps onto however many **resource** folders it touches,
@@ -52,14 +74,15 @@ now. A later pass edits it in place — a path stranded under an old version hea
 | Navigation Bar (Paper bar as a custom `tabBar`) | `src/app/(app)/(tabs)/_layout.tsx` |
 | SystemCard tap destination | `src/app/(app)/systems/[id].tsx` |
 | SystemCard | `src/features/merchants/SystemCard.tsx` |
-| CreateSystemModal + SelectableCard | `src/features/merchants/CreateSystemModal.tsx` |
+| CreateSystemModal + SelectableCard, SectionHeader, Phone Input Group | `src/features/merchants/CreateSystemModal.tsx` |
 | Merchant reads/writes, query keys | `src/features/merchants/queries.ts` |
-| Form schema, category enum, `CATEGORY_META` | `src/features/merchants/schema.ts` |
+| Form schema, category enum, `CATEGORY_META`, `COUNTRIES`, `countryFlag`, `normalizePhone` | `src/features/merchants/schema.ts` |
 | Profile read (display name, email) | `src/features/profiles/queries.ts` |
 | Column count from measured width | `src/lib/columns.ts` |
 | QueryClient, `STALE`, online/focus wiring | `src/lib/query.ts` |
 | Generated schema types | `src/lib/database.types.ts` |
 | `merchants` table, RLS, `current_merchant_ids()` | `supabase/migrations/20260908131200_merchants.sql` |
+| `contact_email`, `phone`, `description` → `address` | `supabase/migrations/20260910000000_merchants_contact_and_address.sql` |
 
 Two of these are already shared beyond this page, which is why they are keyed on the resource and
 not on Home-Page: `features/profiles/queries` is imported by both the Account screen and
@@ -101,6 +124,17 @@ Not built, and why:
   table's policies will use; writing it now is what stops that table shipping an
   `auth.uid() = owner_id` policy that then has to be rewritten (`docs/tenancy.md` §2).
 
+### version 2
+
+Every interactive the revamp specifies is wired, so nothing was left inert this pass. Two things it
+implies were still not built:
+
+- **`merchants.contact_email` is nullable, and the form is what requires it.** The three merchant
+  rows that already existed were created before the column did, and there is nothing true to
+  backfill them with. Tighten to `not null` once they have one.
+- **Nothing reads `contact_email` or `phone` back.** They are collected and stored; the Systems
+  Page is where a business's own contact details would be shown, and that page is not this one.
+
 ## Deviations from the M3 analysis
 
 Resolved in favour of the project rules, which are authoritative:
@@ -112,6 +146,8 @@ Resolved in favour of the project rules, which are authoritative:
 | Appbar background `primary` / content `onPrimary` | Paper's default | Hand-picking a colour with no reason to; `docs/typography.md` rule 5 also forbids passing `variant` to `Appbar.Content` |
 | Profile list titles "use `bodyMedium`" | Paper's default | `List.Item` reads a raw fontSize outside the theme and takes no `variant` (`docs/typography.md` §3). Restyle via `titleStyle` only if it visibly drifts |
 | Tablet Profile is a centred `Dialog` | A tab screen with `maxWidth: 640` | It is a destination, not a layer. The one surviving `Dialog` (delete-account) got `maxWidth: 560` since `Dialog` has no maximum of its own |
+| Country selector shows a flag `Image` (v2) | Flag **emoji** derived from the ISO code | Same pixels with no asset pipeline, no bundle weight and nothing to keep in step with the country list. `docs/typography.md` §6 records that the system font carries emoji here |
+| Phone group's `TextInput` holds the dial prefix "+63" (v2) | The same single input holds the whole number; the picker swaps the prefix on its front | A field that only ever holds a prefix collects no phone number. This is still one control, exactly as the analysis lists it, and it is usable |
 
 One note for the modal, found while building: Paper's `Modal` styles only the backdrop
 (`Modal.js:144`) and leaves its content `transparent` (`:175`) — unlike `Dialog`, it does not give
@@ -122,12 +158,19 @@ same layer.
 
 **Not versioned** — one current value, replaced in place by each pass.
 
-**In-Complete** (version 1) — every priority interaction is wired, and their markers in
-`Interactives ( Priority ).md` are now 🏁. The 11 controls listed above render inert by design,
-waiting for the filter to promote them.
+**In-Complete** (through version 2) — every priority interaction is wired, including all of the
+revamped CreateSystemModal, and their markers in `Interactives ( Priority ).md` are 🏁. The 11
+controls listed above render inert by design, waiting for the filter to promote them.
 
 **Verified on a phone (narrow, `columns === 1`)** — run on the Medium_Phone AVD, plus typecheck,
 lint and a full Metro bundle of the whole route tree.
+
+**That phone run predates two later passes** — the card grid moving from `FlatList` to `FlashList`
+([System-History version 1.1](../../System-History/version-1.1.md)), and the CreateSystemModal
+revamp ([version 2.1](../../System-History/version-2.1.md)). Typecheck, lint and the full bundle
+pass after both; neither has been back on a device. The revamp is the one that matters here: it
+changed what the wizard collects and added a Menu-anchored control, so the stepped branch needs
+re-running on the phone AVD before this reads as verified again.
 
 **The wide branch (`columns > 1`) has never rendered on a device.** The Pixel Tablet AVD boots with
 no default route in its routing table, so it can reach neither Metro nor Supabase — an emulator
@@ -138,5 +181,6 @@ but is unexercised, so treat it as the first thing to check on the next working 
 - the 2-column card grid, and the blank-padding that stops a partial last row stretching
 - SystemCard's grid anatomy (square category tile) rather than its row anatomy
 - the Action Card create trigger, in place of the filled button
-- CreateSystemModal as one scrolling form rather than three steps
+- CreateSystemModal as one scrolling form rather than three steps — and, since version 2, its two
+  labelled sections and the paired two-to-a-row fields inside them
 - Account Appbar.Action 🏁 and the Go Back button 🏁, which exist only on this branch

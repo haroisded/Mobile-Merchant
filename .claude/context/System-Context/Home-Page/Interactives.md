@@ -38,13 +38,16 @@ later on, they're important
 - Settings destination
 - Account destination
 
-**CreateSystemModal**
+**CreateSystemModal** *(revamped — `revamps/Thu_09-10-2026_13.59.58.10`)*
 - Back IconButton (Top App Bar)
-- Next Button (Step 1 — UsernameStep)
-- Next Button (Step 2 — BusinessDetailsStep)
+- Next Button (Step 1 — AccountStep)
+- Next Button (Step 2 — BusinessIdentityStep)
+- Country Selector (Phone Input Group, Step 2 / tablet — Menu anchor)
 - SelectableCard options (Step 3 — StoreCategoryStep, 10 tappable cards)
-- Continue Button (Step 3)
-- TextInputs (editable, but not "clickable" per se — they accept focus/tap)
+- Continue Button (Step 3, trailing arrow icon)
+- Next Button (tablet combined view, aligned bottom-right)
+- TextInputs (editable, but not "clickable" per se — they accept focus/tap):
+  Username, Email Address, Store Name, Phone Number, Store Address
 
 **ProfileDialog**
 - Back Arrow (mobile Top App Bar)
@@ -79,13 +82,14 @@ later on, they're important
    - Tapping any destination (Home, Notifications, Settings, Account) switches the active tab, updating the page content accordingly.
 
 6. **CreateSystemModal Internal Interactions (Mobile)**
-   - Step 1: Enter username → tap Next → progresses to Step 2.
-   - Step 2: Enter store name/description → tap Next → progresses to Step 3.
+   - Step 1 (AccountStep): Enter username and email address → tap Next → progresses to Step 2. Both fields must pass before the step advances.
+   - Step 2 (BusinessIdentityStep): Enter store name, phone number and store address → tap Next → progresses to Step 3. Store name is required; phone may be left empty but must be a valid number if filled.
+   - Step 2 — Country Selector: tapping the flag + chevron trigger opens a Menu of countries. Selecting one swaps the dial prefix on the front of the number already typed.
    - Step 3: Select a category (SelectableCard) → tap Continue → creates the system → closes modal → home page refreshes with new SystemCard.
    - Back Icon: At Step 2/3, navigates to previous step; at Step 1, closes the modal.
 
 7. **CreateSystemModal Internal Interactions (Tablet)**
-   - All steps visible in one scrollable card. Tap Next → creates the system → closes modal → home page refreshes.
+   - Every field visible in one scrollable card, split into two sections — "Personal Details" (Username, Email Address) then "Business Identity" (Store Name, Phone Number, Store Address, Store Category). Tap Next → creates the system → closes modal → home page refreshes.
 
 8. **ProfileDialog Internal Interactions**
    - Tap Sign Out → logs out the merchant.

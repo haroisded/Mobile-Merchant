@@ -41,13 +41,16 @@ later on, they're important
 - Settings destination *(same)*
 - Account destination 🏁
 
-**CreateSystemModal** ( 🏁 ALL )
+**CreateSystemModal** ( 🏁 ALL ) *(revamped and rebuilt — `revamps/Thu_09-10-2026_13.59.58.10`)*
 - Back IconButton (Top App Bar)
-- Next Button (Step 1 — UsernameStep)
-- Next Button (Step 2 — BusinessDetailsStep)
+- Next Button (Step 1 — AccountStep) 🏁
+- Next Button (Step 2 — BusinessIdentityStep) 🏁
+- Country Selector (Phone Input Group — Menu anchor) 🏁
 - SelectableCard options (Step 3 — StoreCategoryStep, 10 tappable cards)
-- Continue Button (Step 3)
-- TextInputs (editable, but not "clickable" per se — they accept focus/tap)
+- Continue Button (Step 3, trailing arrow icon) 🏁
+- Next Button (tablet combined view) 🏁
+- TextInputs (editable, but not "clickable" per se — they accept focus/tap):
+  Username 🏁, Email Address 🏁, Store Name 🏁, Phone Number 🏁, Store Address 🏁
 
 **ProfileDialog**
 - Back Arrow (mobile Top App Bar) 🏁

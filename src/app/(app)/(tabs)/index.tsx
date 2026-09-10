@@ -1,6 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   ActivityIndicator,
   Appbar,
@@ -15,20 +16,8 @@ import {
 
 import { CreateSystemModal } from '../../../features/merchants/CreateSystemModal';
 import { useMerchantsQuery } from '../../../features/merchants/queries';
-import type { Merchant } from '../../../features/merchants/queries';
 import { SystemCard } from '../../../features/merchants/SystemCard';
 import { useColumns } from '../../../lib/columns';
-
-// A FlatList's final row stretches its items across the full width when it holds fewer than
-// `numColumns` of them. Padding the data with blanks that render as an empty flex:1 View is the
-// cheaper of the two fixes in docs/layout.md §3 — the other, flexBasis: `${100/columns}%`,
-// overflows the row once `gap` is added to it.
-function padToFullRows(rows: Merchant[], columns: number): (Merchant | null)[] {
-  if (columns < 2 || rows.length === 0) return rows;
-  const remainder = rows.length % columns;
-  if (remainder === 0) return rows;
-  return [...rows, ...Array<null>(columns - remainder).fill(null)];
-}
 
 export default function Home() {
   const { columns, onLayout } = useColumns();
@@ -93,47 +82,42 @@ export default function Home() {
       {/* onLayout goes on the element that actually constrains the cards — never on the screen and
           never on the window. This is what survives Stage Manager and split-screen. */}
       <View style={styles.body} onLayout={onLayout}>
-        <FlatList
-          data={padToFullRows(merchants.data ?? [], columns)}
-          keyExtractor={(item, index) => item?.id ?? `blank-${index}`}
+        <FlashList
+          data={merchants.data ?? []}
+          keyExtractor={(item) => item.id}
           numColumns={columns}
-          // Not optional: React Native throws on a numColumns change without a key change forcing
-          // the remount (docs/layout.md rule 4).
+          // FlashList recomputes its layout when numColumns changes, so the remount FlatList
+          // required (docs/layout.md rule 4) is no longer load-bearing. It is kept because the
+          // key only changes when the container crosses a column boundary — a rotation or a
+          // resize, which is already a full relayout — and it costs nothing the rest of the time.
           key={columns}
-          // RN rejects columnWrapperStyle outright when numColumns is 1.
-          columnWrapperStyle={columns > 1 ? styles.row : undefined}
           contentContainerStyle={styles.list}
           ListHeaderComponent={header}
           ListEmptyComponent={
-            merchants.isPending ? (
-              <ActivityIndicator />
-            ) : merchants.isError ? (
-              // retry is false by default, so nothing retries on its own — the user gets a result
-              // and a control rather than a spinner that silently gives up (docs/data-layer.md §5).
-              <View style={styles.state}>
-                <Text variant="bodyMedium">{merchants.error.message}</Text>
-                <Button onPress={() => merchants.refetch()}>Try again</Button>
-              </View>
-            ) : (
-              <Text variant="bodyMedium">No systems yet.</Text>
-            )
+            <View style={styles.empty}>
+              {merchants.isPending ? (
+                <ActivityIndicator />
+              ) : merchants.isError ? (
+                // retry is false by default, so nothing retries on its own — the user gets a result
+                // and a control rather than a spinner that silently gives up (docs/data-layer.md §5).
+                <View style={styles.state}>
+                  <Text variant="bodyMedium">{merchants.error.message}</Text>
+                  <Button onPress={() => merchants.refetch()}>Try again</Button>
+                </View>
+              ) : (
+                <Text variant="bodyMedium">No systems yet.</Text>
+              )}
+            </View>
           }
-          renderItem={({ item }) =>
-            item ? (
-              <View style={styles.cell}>
-                <SystemCard
-                  merchant={item}
-                  row={narrow}
-                  onPress={() =>
-                    router.push({ pathname: '/systems/[id]', params: { id: item.id } })
-                  }
-                />
-              </View>
-            ) : (
-              // A padding blank. It holds a column open so the real cards keep their width.
-              <View style={styles.cell} />
-            )
-          }
+          renderItem={({ item }) => (
+            <View style={styles.cell}>
+              <SystemCard
+                merchant={item}
+                row={narrow}
+                onPress={() => router.push({ pathname: '/systems/[id]', params: { id: item.id } })}
+              />
+            </View>
+          )}
         />
       </View>
 
@@ -147,15 +131,21 @@ export default function Home() {
   );
 }
 
+// FlashList positions every cell absolutely, so neither `columnWrapperStyle` (it has no such prop)
+// nor a flex `gap` on the content container reaches between cards. The spacing is carried by a
+// 6-unit inset on each cell instead: 6 + 6 meets as the 12 between two cards, and 10 + 6 as the 16
+// at the outer edge. Changing one of the three numbers below without the others moves the grid.
+const GUTTER = 6;
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { flex: 1 },
-  list: { gap: 12, padding: 16 },
-  header: { gap: 12 },
-  row: { gap: 12 },
-  // No width and no height on the cell — flex:1 inside a padded row is what makes the card's width
-  // fall out of the column count.
-  cell: { flex: 1 },
+  list: { padding: 16 - GUTTER },
+  header: { gap: 12, padding: GUTTER },
+  // No width and no height on the cell — FlashList sets the width from the column count, and
+  // flex:1 lets the card fill the cell so neighbours in a row end up the same height.
+  cell: { flex: 1, padding: GUTTER },
+  empty: { padding: GUTTER },
   state: { gap: 12, alignItems: 'flex-start' },
   // Matches Avatar.Icon's size so the ripple is a circle rather than a square around it.
   avatar: { borderRadius: 18, marginLeft: 8 },

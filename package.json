@@ -3,23 +3,25 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@expo/ui": "~57.0.13",
+    "@expo/ui": "~57.0.17",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^5.9.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-google-signin/google-signin": "^16.1.4",
+    "@shopify/flash-list": "2.0.2",
     "@supabase/supabase-js": "^2.112.3",
     "@tanstack/react-query": "^5.102.8",
-    "expo": "~57.0.14",
+    "expo": "~57.0.21",
+    "expo-build-properties": "~57.0.17",
     "expo-constants": "~57.0.11",
     "expo-dev-client": "~57.0.18",
     "expo-device": "~57.0.1",
     "expo-font": "~57.0.1",
-    "expo-glass-effect": "~57.0.1",
+    "expo-glass-effect": "~57.0.2",
     "expo-image": "~57.0.4",
     "expo-linking": "~57.0.7",
     "expo-network": "~57.0.1",
-    "expo-router": "~57.0.16",
+    "expo-router": "~57.0.20",
     "expo-secure-store": "~57.0.3",
     "expo-splash-screen": "~57.0.7",
     "expo-status-bar": "~57.0.1",
@@ -45,6 +47,7 @@
     "@oxlint/plugins": "^1.79.0",
     "@types/node": "^26.2.0",
     "@types/react": "~19.2.2",
+    "expo-atlas": "^0.4.3",
     "oxlint": "^1.79.0",
     "patch-package": "^8.0.1",
     "typescript": "~6.0.3"
@@ -57,7 +60,8 @@
     "web": "expo start --web",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "check:history": "node tools/check-history-paths.mjs"
+    "check:history": "node tools/check-history-paths.mjs",
+    "atlas": "node tools/atlas.mjs"
   },
   "private": true
 }

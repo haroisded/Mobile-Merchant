@@ -5,6 +5,7 @@ import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../Store/StoreUser';
 import { profileKey } from '../profiles/queries';
+import { normalizePhone } from './schema';
 import type { CreateSystemValues } from './schema';
 
 // The row type comes from the generated types, not from a hand-written interface. One less thing to
@@ -78,9 +79,14 @@ export function useCreateSystemMutation() {
           // rejected by the database, not merely by this line.
           owner_id: userId,
           name: values.name,
-          // The column is nullable and the form field is a string. '' would be a value that means
-          // "no description" without looking like one in the database.
-          description: values.description || null,
+          contact_email: values.contactEmail,
+          // These two columns are nullable and their form fields are strings. '' would be a value
+          // that means "not given" without looking like one in the database.
+          //
+          // normalizePhone runs here rather than in the schema so the form validates what the user
+          // typed and the table stores E.164 — see the note on it in schema.ts.
+          phone: normalizePhone(values.phone) || null,
+          address: values.address || null,
           category: values.category,
         })
         .select()

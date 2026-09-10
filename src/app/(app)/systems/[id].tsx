@@ -27,9 +27,7 @@ export default function System() {
         {merchant ? (
           <>
             <Text variant="titleMedium">{CATEGORY_META[merchant.category].label}</Text>
-            {merchant.description ? (
-              <Text variant="bodyMedium">{merchant.description}</Text>
-            ) : null}
+            {merchant.address ? <Text variant="bodyMedium">{merchant.address}</Text> : null}
           </>
         ) : (
           <Text variant="bodyMedium">This system is no longer available.</Text>
