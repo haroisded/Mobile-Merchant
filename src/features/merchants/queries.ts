@@ -110,3 +110,33 @@ export function useCreateSystemMutation() {
     },
   });
 }
+
+export function useDeleteMerchantMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // No owner_id filter, for the same reason the list query has none: merchants_delete_own is
+      // what restricts this to the caller's rows. A client-side `.eq('owner_id', …)` would read as
+      // the thing enforcing it, and a reader who believes that will eventually drop the policy.
+      //
+      // Worth knowing about that policy's shape: RLS on a DELETE *filters* rows rather than
+      // refusing the statement, so deleting a row the caller does not own is a successful no-op,
+      // not the 403 a permission error would give. It is unreachable from here anyway — the grid
+      // only ever renders rows merchants_select_own returned — and a row deleted elsewhere in the
+      // meantime lands on the same screen either way, because the invalidation below refetches a
+      // list that no longer contains it.
+      const { error } = await supabase.from('merchants').delete().eq('id', id);
+      if (error) throw error;
+    },
+
+    onSuccess: async () => {
+      // Only the merchants key. Unlike the create mutation this writes one table, and invalidating
+      // profiles as well would refetch the Account screen's display_name for no reason.
+      //
+      // Awaited, so the mutation stays `pending` until the refetch lands and the dialog closes onto
+      // a grid the card has already left, rather than one it disappears from a moment later.
+      await queryClient.invalidateQueries({ queryKey: merchantsKey.lists() });
+    },
+  });
+}

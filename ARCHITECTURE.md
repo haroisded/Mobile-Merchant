@@ -25,6 +25,7 @@ src/lib/secure-storage.ts  storage adapter: Keychain / Keystore native, AsyncSto
 src/lib/auth.ts            signInWithGoogle / signInWithFacebook / signOut / deleteAccount
 src/lib/query.ts           QueryClient factory, STALE constants, onlineManager + focusManager
 src/lib/columns.ts         useColumns — column count from a container's measured width
+src/lib/errors.ts          failureMessage — the copy a failed action shows, never the provider's
 src/lib/database.types.ts  generated from the schema; regenerate whenever a migration lands
 src/Store/StoreUser.ts     the session handler — one onAuthStateChange subscription
 src/themes.js              MD3 light/dark palettes; the only colors in the project

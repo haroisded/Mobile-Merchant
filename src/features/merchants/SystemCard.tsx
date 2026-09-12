@@ -20,9 +20,14 @@ type Props = {
    */
   row: boolean;
   onPress: () => void;
+  /**
+   * Asks the screen above to open the confirmation. The card does not own that dialog: FlashList
+   * recycles cells, so "which merchant is being deleted" held here could survive into another row.
+   */
+  onRemove: () => void;
 };
 
-export function SystemCard({ merchant, row, onPress }: Props) {
+export function SystemCard({ merchant, row, onPress, onRemove }: Props) {
   const { colors } = useTheme();
 
   // Indexing a Record<StoreCategory, …> with the row's own enum value. No fallback and no `as`:
@@ -30,15 +35,21 @@ export function SystemCard({ merchant, row, onPress }: Props) {
   // this line, which is exactly when it should be found.
   const meta = CATEGORY_META[merchant.category];
 
-  // The unticked Edit / Remove pair. Rendered so the card matches the mockup, with no onPress — the
-  // Priority filter has not ticked them yet. `error`/`onError` are read from the theme, which is
-  // the one place a colour may be chosen by hand (CLAUDE.md §3 rule 2).
+  // Remove is wired; Edit is still unticked in the Priority filter, so it renders and does nothing.
+  // `error`/`onError` are read from the theme, which is the one place a colour may be chosen by
+  // hand (CLAUDE.md §3 rule 2).
   const actions = (
     <Card.Actions>
       <Button mode="contained" icon="pencil">
         Edit
       </Button>
-      <Button mode="contained" icon="delete" buttonColor={colors.error} textColor={colors.onError}>
+      <Button
+        mode="contained"
+        icon="delete"
+        buttonColor={colors.error}
+        textColor={colors.onError}
+        onPress={onRemove}
+      >
         Remove
       </Button>
     </Card.Actions>

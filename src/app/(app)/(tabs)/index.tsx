@@ -16,6 +16,8 @@ import {
 
 import { CreateSystemModal } from '../../../features/merchants/CreateSystemModal';
 import { useMerchantsQuery } from '../../../features/merchants/queries';
+import type { Merchant } from '../../../features/merchants/queries';
+import { RemoveSystemDialog } from '../../../features/merchants/RemoveSystemDialog';
 import { SystemCard } from '../../../features/merchants/SystemCard';
 import { useColumns } from '../../../lib/columns';
 
@@ -23,6 +25,9 @@ export default function Home() {
   const { columns, onLayout } = useColumns();
   const merchants = useMerchantsQuery();
   const [creating, setCreating] = useState(false);
+  // The row awaiting confirmation, held here rather than in the card that opens it — a FlashList
+  // cell is recycled, and this state must outlive neither the row nor the scroll position.
+  const [removing, setRemoving] = useState<Merchant | null>(null);
 
   // The single width branch this screen makes. Everything downstream reads it rather than
   // re-deciding: one screen, one route, one measured branch (docs/layout.md §9).
@@ -115,6 +120,7 @@ export default function Home() {
                 merchant={item}
                 row={narrow}
                 onPress={() => router.push({ pathname: '/systems/[id]', params: { id: item.id } })}
+                onRemove={() => setRemoving(item)}
               />
             </View>
           )}
@@ -126,6 +132,13 @@ export default function Home() {
           measured; the modal must not measure itself to decide its own width. */}
       {creating ? (
         <CreateSystemModal stepped={narrow} onDismiss={() => setCreating(false)} />
+      ) : null}
+
+      {/* Mounted only while a row is awaiting confirmation, which is what makes the typed-
+          confirmation field empty again on every open with no reset logic — the same reason the
+          wizard above is mounted this way. */}
+      {removing ? (
+        <RemoveSystemDialog merchant={removing} onDismiss={() => setRemoving(null)} />
       ) : null}
     </Surface>
   );

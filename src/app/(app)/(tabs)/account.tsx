@@ -21,6 +21,7 @@ import {
 import { useProfileQuery } from '../../../features/profiles/queries';
 import { deleteAccount, signOut } from '../../../lib/auth';
 import { useColumns } from '../../../lib/columns';
+import { failureMessage } from '../../../lib/errors';
 import { useSession } from '../../../Store/StoreUser';
 
 // The ProfileDialog from the specs, shipped as a tab screen rather than a Dialog. On a wide
@@ -54,13 +55,21 @@ export default function Account() {
 
   // Both actions end the session, so both unmount this screen on success and only ever surface an
   // error on failure. One wrapper rather than two copies of the same try/finally.
-  const run = async (action: () => Promise<void>) => {
+  //
+  // The copy is a second positional argument rather than an options object, which
+  // `anti-slop/no-object-parameters` rejects, and it is per-action because "couldn't sign out" and
+  // "couldn't delete your account" are not the same thing to a reader.
+  const run = async (action: () => Promise<void>, fallback: string) => {
     setBusy(true);
     setError(null);
     try {
       await action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      // The one place the real error still goes. __DEV__ is stripped from release builds, the same
+      // mechanism supabase.ts uses for its `debug` flag, so this keeps the detail reachable while
+      // developing without putting a GoTrue string in front of a user.
+      if (__DEV__) console.warn('[account]', e);
+      setError(failureMessage(fallback));
     } finally {
       setBusy(false);
     }
@@ -72,7 +81,7 @@ export default function Account() {
       mode="contained"
       buttonColor={colors.error}
       textColor={colors.onError}
-      onPress={() => run(signOut)}
+      onPress={() => run(signOut, "Couldn't sign out. Try again.")}
       loading={busy}
       disabled={busy}
     >
@@ -204,7 +213,7 @@ export default function Account() {
               textColor={colors.error}
               onPress={() => {
                 setConfirmingDelete(false);
-                void run(deleteAccount);
+                void run(deleteAccount, "Couldn't delete your account. Try again.");
               }}
             >
               Delete

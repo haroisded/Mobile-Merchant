@@ -10,6 +10,7 @@ later on, they're important
 - **SystemCard** (repeated in Active Systems grid)
 - **Navigation Bar**
 - **CreateSystemModal** (multi-step wizard)
+- **RemoveSystemDialog** (destructive confirmation)
 - **ProfileDialog** (profile view/dialog)
 
 ---
@@ -33,7 +34,7 @@ later on, they're important
 **SystemCard**
 - Entire card (single clickable → goes to Systems Page w/the selected system) 🏁
 - Edit Button
-- Remove Button
+- Remove Button 🏁 *(opens RemoveSystemDialog — `revamps/Fri_09-11-2026_4.36.56.31`)*
 
 **Navigation Bar**
 - Home destination 🏁
@@ -51,6 +52,11 @@ later on, they're important
 - Next Button (tablet combined view) 🏁
 - TextInputs (editable, but not "clickable" per se — they accept focus/tap):
   Username 🏁, Email Address 🏁, Store Name 🏁, Phone Number 🏁, Store Address 🏁
+
+**RemoveSystemDialog** ( 🏁 ALL ) *(built — `revamps/Fri_09-11-2026_4.36.56.31`)*
+- Confirmation TextInput (accepts focus/tap; the typed value gates Delete) 🏁
+- Cancel Button 🏁
+- Delete Button (disabled until the typed name matches exactly) 🏁
 
 **ProfileDialog**
 - Back Arrow (mobile Top App Bar) 🏁

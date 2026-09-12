@@ -114,8 +114,9 @@ code ownership.
 
 ### Where a System-Context page lands
 
-`.claude/context/System-Context/<Name>-Page/` is organised by page, and this directory is not. That
-mismatch is deliberate, and it is the first thing an agent building a page trips on, so:
+`.claude/context/System-Context/<Name>-Page/` — or `<Name>-Screen/`, both suffixes are in use — is
+organised by page, and this directory is not. That mismatch is deliberate, and it is the first thing
+an agent building a page trips on, so:
 
 **Put a page's code in as many resource folders as it touches, plus route files in `src/app/`.**
 Never create a folder named after the page. Home-Page is the worked example — read it as the pattern

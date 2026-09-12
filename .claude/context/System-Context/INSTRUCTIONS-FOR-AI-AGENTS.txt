@@ -4,11 +4,24 @@
   repo, including passes that touch no page at all. A tooling or migration pass reads that rule and
   nothing else on this page - it has no page directory to visit.
 - Interactives ( Priority ).md is served as a Filter during Creation Process, Interactives.md is served as the full context
-- After Creating a Page, Create a history.md in the system-context/*PageName-Page, fill this out
+- After Creating a Page, Create a history.md in System-Context/<that page's directory>, fill this out
 • Components and Interactives Added
 • Where the code lives
 • Interactives not yet Added
 • Status: In-Complete or Complete
+
+- system-context.txt holds the STANDING CONTEXT for each page, under one heading per page directory.
+  It is the FIRST thing you read on any pass against a page, ahead of that page's own files. It
+  describes UI that is present on every screen of a system, which a page spec written in isolation
+  cannot tell you about. Merchant-Page is the worked example: the NavigationRail is scoped there,
+  not in any one screen's Interactives.md.
+
+  Where it and a page root file disagree, THE PAGE FILE WINS - it is the more specific spec. This
+  file is context, not an override. If the two contradict each other badly enough to change what
+  you would build, say so rather than silently picking one.
+
+  An empty section means that page has no standing context yet. Read it anyway; sections get
+  filled in, and an empty one is cheap to check.
 
 - There is NO features/<page-name>/ folder. A page's code goes in as many src/features/<resource>/
   folders as it touches, plus its route files in src/app/ - see docs/structure.md section 3.
@@ -20,23 +33,31 @@
 
 - REVAMPS. A page directory is the CURRENT spec: Interactives.md, Interactives ( Priority ).md and
   M3-Analysis/ describe the page as it is meant to be now. A revamp is a BRANCH off that spec, kept
-  in <Name>-Page/revamps/<timestamp>/ and MERGED back into the page root once it is built. There are
-  no version-N/ directories any more; a revamp directory is the frozen record one used to be.
+  in <page directory>/revamps/<timestamp>/ and MERGED back into the page root once it is built.
+  There are no version-N/ directories any more; a revamp directory is the frozen record one used
+  to be.
 
   Reading order on every pass against a page:
-  1. the page root files
-  2. revamps/status.txt
+  1. that page's section of system-context.txt
+  2. the page root files
+  3. system-revamp-status.txt
 
-  status.txt is BOTH the gate and the ordering authority:
+  system-revamp-status.txt sits at the System-Context root, NOT inside a page. One file covers
+  every page, under a heading per page directory - so find your page's heading first, and ignore
+  the rest. It is BOTH the gate and the ordering authority:
 
     <timestamp> - implemented      -> do NOT open that directory. What it said is already merged
                                       into the page root, so reading it re-reads the past and can
                                       only mislead you.
     <timestamp> - not implemented  -> open it and get to work.
 
-  Two entries marked not implemented: do them in the order status.txt lists them, top down. The
-  timestamped directory names do NOT sort - Thu_09-10-2026 is day-name first - so the file is the
-  order, never the names.
+  Two entries marked not implemented under one page heading: do them in the order the file lists
+  them, top down. The timestamped directory names do NOT sort - Thu_09-10-2026 is day-name first -
+  so the file is the order, never the names.
+
+  A page heading with no entries under it has no revamps. A revamp directory on disk with no line
+  under its page heading is a bug in the file, not permission to build it - the heading must name
+  the page directory exactly, or the gate silently reads as "no revamps" forever.
 
   A revamp directory holds the same kinds of file as the page root, scoped to what it changes:
   • interactives.md              the revamped spec. Its FIRST line names what it replaces:
@@ -57,7 +78,8 @@
      M3-Analysis merges too. Skip it and the root analysis keeps describing a field the code no
      longer has, which is the same failure as an index that has started lying.
   3. Add the version heading to history.md, and write the System-History entry (rules below).
-  4. LAST LINE OF THE PASS: flip that timestamp to "implemented" in revamps/status.txt.
+  4. LAST LINE OF THE PASS: flip that timestamp to "implemented" in system-revamp-status.txt,
+     under that page's heading.
 
   That order is not cosmetic. Stop before step 4 and the next session rebuilds work already
   shipped; flip it early and a crash leaves a revamp marked done that was never built. The

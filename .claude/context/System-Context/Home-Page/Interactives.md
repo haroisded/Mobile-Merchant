@@ -10,6 +10,7 @@ later on, they're important
 - **SystemCard** (repeated in Active Systems grid)
 - **Navigation Bar**
 - **CreateSystemModal** (multi-step wizard)
+- **RemoveSystemDialog** (destructive confirmation)
 - **ProfileDialog** (profile view/dialog)
 
 ---
@@ -49,6 +50,11 @@ later on, they're important
 - TextInputs (editable, but not "clickable" per se — they accept focus/tap):
   Username, Email Address, Store Name, Phone Number, Store Address
 
+**RemoveSystemDialog** *(added — `revamps/Fri_09-11-2026_4.36.56.31`)*
+- Confirmation TextInput (accepts focus/tap; the typed value gates Delete)
+- Cancel Button
+- Delete Button (disabled until the typed name matches the system name exactly)
+
 **ProfileDialog**
 - Back Arrow (mobile Top App Bar)
 - Camera FAB (edit profile photo overlay)
@@ -75,8 +81,11 @@ later on, they're important
 3. **SystemCard Edit → Edit Flow**
    - Tapping Edit on any SystemCard triggers the edit flow for that specific system (likely opens a modal or navigates to edit screen — not detailed in provided specs).
 
-4. **SystemCard Remove → Delete Confirmation**
-   - Tapping Remove on any SystemCard triggers a delete confirmation flow (likely a dialog) before removal.
+4. **SystemCard Remove → RemoveSystemDialog**
+   - Tapping Remove on any SystemCard opens the destructive confirmation for that system.
+   - The dialog names the system in its title and asks for that name to be typed back. Delete stays disabled until the typed value matches exactly, so a mismatch sends no request at all.
+   - Confirming deletes the merchant row; the grid refreshes and the card is gone. Cancel closes with nothing written.
+   - A failure leaves the dialog open with the message on it, so the attempt is retried from where the user already is.
 
 5. **Navigation Bar → Tab Switching**
    - Tapping any destination (Home, Notifications, Settings, Account) switches the active tab, updating the page content accordingly.

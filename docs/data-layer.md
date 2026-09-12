@@ -203,6 +203,13 @@ first entry, *then* invalidate — otherwise the refetch pulls every page the us
 **Mutation error handling.** Do not log network errors, the user is already being told. Handle typed
 errors specifically. Send only the unexpected to the logger.
 
+**A provider's own error string never reaches the UI.** A PostgREST or GoTrue message names columns,
+policies and constraints — it is written for whoever reads the logs, tells the user nothing they can
+act on, and leaks the shape of the schema. A failed mutation renders copy written for the user
+through `failureMessage` (`src/lib/errors.ts`), which swaps in the offline message when
+`onlineManager` says that is the better explanation. Zod messages are the exception and stay as they
+are: those already *are* written for the user (§4).
+
 **React Native setup is not optional.** `onlineManager` and `focusManager` must be wired per the
 TanStack React Native guide, or queries never learn they are offline and never refetch on resume.
 That is separate from, and additional to, the `AppState` listener in `src/lib/supabase.ts`, which

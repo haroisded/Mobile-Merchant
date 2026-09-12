@@ -56,6 +56,32 @@ outside the modal was added, removed or rewired.
   `src/lib/database.types.ts` regenerated. `src/app/(app)/systems/[id].tsx` reads `address`, which
   is the only file outside the feature folder the rename touched.
 
+### version 3 — RemoveSystemDialog (`revamps/Fri_09-11-2026_4.36.56.31`)
+
+Only the SystemCard Remove path changed. No other interactive on this page was added, removed or
+rewired, and no migration was needed — `merchants_delete_own` has existed since
+`20260908131200_merchants.sql`.
+
+- **SystemCard — Remove Button** 🏁 — was rendered inert since version 1; now opens the
+  confirmation for that card's system. Edit stays inert.
+- **RemoveSystemDialog** (`src/features/merchants/RemoveSystemDialog.tsx`) — the M3
+  destructive-confirmation pattern: `Dialog.Icon` tinted `error`, a centred `Dialog.Title` naming
+  the system, the consequence in `bodyMedium`, a `labelMedium` instruction, an outlined `TextInput`,
+  and a Cancel/Delete pair both `mode="contained"` with only Delete carrying the `error` role.
+  Delete is disabled until the typed name matches, so a mismatch sends no request — the sequence
+  diagram's first branch is a disabled button, not a rejected call.
+- **Hosted by the Home screen, not by the card** 🏁 — `index.tsx` holds `removing: Merchant | null`
+  and the card calls `onRemove()`. FlashList recycles its cells, so "which merchant is being
+  deleted" held inside one could reappear against a different row; one dialog above the list has no
+  recycling to survive. It is also the shape CreateSystemModal already uses.
+- **Data layer** — `useDeleteMerchantMutation` in `src/features/merchants/queries.ts`: one
+  `delete().eq('id', …)`, invalidating `merchantsKey.lists()` only. No `owner_id` filter, for the
+  same reason the list query has none.
+- **Plain `useState`, not react-hook-form + Zod.** The confirmation is one equality check with no
+  message to render — the feedback *is* the disabled button. Zod earns its place where there are
+  fields, per-field errors and a schema shared with a mutation (`docs/data-layer.md` §4); pulling
+  in a resolver for `typed.trim() === merchant.name` would be the abstraction to delete.
+
 ## Where the code lives
 
 There is no `features/home/` folder. A page maps onto however many **resource** folders it touches,
@@ -75,11 +101,13 @@ now. A later pass edits it in place — a path stranded under an old version hea
 | SystemCard tap destination | `src/app/(app)/systems/[id].tsx` |
 | SystemCard | `src/features/merchants/SystemCard.tsx` |
 | CreateSystemModal + SelectableCard, SectionHeader, Phone Input Group | `src/features/merchants/CreateSystemModal.tsx` |
+| RemoveSystemDialog (typed-confirmation delete) | `src/features/merchants/RemoveSystemDialog.tsx` |
 | Merchant reads/writes, query keys | `src/features/merchants/queries.ts` |
 | Form schema, category enum, `CATEGORY_META`, `COUNTRIES`, `countryFlag`, `normalizePhone` | `src/features/merchants/schema.ts` |
 | Profile read (display name, email) | `src/features/profiles/queries.ts` |
 | Column count from measured width | `src/lib/columns.ts` |
 | QueryClient, `STALE`, online/focus wiring | `src/lib/query.ts` |
+| `failureMessage` — user-facing copy for a failed action | `src/lib/errors.ts` |
 | Generated schema types | `src/lib/database.types.ts` |
 | `merchants` table, RLS, `current_merchant_ids()` | `supabase/migrations/20260908131200_merchants.sql` |
 | `contact_email`, `phone`, `description` → `address` | `supabase/migrations/20260910000000_merchants_contact_and_address.sql` |
@@ -135,6 +163,23 @@ implies were still not built:
 - **Nothing reads `contact_email` or `phone` back.** They are collected and stored; the Systems
   Page is where a business's own contact details would be shown, and that page is not this one.
 
+### version 3
+
+Nothing the revamp specifies was left inert. One control it sits beside is still unwired, and two
+things the sequence diagram offers were deliberately not built:
+
+- **SystemCard — Edit Button** stays rendered with no `onPress`. The revamp is scoped to deleting
+  ("purely for deleting merchant ( POS ) systems"), and the filter has not promoted Edit.
+- **No audit log.** The diagram marks `audit_log` optional. There is no such table, and adding one
+  to record a delete nobody reads back is a table plus a trigger plus a policy for no consumer.
+  It becomes worth building when someone can be asked who deleted what — which needs
+  `merchant_members`, and that is `docs/tenancy.md` §4's "later, deliberately".
+- **Hard delete, not the soft-delete alternative.** The diagram offers `deleted_at` as a note. Soft
+  delete means a nullable column, a filter on every read of the table forever, and a row that
+  still counts against a name the user believes they freed. The dialog already promises the delete
+  is permanent, and `on delete cascade` is what makes that true in one statement. Revisit only if
+  undo is actually asked for.
+
 ## Deviations from the M3 analysis
 
 Resolved in favour of the project rules, which are authoritative:
@@ -148,6 +193,9 @@ Resolved in favour of the project rules, which are authoritative:
 | Tablet Profile is a centred `Dialog` | A tab screen with `maxWidth: 640` | It is a destination, not a layer. The one surviving `Dialog` (delete-account) got `maxWidth: 560` since `Dialog` has no maximum of its own |
 | Country selector shows a flag `Image` (v2) | Flag **emoji** derived from the ISO code | Same pixels with no asset pipeline, no bundle weight and nothing to keep in step with the country list. `docs/typography.md` §6 records that the system font carries emoji here |
 | Phone group's `TextInput` holds the dial prefix "+63" (v2) | The same single input holds the whole number; the picker swaps the prefix on its front | A field that only ever holds a prefix collects no phone number. This is still one control, exactly as the analysis lists it, and it is usable |
+| Confirmation `TextInput` is "pre-filled with the system name" (v3) | `placeholder`, so the field opens **empty** | A confirmation field that arrives already matching enables Delete on open and confirms nothing — it would delete the safety mechanism the same analysis calls the safety mechanism. The revamp's own `sequence-diagram-code.txt` has the user type it ("Types 'Cafe 67' and clicks Delete"), so the two files disagree and the behavioural one wins on behaviour. A greyed name in the mockup is what a placeholder looks like |
+| Warning icon sits **outside** `Dialog.Icon`, because the built-in "tints with `secondary`" (v3) | Paper's `Dialog.Icon` with `color={colors.error}` | `secondary` is only its fallback — `color \|\| theme.colors.secondary` (`Dialog/DialogIcon.js:62`). Passing the role gives the specified appearance plus Paper's own centred wrapper and 24 top padding, instead of hand-building the same thing |
+| Dialog background `surfaceContainerHigh` (or `surface`) (v3) | No colour prop passed | Same as v1: that role does not exist in react-native-paper 5.15.3. `Dialog` already resolves to `elevation.level3` |
 
 One note for the modal, found while building: Paper's `Modal` styles only the backdrop
 (`Modal.js:144`) and leaves its content `transparent` (`:175`) — unlike `Dialog`, it does not give
@@ -158,19 +206,26 @@ same layer.
 
 **Not versioned** — one current value, replaced in place by each pass.
 
-**In-Complete** (through version 2) — every priority interaction is wired, including all of the
-revamped CreateSystemModal, and their markers in `Interactives ( Priority ).md` are 🏁. The 11
-controls listed above render inert by design, waiting for the filter to promote them.
+**In-Complete** (through version 3) — every priority interaction is wired, including all of the
+revamped CreateSystemModal and all of RemoveSystemDialog, and their markers in
+`Interactives ( Priority ).md` are 🏁. The 10 controls still listed as inert render by design,
+waiting for the filter to promote them.
 
 **Verified on a phone (narrow, `columns === 1`)** — run on the Medium_Phone AVD, plus typecheck,
 lint and a full Metro bundle of the whole route tree.
 
-**That phone run predates two later passes** — the card grid moving from `FlatList` to `FlashList`
-([System-History version 1.1](../../System-History/version-1.1.md)), and the CreateSystemModal
-revamp ([version 2.1](../../System-History/version-2.1.md)). Typecheck, lint and the full bundle
-pass after both; neither has been back on a device. The revamp is the one that matters here: it
-changed what the wizard collects and added a Menu-anchored control, so the stepped branch needs
-re-running on the phone AVD before this reads as verified again.
+**That phone run predates three later passes** — the card grid moving from `FlatList` to
+`FlashList` ([System-History version 1.1](../../System-History/version-1.1.md)), the
+CreateSystemModal revamp ([version 2.1](../../System-History/version-2.1.md)), and RemoveSystemDialog
+([version 4.1](../../System-History/version-4.1.md)). Typecheck, lint and the full bundle pass after
+all three; none has been back on a device. Two need it for different reasons:
+
+- the **CreateSystemModal revamp** changed what the wizard collects and added a Menu-anchored
+  control, so the stepped branch needs re-running.
+- **RemoveSystemDialog is the first destructive write in this app that a user can reach twice.**
+  Compiling proves the call is well-typed, not that the row leaves the grid — the delete, the
+  invalidation and the disabled-until-match gate are all unexercised. Deleting one system on the
+  phone AVD and watching the card go is what verifies this pass.
 
 **The wide branch (`columns > 1`) has never rendered on a device.** The Pixel Tablet AVD boots with
 no default route in its routing table, so it can reach neither Metro nor Supabase — an emulator
@@ -184,3 +239,5 @@ but is unexercised, so treat it as the first thing to check on the next working 
 - CreateSystemModal as one scrolling form rather than three steps — and, since version 2, its two
   labelled sections and the paired two-to-a-row fields inside them
 - Account Appbar.Action 🏁 and the Go Back button 🏁, which exist only on this branch
+- RemoveSystemDialog's `maxWidth: 560` — the constraint only does anything past 560dp, so the
+  narrow branch cannot show whether it holds

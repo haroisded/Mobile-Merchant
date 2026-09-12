@@ -17,6 +17,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 
+import { failureMessage } from '../../lib/errors';
 import { useProfileQuery } from '../profiles/queries';
 import { useCreateSystemMutation } from './queries';
 import {
@@ -492,9 +493,13 @@ export function CreateSystemModal({ stepped, onDismiss }: Props) {
 
           {/* The mutation's own failure, distinct from a field being invalid. Not logged — the user
               is already being told, and a network error is not the unexpected kind worth a logger
-              (docs/data-layer.md §5). */}
+              (docs/data-layer.md §5).
+
+              The field-level HelperTexts above render `fieldState.error.message`, and that stays:
+              those are Zod messages written for the user. This one is a provider string, which is
+              not, so it is replaced by copy the user can act on. */}
           <HelperText type="error" visible={createSystem.isError}>
-            {createSystem.error?.message}
+            {failureMessage("Couldn't create this system. Try again.")}
           </HelperText>
         </ScrollView>
       </Modal>
