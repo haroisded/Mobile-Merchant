@@ -20,6 +20,7 @@ import type { Merchant } from '../../../features/merchants/queries';
 import { RemoveSystemDialog } from '../../../features/merchants/RemoveSystemDialog';
 import { SystemCard } from '../../../features/merchants/SystemCard';
 import { useColumns } from '../../../lib/columns';
+import { failureMessage } from '../../../lib/errors';
 
 export default function Home() {
   const { columns, onLayout } = useColumns();
@@ -100,13 +101,35 @@ export default function Home() {
           ListHeaderComponent={header}
           ListEmptyComponent={
             <View style={styles.empty}>
-              {merchants.isPending ? (
+              {/* Paused is checked FIRST because `isPending` is also true while paused, and the
+                  spinner would win. networkMode: 'online' (the default, with onlineManager wired in
+                  src/lib/query.ts) does not fail a query with no connection — it queues it, so
+                  `isPending` never resolves and this screen would animate forever with nothing to
+                  read and nothing to press. Verified on a device: uiautomator could not reach idle
+                  offline, and dumped the instant the network came back.
+
+                  No retry control, unlike the error branch below: a paused query resumes on its own
+                  when onlineManager reports a connection, so a button here would offer to do what
+                  is already going to happen. */}
+              {merchants.isPaused ? (
+                <View style={styles.state}>
+                  <Text variant="bodyMedium">
+                    You&apos;re offline. Your systems will load when you reconnect.
+                  </Text>
+                </View>
+              ) : merchants.isPending ? (
                 <ActivityIndicator />
               ) : merchants.isError ? (
                 // retry is false by default, so nothing retries on its own — the user gets a result
                 // and a control rather than a spinner that silently gives up (docs/data-layer.md §5).
+                //
+                // Copy written for the user, not `merchants.error.message`: this is the whole-screen
+                // empty state, so a PostgREST string would be the most prominent text in the app on
+                // a failed load. failureMessage swaps in the offline line when that is the cause.
                 <View style={styles.state}>
-                  <Text variant="bodyMedium">{merchants.error.message}</Text>
+                  <Text variant="bodyMedium">
+                    {failureMessage("Couldn't load your systems. Try again.")}
+                  </Text>
                   <Button onPress={() => merchants.refetch()}>Try again</Button>
                 </View>
               ) : (

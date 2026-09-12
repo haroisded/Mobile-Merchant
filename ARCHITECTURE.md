@@ -29,7 +29,7 @@ src/lib/errors.ts          failureMessage — the copy a failed action shows, ne
 src/lib/database.types.ts  generated from the schema; regenerate whenever a migration lands
 src/Store/StoreUser.ts     the session handler — one onAuthStateChange subscription
 src/themes.js              MD3 light/dark palettes; the only colors in the project
-src/features/merchants/    schema, queries, SystemCard, CreateSystemModal
+src/features/merchants/    schema, queries, SystemCard, CreateSystemModal, RemoveSystemDialog
 src/features/profiles/     the profile read
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        provider buttons

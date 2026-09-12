@@ -20,6 +20,9 @@ accident. Which directories these files may live in is [`structure.md`](./struct
    discards the cache.
 8. Server state lives in TanStack Query and client state in Zustand. Never copy a fetched row into
    `useState` or a store.
+9. Check `isPaused` **before** `isPending`, and never show a provider's error string. Offline
+   requests are queued, not failed, so `isPending` alone renders a spinner that never ends; and a
+   failed one renders copy written for the user through `failureMessage` (`src/lib/errors.ts`). §5.
 
 The rest of this file is why. Read it before overriding a rule, not before following one.
 
@@ -215,6 +218,26 @@ TanStack React Native guide, or queries never learn they are offline and never r
 That is separate from, and additional to, the `AppState` listener in `src/lib/supabase.ts`, which
 exists to start and stop token refresh.
 
+**A paused request is not a pending one — check `isPaused` first.** With `onlineManager` wired and
+the default `networkMode: 'online'`, a request made with no connection is **queued, not failed**. It
+never errors, and `isPending` stays true for as long as the device is offline, so:
+
+- **Every loading branch must test `isPaused` before `isPending`**, or an offline screen renders a
+  spinner that animates forever with nothing to read and nothing to press. The error branch is no
+  substitute — a paused query never reaches it. `src/app/(app)/(tabs)/index.tsx` is the worked
+  example, and it shipped with exactly that bug until a device run caught it.
+- **"In flight" for a mutation is `isPending && !isPaused`.** Anything gated on a request being
+  genuinely out — a disabled control, a dialog that refuses to be dismissed — has to exclude the
+  paused case, or going offline locks the user in with no exit.
+  `src/features/merchants/RemoveSystemDialog.tsx` names that value `inFlight`.
+- **Say so, and leave the way out.** A paused state resumes on its own when the connection returns,
+  so it wants a line of copy and no retry control — the retry is already going to happen.
+
+Both halves of this are verified on a device
+([System-History 5.2](../.claude/context/System-History/version-5.2.md),
+[5.3](../.claude/context/System-History/version-5.3.md)), including that the queued write lands on
+reconnect with no further input.
+
 ---
 
 ## 6. The cache must be keyed on the user
@@ -257,3 +280,9 @@ system with its own failure modes and reconnection semantics. A mutation followe
 covers a single-admin app completely. Add it for genuinely collaborative editing and nothing less.
 
 **No client-side Zod on reads.** §4.
+
+**No `networkMode: 'always'`.** It would make an offline request fail fast and fall into the error
+branch, which looks like a simpler story than §5's paused handling. It also throws away the two
+things that make offline behave well here: the request no longer waits and resumes on reconnect, and
+`refetchOnReconnect` stops meaning anything. Wiring `onlineManager` and then opting out of what it
+buys is the contradiction to avoid.

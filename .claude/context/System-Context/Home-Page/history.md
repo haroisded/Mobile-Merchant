@@ -214,18 +214,35 @@ waiting for the filter to promote them.
 **Verified on a phone (narrow, `columns === 1`)** — run on the Medium_Phone AVD, plus typecheck,
 lint and a full Metro bundle of the whole route tree.
 
-**That phone run predates three later passes** — the card grid moving from `FlatList` to
-`FlashList` ([System-History version 1.1](../../System-History/version-1.1.md)), the
-CreateSystemModal revamp ([version 2.1](../../System-History/version-2.1.md)), and RemoveSystemDialog
-([version 4.1](../../System-History/version-4.1.md)). Typecheck, lint and the full bundle pass after
-all three; none has been back on a device. Two need it for different reasons:
+**Re-run on the Medium_Phone AVD at version 5.2**, which closes the gap the three passes after the
+original phone run had left. Signed in with Google, created a system through the full stepped
+wizard, and deleted it. What that run actually proved:
 
-- the **CreateSystemModal revamp** changed what the wizard collects and added a Menu-anchored
-  control, so the stepped branch needs re-running.
-- **RemoveSystemDialog is the first destructive write in this app that a user can reach twice.**
-  Compiling proves the call is well-typed, not that the row leaves the grid — the delete, the
-  invalidation and the disabled-until-match gate are all unexercised. Deleting one system on the
-  phone AVD and watching the card go is what verifies this pass.
+- the **CreateSystemModal revamp** — all three steps, the category grid and the submit, ending with
+  the card on the grid. The wizard writes both tables and the list refetches itself.
+- **RemoveSystemDialog** — the dialog's copy, and Delete doing nothing with the field left empty.
+- **The offline paused path**, which is what version 5.1 was designed around and had never been
+  exercised: with no network the mutation pauses rather than failing, the dialog says so, the
+  hardware back button still dismisses it, and on reconnect the queued delete lands and the card
+  leaves the grid on its own.
+- **The offline paused path for the list query**, after version 5.2 fixed it — see below.
+
+**The three gaps version 5.2 left open were closed at version 5.3**, on the same AVD:
+
+- **The dismiss lock during a live (online) delete.** With the request genuinely in flight — dialog
+  open, no paused notice — a backdrop tap and a hardware back press both bounced off, and the dialog
+  then closed on its own when the delete landed. What made it testable is recorded in
+  [version 5.3](../../System-History/version-5.3.md): the emulator's `network delay`/`speed` console
+  commands throttle **only the cellular path**, so on `AndroidWifi` they do nothing and the delete
+  keeps finishing in ~200ms.
+- **The typed-confirmation gate against a *wrong* name.** With `Cafe 6` in the field, Delete's
+  clickable ancestor reported `enabled="false"`, and tapping it left the dialog open and the row in
+  place. Read the state off that ancestor, never off the label: Paper renders the label as a plain
+  `TextView`, so `Cancel` reports `clickable="false"` while plainly enabled.
+- **The sign-in failure copy.** Signing in with the network down shows
+  "You're offline. Reconnect and try again." — `failureMessage`'s offline branch, no GoTrue string.
+  The native Google sheet opens from cached accounts regardless, so the failure only arrives after
+  an account is chosen.
 
 **The wide branch (`columns > 1`) has never rendered on a device.** The Pixel Tablet AVD boots with
 no default route in its routing table, so it can reach neither Metro nor Supabase — an emulator

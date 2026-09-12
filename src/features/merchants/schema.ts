@@ -125,7 +125,13 @@ export const createSystemSchema = z.object({
   // stays the person's sign-in identity and is still never copied into a table (ARCHITECTURE.md).
   // A user with two merchants can publish two different contact addresses; a mirror of auth could
   // not express that, and would go stale the first time they changed their sign-in email.
-  contactEmail: z.email({ error: 'Enter a valid email address.' }),
+  //
+  // The 254 mirrors merchants_contact_email_shape, which bounds the column at 3..254. Without it a
+  // long address passes the form, reaches Postgres, and comes back as a constraint violation the
+  // user sees as a generic failure with no field named — the same reason ADDRESS_MAX exists.
+  contactEmail: z
+    .email({ error: 'Enter a valid email address.' })
+    .max(254, 'Email address is too long.'),
 
   // Step 2. `.trim()` before `.min(1)` so a name of pure spaces fails here rather than at the
   // merchants_name_length check constraint.

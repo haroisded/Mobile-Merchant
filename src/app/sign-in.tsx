@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { Button, HelperText, Surface, Text } from 'react-native-paper';
 
 import { signInWithFacebook, signInWithGoogle } from '../lib/auth';
+import { failureMessage } from '../lib/errors';
 
 type Provider = 'google' | 'facebook';
 
@@ -17,7 +18,11 @@ export default function SignIn() {
       await (provider === 'google' ? signInWithGoogle() : signInWithFacebook());
     } catch (e) {
       // A cancelled sign-in resolves quietly, so anything caught here is a real failure.
-      setError(e instanceof Error ? e.message : String(e));
+      //
+      // The GoTrue message itself goes to the dev console only — __DEV__ is stripped from release
+      // builds — and the screen gets copy the user can act on (docs/data-layer.md §5).
+      if (__DEV__) console.warn('[sign-in]', e);
+      setError(failureMessage('Sign-in failed. Try again.'));
     } finally {
       // Nothing here navigates. On success the session changes and the root layout's guard moves
       // the user; this screen only has to stop looking busy.
