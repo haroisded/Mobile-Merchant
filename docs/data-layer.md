@@ -132,9 +132,10 @@ against a schema that no longer exists.
 
 `--linked`, not `--local`: `supabase/config.toml` here is the five-line file that only names the
 project, with no local Docker stack behind it, so `--local` has nothing to read. If the CLI stalls at
-`Initialising login role…` — the failure [README.md](../README.md#database-schema) warns about — the
-Supabase MCP server's `generate_typescript_types` returns the same output, and `.mcp.json` already
-points it at this project.
+`Initialising login role…` — the failure [README.md](../README.md#database-schema) warns about — set
+`SUPABASE_DB_PASSWORD` as the README describes (verified for `migration list` and `db push`, not yet
+for `gen types`), or use the Supabase MCP server's `generate_typescript_types`, which returns the same
+output and which `.mcp.json` already points at this project.
 
 ---
 

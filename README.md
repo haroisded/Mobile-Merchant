@@ -131,8 +131,23 @@ supabase link --project-ref <ref>
 supabase db push
 ```
 
-Every statement is re-runnable, so pasting the file into the dashboard's **SQL Editor** works just
-as well and is the quickest route if the CLI stalls at `Initialising login role…`.
+If `supabase db push` (or `supabase migration list`) stops at `Initialising login role…` with
+`permission denied to alter role`, give the CLI the database password and it skips that step. The
+password is under **Project Settings → Database** — reset it there if you never had one; the app
+itself never uses it:
+
+```bash
+export SUPABASE_DB_PASSWORD='…'     # PowerShell: $env:SUPABASE_DB_PASSWORD = '…'
+                                    # cmd:        set "SUPABASE_DB_PASSWORD=…"
+supabase db push
+```
+
+Every statement is re-runnable, so pasting `supabase/all-in-one/add.sql` — every migration, in order
+— into the dashboard's **SQL Editor** also works. The SQL Editor does not record what it ran,
+though: follow it with `supabase migration repair --status applied <version> …` for each file, or
+`supabase migration list` shows them as never applied. Its counterpart `supabase/all-in-one/revert.sql` undoes the lot and
+destroys the data with it; both are generated, never edited — see
+[`docs/migrations.md`](./docs/migrations.md).
 
 > **You have to enable RLS on every table you add.** Nothing in this scaffold does it for you.
 > A new table in `public` is published over HTTP by PostgREST the moment it exists, and the
@@ -144,15 +159,15 @@ Check the ones you missed under **Advisors → Security** in the dashboard, whic
 `rls_disabled_in_public`. Worth a look before any release. (`supabase db lint` is a different
 tool — it type-checks plpgsql and says nothing about policies.)
 
-`supabase/migrations/20260902000003_rls_auto_enable.sql` is a second line of defence, applied by
-`supabase db push` along with everything else: a DDL event trigger that enables RLS on every table
-created in `public` from then on.
+`supabase/migrations/20260902000003_rls_auto_enable.sql` tries to add a second line of defence: a
+DDL event trigger that enables RLS on every table created in `public` from then on.
 
-**It does not excuse you from the line above.** Creating an event trigger needs superuser, and the
-`DO` block around it warns and continues rather than failing the push — so on a hosted project it
-may not be installed at all. It is also invisible: nothing leads a reader from an unexpectedly empty
-query result back to it. Keep writing `alter table … enable row level security` in your own
-migrations; treat the trigger as the thing that catches the one you forget.
+**On hosted Supabase it does not install.** Creating an event trigger needs superuser, and the
+project's `postgres` role is not one, so the `DO` block around it only warns — the SQL Editor still
+says *Success*, and `supabase db push` still succeeds. The trigger works on a local `supabase start`
+stack and nowhere else. It is also invisible when it does exist: nothing leads a reader from an
+unexpectedly empty query result back to it. Keep writing `alter table … enable row level security`
+in your own migrations; on a hosted project that line is the only thing that turns RLS on.
 
 ---
 

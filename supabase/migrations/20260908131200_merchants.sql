@@ -56,8 +56,9 @@ create table if not exists public.merchants (
 );
 
 -- Its own line, per the note in 20260902000002_profiles.sql. The event trigger in
--- 20260902000003_rls_auto_enable.sql would also catch this table, but installing it needs superuser
--- and its DO block warns rather than failing — so on a hosted project it may simply not be there.
+-- 20260902000003_rls_auto_enable.sql would also catch this table where it installs, but installing it
+-- needs superuser — so on hosted Supabase it is not there (verified 2026-09-13), and this line is the
+-- only thing that turns RLS on.
 alter table public.merchants enable row level security;
 
 -- Not covered by the primary key. private.current_merchant_ids() filters on this column, and once

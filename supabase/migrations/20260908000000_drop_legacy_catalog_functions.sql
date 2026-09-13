@@ -21,6 +21,10 @@
 -- and `supabase db push` has to succeed there too. No `cascade`: if some object does
 -- turn out to depend on one of these, this migration should fail loudly rather than
 -- take that object with it.
+--
+-- No revert file (docs/migrations.md rule 2): the bodies of what this drops are not in
+-- the repo, and restoring them would reopen the endpoints described above.
+-- no-revert: drop-only; its revert would restore leftover functions from an unrelated project
 
 drop function if exists public.verify_user_password(p_email text, p_password text, p_enc_key text);
 drop function if exists public.verify_user_password(p_email_fingerprint text, p_password text);

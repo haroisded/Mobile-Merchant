@@ -61,6 +61,8 @@
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
     "check:history": "node tools/check-history-paths.mjs",
+    "build:migrations": "node tools/build-migrations.mjs",
+    "check:migrations": "node tools/build-migrations.mjs --check",
     "atlas": "node tools/atlas.mjs"
   },
   "private": true

@@ -17,9 +17,14 @@
 -- Keep writing `alter table ... enable row level security` explicitly in every migration. Two
 -- reasons this trigger cannot be relied on alone:
 --
---   1. It needs superuser to install (see the DO block at the bottom), and a hosted project's
---      migration role may not have it. The block warns and continues rather than failing the push,
---      so the trigger may quietly not be there at all.
+--   1. It needs superuser to install (see the DO block at the bottom), and on hosted Supabase it
+--      does NOT install. The project's `postgres` role is not a superuser (`rolsuper` is false), so
+--      `create event trigger` fails with `permission denied to create event trigger` — verified on
+--      this project's hosted database on 2026-09-13. The block turns that into a warning, so
+--      `supabase db push` succeeds, the SQL Editor reports "Success", and the trigger is simply not
+--      there. private.rls_auto_enable() below is still created, with nothing calling it. The
+--      trigger only exists on a local `supabase start` stack, so on a hosted project the explicit
+--      line is the only thing that turns RLS on.
 --   2. It is invisible. `\d your_table` does not mention it, the migration that created that table
 --      does not mention it, and nothing leads a reader from an unexpectedly empty result back to
 --      this file.
@@ -77,9 +82,10 @@ $$;
 -- revoking from PUBLIC alone would leave three live grants behind.
 revoke execute on function private.rls_auto_enable() from public, anon, authenticated, service_role;
 
--- CREATE EVENT TRIGGER requires superuser. The local `supabase start` stack has it; a hosted
--- project's migration role may not, and that must not take the whole migration down — every table
--- below still enables RLS explicitly, so this is defence in depth, not the only defence.
+-- CREATE EVENT TRIGGER requires superuser. The local `supabase start` stack has it; hosted Supabase's
+-- `postgres` role does not, so on a hosted project this block always lands in the exception branch.
+-- That must not take the whole migration down: every table's own migration enables RLS explicitly,
+-- so this is defence in depth where it installs, not the only defence.
 do $$
 begin
   execute 'drop event trigger if exists ensure_rls';

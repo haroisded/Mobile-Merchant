@@ -18,11 +18,12 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
--- Every table you add needs this line of its own. The next migration installs an event trigger that
--- would also catch it, but that needs superuser and warns rather than failing when it cannot install
--- — so it is a safety net, not a substitute for writing the line. Without it PostgREST serves the
--- whole table to anyone holding the publishable key, which ships in the app bundle. The dashboard's
--- Security Advisor flags the tables that are missing it.
+-- Every table you add needs this line of its own. The next migration tries to install an event
+-- trigger that would also catch it, but that needs superuser and hosted Supabase's `postgres` role is
+-- not one — there it only warns and the trigger never exists (verified 2026-09-13), so it is no
+-- substitute for writing the line. Without it PostgREST serves the whole table to anyone holding the
+-- publishable key, which ships in the app bundle. The dashboard's Security Advisor flags the tables
+-- that are missing it.
 alter table public.profiles enable row level security;
 
 -- Deliberately NOT `force row level security`, which is otherwise the stricter default worth

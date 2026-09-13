@@ -24,7 +24,8 @@ claude mcp add --scope user obscura obscura mcp
 # supabase — swap in the project ref; drop --scope for the current project only.
 # `.mcp.json` in this repo already declares it, pointed at this project's ref and NOT read-only —
 # apply_migration and generate_typescript_types both work through it, which is the way round the
-# CLI's "Initialising login role…" stall (README.md, Database schema).
+# CLI's "Initialising login role…" stall. The CLI's own fix for that stall is to set
+# SUPABASE_DB_PASSWORD (README.md, Database schema).
 claude mcp add --transport http --scope project supabase \
   "https://mcp.supabase.com/mcp?project_ref=<project_ref>&features=docs,account,database,debugging,development,functions,branching"
 ```

@@ -89,6 +89,7 @@ so you use it rather than build a second one:
 | [`docs/tenancy.md`](./docs/tenancy.md) | merchant scoping and the RLS shape every business table takes |
 | [`docs/layout.md`](./docs/layout.md) | phone and tablet, column counts, no breakpoints |
 | [`docs/typography.md`](./docs/typography.md) | Paper `Text` variants, no type at a call site |
+| [`docs/migrations.md`](./docs/migrations.md) | revert files, and the generated all-in-one ADD / REVERT SQL |
 
 Record a rejected option alongside the chosen one wherever the reasoning lives. A rule without its
 rejected alternative gets re-litigated.
@@ -261,7 +262,9 @@ removes.
 
 `supabase/migrations/` holds two tables — `public.profiles` (the person) and `public.merchants` (the
 tenant) — with their policies, the signup trigger, `public.delete_current_user()`,
-`private.current_merchant_ids()`, and the event trigger that auto-enables RLS.
+`private.current_merchant_ids()`, and `private.rls_auto_enable()` — the function behind an event
+trigger that hosted Supabase will not let this project install (§6.1). Each migration has a revert
+in `supabase/reverts/` (§6.6).
 `ARCHITECTURE.md` describes what they do; `docs/tenancy.md` covers the tenancy model and what is
 still ahead of it. The rules below are what must not be broken when adding to them.
 
@@ -272,12 +275,16 @@ PostgREST publishes a new table in `public` over HTTP the moment it exists, and 
 that reaches it ships inside the app bundle — so a table without that line is world-readable to
 anyone who opens the binary.
 
-`supabase/migrations/20260902000003_rls_auto_enable.sql` installs a DDL event trigger that enables
-RLS on every table created in `public`. It **is** a migration and `supabase db push` applies it —
-but it is a safety net, not the mechanism. Creating an event trigger needs superuser, and its `DO`
-block warns and continues rather than failing the push, so on a hosted project the trigger may
-quietly not be there. It is also invisible: nothing leads a reader from an empty result back to that
-file. Write the `enable row level security` line in every migration anyway.
+`supabase/migrations/20260902000003_rls_auto_enable.sql` tries to install `ensure_rls`, a DDL event
+trigger that would enable RLS on every table created in `public`. **On the hosted project it is not
+installed, and cannot be.** Creating an event trigger needs superuser, and the hosted `postgres`
+role is not one: `rolsuper` is false, and `create event trigger` fails with `permission denied to
+create event trigger` (verified 2026-09-13). The migration's `DO` block catches that and only warns,
+so the SQL Editor still reports *Success* while `private.rls_auto_enable()` sits there with nothing
+calling it. The trigger exists only on a local `supabase start` stack.
+
+So the explicit line is the mechanism, not a belt-and-braces habit: write `enable row level
+security` in every migration.
 
 The dashboard's Security Advisor reports the tables missing RLS as `rls_disabled_in_public`.
 `supabase db lint` is a different tool — it type-checks plpgsql and says nothing about policies.
@@ -323,3 +330,12 @@ RSA hybrid encryptor, which `HybridAESEncryptor.kt` keeps only as a read path fo
 and below — beneath SDK 57's floor. The live write path is AES into SharedPreferences, and
 `setItemAsync` validates only that the value is a string. Chunking now buys nothing and reintroduces
 a torn-write window across the pieces.
+
+### 6.6 Every migration ships its revert
+
+Whenever you add or change a file in `supabase/migrations/`, in the same change: write its inverse at
+`supabase/reverts/<identical filename>` (or give a drop-only migration a `-- no-revert: <reason>`
+line), then run `npm run build:migrations` and `npm run check:migrations`. That regenerates
+`supabase/all-in-one/add.sql` and `revert.sql` — never edit those two by hand, and never put a revert
+inside `migrations/`, where `supabase db push` would apply it. The rules and the reasoning are in
+[`docs/migrations.md`](./docs/migrations.md).
