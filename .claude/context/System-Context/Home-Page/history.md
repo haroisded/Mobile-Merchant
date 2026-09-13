@@ -53,7 +53,7 @@ outside the modal was added, removed or rewired.
   Details** and **Business Identity**, with the paired single-line fields two to a row.
 - **Data layer** — `supabase/migrations/20260910000000_merchants_contact_and_address.sql` renames
   `merchants.description` to `address` and adds `contact_email` and `phone` with shape checks;
-  `src/lib/database.types.ts` regenerated. `src/app/(app)/systems/[id].tsx` reads `address`, which
+  `src/lib/database.types.ts` regenerated. The placeholder `systems/[id].tsx` reads `address`, which
   is the only file outside the feature folder the rename touched.
 
 ### version 3 — RemoveSystemDialog (`revamps/Fri_09-11-2026_4.36.56.31`)
@@ -82,6 +82,33 @@ rewired, and no migration was needed — `merchants_delete_own` has existed sinc
   fields, per-field errors and a schema shared with a mutation (`docs/data-layer.md` §4); pulling
   in a resolver for `typed.trim() === merchant.name` would be the abstraction to delete.
 
+### version 4 — side effects of the Merchant-Page shell (System-History 9.1)
+
+No Home-Page interactive was added, removed or rewired. These changes come from the Merchant-Page
+pass:
+
+- **ProfileDialog's body moved** to `src/features/profiles/ProfileScreen.tsx`, because a second route
+  now renders it: `src/app/(app)/profile.tsx`, pushed from inside a system. The Account tab renders
+  it with `onBack` → `router.navigate('/')`, which is what it did before. It does not get the
+  "Back to your systems" button, which exists only on the in-system route. Section labels are now
+  written in normal case ("Account", "Full name"); the `labelMedium` token uppercases them, so they
+  render as before.
+- **The theme foundation landed**, and every screen on this page follows it:
+  - `roundness: 0` squares cards, buttons, dialogs, the FAB and text inputs.
+  - The type scale shrinks text: `titleMedium` 16→14, `bodyMedium` 14→13, `bodySmall` 12→11,
+    `labelLarge` 14→12, `headlineSmall` 24→19, `headlineMedium` 28→24.
+  - `labelMedium` is now 10, bold, tracked and **uppercase**. CreateSystemModal's field labels and
+    category tile labels therefore render in capitals.
+  - Icon names Feather has now draw from Feather: `home`, `bell`, `plus`, `camera`, `chevron-right`,
+    `arrow-left`. The rest keep MaterialCommunityIcons: `home-outline`, `bell-outline`, `account`,
+    `cog`, `magnify`, `logout`, `view-grid`. On the Navigation Bar this means a focused tab
+    (`home`, `bell`) draws a Feather glyph while its unfocused state (`home-outline`, `bell-outline`)
+    draws a MaterialCommunityIcons one. `docs/visual-language.md` §6 records that mix and accepts it
+    until the names are changed.
+- **RemoveSystemDialog's instruction** moved from `labelMedium` to `bodySmall`. Uppercasing it would
+  change the case of the system name the user has to type exactly.
+- **The SystemCard tap destination** is now the Merchant-Page shell, at its Home destination.
+
 ## Where the code lives
 
 There is no `features/home/` folder. A page maps onto however many **resource** folders it touches,
@@ -95,10 +122,11 @@ now. A later pass edits it in place — a path stranded under an old version hea
 | Piece of this page | File |
 | --- | --- |
 | Home screen (app bar, header, card grid, create trigger) | `src/app/(app)/(tabs)/index.tsx` |
-| Account screen / ProfileDialog | `src/app/(app)/(tabs)/account.tsx` |
+| Account tab (renders ProfileScreen) | `src/app/(app)/(tabs)/account.tsx` |
+| ProfileDialog body — identity, lists, Sign Out, Delete account | `src/features/profiles/ProfileScreen.tsx` |
 | Notifications, Settings stubs | `src/app/(app)/(tabs)/{notifications,settings}.tsx` |
 | Navigation Bar (Paper bar as a custom `tabBar`) | `src/app/(app)/(tabs)/_layout.tsx` |
-| SystemCard tap destination | `src/app/(app)/systems/[id].tsx` |
+| SystemCard tap destination — the Merchant-Page shell's Home | `src/app/(app)/systems/[id]/index.tsx` |
 | SystemCard | `src/features/merchants/SystemCard.tsx` |
 | CreateSystemModal + SelectableCard, SectionHeader, Phone Input Group | `src/features/merchants/CreateSystemModal.tsx` |
 | RemoveSystemDialog (typed-confirmation delete) | `src/features/merchants/RemoveSystemDialog.tsx` |
@@ -114,8 +142,9 @@ now. A later pass edits it in place — a path stranded under an old version hea
 
 Two of these are already shared beyond this page, which is why they are keyed on the resource and
 not on Home-Page: `features/profiles/queries` is imported by both the Account screen and
-`CreateSystemModal`, and `features/merchants` is imported by `systems/[id].tsx`, which belongs to the
-Systems Page.
+`CreateSystemModal`, and `features/merchants` is imported by `systems/[id]/_layout.tsx`, which
+belongs to the Merchant-Page. `ProfileScreen` is rendered by the Merchant-Page's `profile.tsx` as
+well as by the Account tab.
 
 ## Interactives not yet Added
 
@@ -180,6 +209,14 @@ things the sequence diagram offers were deliberately not built:
   is permanent, and `on delete cascade` is what makes that true in one statement. Revisit only if
   undo is actually asked for.
 
+### version 4
+
+Nothing on this page was newly left inert. One visible inconsistency is left in place on purpose:
+
+- **Mixed icon sets on the Navigation Bar.** A focused tab draws Feather (`home`, `bell`) and its
+  unfocused state draws MaterialCommunityIcons (`home-outline`, `bell-outline`). Renaming the tab
+  icons to one set is a Home-Page change nobody asked for in this pass.
+
 ## Deviations from the M3 analysis
 
 Resolved in favour of the project rules, which are authoritative:
@@ -209,7 +246,12 @@ same layer.
 **In-Complete** (through version 3) — every priority interaction is wired, including all of the
 revamped CreateSystemModal and all of RemoveSystemDialog, and their markers in
 `Interactives ( Priority ).md` are 🏁. The 10 controls still listed as inert render by design,
-waiting for the filter to promote them.
+waiting for the filter to promote them. Version 4 added no interactive.
+
+**Version 4 is not re-verified on a device.** The theme foundation changes every screen on this page:
+square corners, the smaller type, uppercase `labelMedium`, and Feather glyphs. Only typecheck, lint
+and a full export have run since. Walk the card grid, CreateSystemModal, RemoveSystemDialog and the
+Account tab on the phone before trusting the device results below for the current build.
 
 **Verified on a phone (narrow, `columns === 1`)** — run on the Medium_Phone AVD, plus typecheck,
 lint and a full Metro bundle of the whole route tree.

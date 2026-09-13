@@ -87,8 +87,9 @@ so you use it rather than build a second one:
 | [`docs/structure.md`](./docs/structure.md) | which directories may exist under `src/`, and what is not a feature |
 | [`docs/data-layer.md`](./docs/data-layer.md) | Supabase calls, Zod, TanStack Query keys and cache |
 | [`docs/tenancy.md`](./docs/tenancy.md) | merchant scoping and the RLS shape every business table takes |
-| [`docs/layout.md`](./docs/layout.md) | phone and tablet, column counts, no breakpoints |
-| [`docs/typography.md`](./docs/typography.md) | Paper `Text` variants, no type at a call site |
+| [`docs/layout.md`](./docs/layout.md) | phone and tablet, column counts, the one width threshold |
+| [`docs/typography.md`](./docs/typography.md) | the nine Paper `Text` variants, no type at a call site |
+| [`docs/visual-language.md`](./docs/visual-language.md) | the Merchant mockups → theme colours, the accent, icons, and the Paper piece for each pattern |
 | [`docs/migrations.md`](./docs/migrations.md) | revert files, and the generated all-in-one ADD / REVERT SQL |
 
 Record a rejected option alongside the chosen one wherever the reasoning lives. A rule without its
@@ -103,14 +104,23 @@ until rule 4 below calls for it.
 
 ### Rules
 
-1. No custom components — React Native Paper only.
-2. No hardcoded or inline colors — everything from `src/themes.js`, the MD3 light/dark palettes.
-   Where a color has to be picked by hand, read it from Paper's `useTheme()` rather than inline it.
+1. No custom primitives — `Text`, `Button`, `TextInput`, `Menu`, `Switch`, `SegmentedButtons`,
+   `Checkbox`, `DataTable`, `Dialog`, `Modal`, `ProgressBar` and `Icon` come from React Native Paper.
+   Screen pieces composed from them are fine.
+2. No hardcoded or inline colors — every color is a key in `src/themes.js`, read through Paper's
+   `useTheme()` — or `useAppTheme()` from `src/lib/theme.ts` for the Merchant keys. A color the design needs and the theme lacks becomes a new key in both themes, never
+   a literal — [`docs/visual-language.md`](./docs/visual-language.md) §3.
+   `anti-slop/no-design-literals` fails `npm run lint` on color literals under `src/` outside
+   `src/themes.js`.
 3. No hardcoded or inline type — every string is a Paper `Text` with a `variant`. Never set
-   `fontSize`, `lineHeight`, `fontWeight` or `letterSpacing` at a call site. Sizes are Paper's MD3
-   defaults today; `src/themes.js` overrides `colors` only, so changing one means adding a `fonts`
-   key there — [`docs/typography.md`](./docs/typography.md) §2.
+   `fontSize`, `lineHeight`, `fontWeight`, `letterSpacing`, `fontFamily` or `textTransform` at a
+   call site; the same lint rule catches the first five. The scale is
+   [`docs/typography.md`](./docs/typography.md) §2, written into `src/themes.js` through one
+   `configureFonts` call.
 4. Extract a component only when a second screen needs it.
+5. Corners are square: `roundness: 0` in both themes, never a `borderRadius` by hand. The one
+   exception zeroes react-navigation's own drawer corners, which `roundness` cannot reach —
+   `src/app/(app)/systems/[id]/_layout.tsx`.
 
 ### Paper, its patch, and icons
 
@@ -118,7 +128,9 @@ until rule 4 below calls for it.
   `postinstall` / `patch-package` hook.
 - Paper's icons are pointed at `@expo/vector-icons` through `PaperProvider`'s `settings` prop;
   Paper's own default goes through `react-native-vector-icons`, whose fonts nothing loads, so icons
-  would otherwise be blank boxes.
+  would otherwise be blank boxes. The renderer draws Feather first and falls back to
+  MaterialCommunityIcons for names Feather lacks —
+  [`docs/visual-language.md`](./docs/visual-language.md) §6.
 - `react-native-vector-icons` stays in `package.json` because Paper imports it internally either way.
 
 ---

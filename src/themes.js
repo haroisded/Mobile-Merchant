@@ -1,5 +1,5 @@
 // styles/theme.js
-import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { MD3DarkTheme, MD3LightTheme, configureFonts } from 'react-native-paper';
 
 const lightColors = {
   primary: "#1E293B",
@@ -42,6 +42,15 @@ const lightColors = {
     level4: "#E8EDF4",
     level5: "#E4EAF2",
   },
+  // The Merchant keys, from docs/visual-language.md §3 — roles the mockups need and MD3 lacks. Read
+  // them through useAppTheme() (src/lib/theme.ts); Paper's plain useTheme() types colors to MD3 only.
+  accent: "#EC3013",
+  onAccent: "#FFFFFF",
+  onSurfaceMuted: "#64748B",
+  onSurfaceFaint: "#94A3B8",
+  surfaceMuted: "#F1F5F9",
+  surfaceSubtle: "#F8FAFC",
+  primaryHighlight: "rgba(255, 255, 255, 0.14)",
 };
 
 
@@ -87,24 +96,84 @@ const darkColors = {
     level4: "#252D3A",
     level5: "#29323F",
   },
+  // The accent stays the same red on dark, as POS Shell draws it. The rest follow the dark ramp
+  // above; `primaryHighlight` darkens instead of lightening, because `primary` is light here.
+  accent: "#EC3013",
+  onAccent: "#FFFFFF",
+  onSurfaceMuted: "#A3AEBE",
+  onSurfaceFaint: "#7C8898",
+  surfaceMuted: "#1E2632",
+  surfaceSubtle: "#1A212C",
+  primaryHighlight: "rgba(0, 0, 0, 0.12)",
 };
 
 
 
+// The nine-role scale from docs/typography.md §2, shared by both themes — size does not change with
+// the palette. Keyed by variant, never flat: a config whose values are all non-objects is merged into
+// ALL fifteen variants (fonts.tsx:88-98), so `{ fontSize: 26 }` one level up would resize everything.
+const fonts = configureFonts({
+  config: {
+    // An MD3 key merges over its default (fonts.tsx:101-110), so only what changes is named.
+    headlineMedium: { fontSize: 24, lineHeight: 28, fontWeight: '800' },
+    headlineSmall: { fontSize: 19, lineHeight: 24, fontWeight: '800' },
+    // Never typed at a call site: Appbar.Content picks it for a small header's title (§3).
+    titleLarge: { fontSize: 19, lineHeight: 24, fontWeight: '700' },
+    titleMedium: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
+    bodyMedium: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+    bodySmall: { fontSize: 11, lineHeight: 15, fontWeight: '400' },
+    labelLarge: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+    // The uppercase lives in the token: Paper's Text spreads the whole variant object into the style
+    // (Text.tsx:99), so copy is written in normal case and rendered in capitals.
+    labelMedium: {
+      fontSize: 10,
+      lineHeight: 14,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    // New keys have no default to merge over, so each carries every property itself. Type them
+    // through AppText (src/lib/theme.ts); Paper's own Text only accepts MD3 variant names.
+    display: {
+      fontFamily: MD3LightTheme.fonts.default.fontFamily,
+      fontSize: 30,
+      lineHeight: 34,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+    },
+    amount: {
+      fontFamily: MD3LightTheme.fonts.default.fontFamily,
+      fontSize: 20,
+      lineHeight: 24,
+      fontWeight: '800',
+      letterSpacing: 0,
+    },
+  },
+});
+
+
+
+// `roundness: 0` squares every Paper component that has a radius, because Paper multiplies it into
+// each one's corners (docs/visual-language.md §5). Both themes need it and both need `fonts`: they are
+// separate objects, and a key on one never reaches the other.
 export const LightTheme = {
   ...MD3LightTheme,
+  roundness: 0,
   colors: {
     ...MD3LightTheme.colors,
     ...lightColors,
   },
+  fonts,
 };
 
 
 
 export const DarkTheme = {
   ...MD3DarkTheme,
+  roundness: 0,
   colors: {
     ...MD3DarkTheme.colors,
     ...darkColors,
   },
+  fonts,
 };

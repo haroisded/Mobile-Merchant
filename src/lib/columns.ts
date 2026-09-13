@@ -8,6 +8,17 @@ import type { LayoutChangeEvent } from 'react-native';
 // (docs/layout.md §1).
 export const MIN_CARD = 260;
 
+// ponytail: M3's "expanded" window class. Tune it on a real tablet.
+//
+// The one width threshold (docs/layout.md §9). It picks between the merchant shell's rail and its
+// drawer, and nothing else — measured on the shell's root container, never on the window.
+export const WIDE_MIN = 840;
+
+// Chrome widths, not card widths: panes are named so no screen writes its own (docs/layout.md rule 1).
+export const RAIL_EXPANDED = 116; // icons + labels
+export const RAIL_COLLAPSED = 72; // icons only, after the menu action
+export const DRAWER_WIDTH = 300; // the narrow shell's off-canvas drawer
+
 /**
  * Column count derived from the container's measured width.
  *

@@ -107,9 +107,10 @@ export function RemoveSystemDialog({ merchant, onDismiss }: Props) {
           </Text>
 
           {/* The typed-confirmation instruction. Distinct from the body copy above it — that
-              explains the consequence, this one asks for an action — so it is labelMedium rather
-              than more bodyMedium. */}
-          <Text variant="labelMedium">Type {merchant.name} to confirm</Text>
+              explains the consequence, this one asks for an action — so it is not more bodyMedium.
+              Not labelMedium either: that token uppercases (docs/typography.md §2), and the name
+              shown here is the exact string to type, case included. bodySmall is the hint role. */}
+          <Text variant="bodySmall">Type {merchant.name} to confirm</Text>
 
           <TextInput
             mode="outlined"

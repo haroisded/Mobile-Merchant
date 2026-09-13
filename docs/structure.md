@@ -17,7 +17,8 @@ which feature folders exist at all and what is not a feature.
 5. Infrastructure stays in `src/lib/` — the Supabase client, auth, secure storage, the query client,
    `database.types.ts`, device wrappers. None of these are features.
 6. Shared UI is React Native Paper. `src/components/` is created only when a **second screen** needs
-   the same component, per [CLAUDE.md §3](../CLAUDE.md#3-the-ui) rule 4.
+   the same component, per [CLAUDE.md §3](../CLAUDE.md#3-the-ui) rule 4. The first known case is
+   Discounts reusing Products' pieces — §6.
 7. The only directories under `src/` are `app/`, `lib/`, `Store/`, `features/`, and eventually
    `components/`. Adding a sixth is a decision — write down what it is for.
 8. Feature toggles are runtime data, not directory structure. Nothing about the folder layout
@@ -144,14 +145,44 @@ it after moving a file a page index mentions. It only checks that listed paths e
 check that every file is listed, because "belongs to this page" is exactly the definition this
 section refuses to make.
 
+### The merchant shell
+
+The Revamped Merchant UI screens (`.claude/context/Revamped Merchant UI/`) all render inside one
+shell: a header, plus a rail on a wide container or a drawer on a narrow one
+([`layout.md` §9](./layout.md#9-one-threshold-five-pairs)). The shell is navigation, so it is a
+layout, not a component (rule 4):
+
+```
+src/app/(app)/systems/[id]/_layout.tsx   the shell — an expo-router Drawer, permanent when wide
+src/app/(app)/systems/[id]/index.tsx     Home
+src/app/(app)/systems/[id]/register.tsx
+src/app/(app)/systems/[id]/products/     list, detail, create and edit routes
+src/app/(app)/systems/[id]/discounts/
+```
+
+The shell and Home exist. Register, Dashboard, Products, Discounts, Employees, Features and Audit are
+one-line stub files (`register.tsx`, `products.tsx`, …) until their screens are built; `products.tsx`
+and `discounts.tsx` then become the directories above. The code behind those routes goes by
+resource, as above:
+
+| The mockup calls it | Put it in |
+| --- | --- |
+| Products list, form, detail, archive dialog | `src/features/products/` |
+| Discounts list, form, detail, archive dialog | `src/features/discounts/` |
+| Register's cart, held sales, payment, receipt | `src/features/sales/` — a sale is the resource, Register is the page |
+| The rail and header | `src/app/(app)/systems/[id]/_layout.tsx` |
+
+Dashboard, Employees, Features and Audit are rail destinations with no mockup yet. They get a folder
+when they get a design, not before.
+
 ### Rejected: `local-features/` + `global-features/`
 
 Do not add a shared bucket alongside page folders. §2 gives the reasons; the tree gives the
 evidence, and it is worth checking before re-proposing this:
 
 - `features/profiles/queries` has three importers, one of them inside `features/merchants/`.
-- `features/merchants` is imported by `src/app/(app)/systems/[id].tsx`, which belongs to a different
-  page.
+- `features/merchants` is imported by `src/app/(app)/systems/[id]/_layout.tsx`, the Merchant-Page
+  shell, which is a different page.
 
 Both would therefore be "global" already, leaving a `home/` folder holding two files — one of which
 (`SystemCard`) the Systems Page wants. That is §2's third argument made concrete: almost everything
@@ -215,6 +246,15 @@ So a shared component's home is `src/components/`, created on the day the second
 not before. Two lines of policy, no taxonomy — which is the whole answer, and the reason no directory
 structure has to encode it.
 
+### The first case is already in view
+
+Products and Discounts draw the same anatomy: a list header, a table or card list with bulk select, a
+type selector, a section list or stepper, a field grid, detail cards and an archive dialog.
+
+Build Products with those pieces inside `src/features/products/`. When Discounts is built, lift the
+pieces it actually reuses into `src/components/` in that same pass. Not before: the second screen is
+what shows which parts really repeat, and a kit designed from one screen guesses at the other.
+
 ---
 
 ## 7. Toggles are data
@@ -273,7 +313,8 @@ however many resource folders it touches; the page → code index lives in that 
 **No `components/`, `modals/`, `navigations/` or `hooks/` inside a feature folder** until it passes
 roughly eight files. §4.
 
-**No `src/components/` yet.** It appears the day a second screen needs the same component. §6.
+**No `src/components/` yet.** It appears the day a second screen needs the same component — expected
+when Discounts reuses Products' pieces. §6.
 
 **No feature-toggle registry, config file, or module manifest.** §7.
 

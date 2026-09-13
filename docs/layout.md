@@ -2,11 +2,14 @@
 
 Phones and tablets, iOS and Android. No web. Sits alongside
 [`typography.md`](./typography.md) — the two interlock, because the reason text never scales
-on a breakpoint is the same reason a card never gets wider on one.
+on a breakpoint is the same reason a card never gets wider on one. What a screen *looks* like is
+[`visual-language.md`](./visual-language.md); this file is how it fills the width it is given.
 
 ## Rules
 
-1. Never set a card's width or height. Set a minimum width and derive the column count.
+1. Never set a card's width or height. Set a minimum width and derive the column count. Panes and
+   chrome — the rail, a form's section list, the register's item pane — are not cards; their widths
+   are the named constants in §9.
 2. Derive that count from the **container's** measured width via `onLayout`. Never make a layout
    decision from `useWindowDimensions()`, and never call `Dimensions.get()` at module scope.
 3. On a wider container, grid cards get **more columns**. Row cards get a **second pane** — never
@@ -14,10 +17,14 @@ on a breakpoint is the same reason a card never gets wider on one.
 4. Changing `numColumns` on a `FlatList` requires changing its `key` in the same render. `FlashList`
    does not, and takes neither `columnWrapperStyle` nor `estimatedItemSize` — §3.
 5. Fix an image's `aspectRatio`, never its pixel height. Cap text with `numberOfLines`.
-6. Give single-column content `maxWidth: 640, alignSelf: 'center'`.
+6. Content fills its pane and stays left-aligned. A form is a two-column field grid on a wide pane
+   and one column on a narrow one. Only running prose gets a maximum measure, and it is left-aligned
+   too — never `alignSelf: 'center'`.
 7. Never use `Card.Cover` in a grid — it hardcodes `height: 195`. Never render `Dialog` without an
    explicit `maxWidth` — it has none of its own.
-8. No `isTablet`, no breakpoint constants, no separate tablet screens.
+8. Exactly one width threshold, `WIDE_MIN`, measured with `onLayout` on the merchant shell's root
+   container. It picks between the five pairs in §9 and nothing else. No `isTablet`, no device
+   checks, no second breakpoint, no separate tablet screens.
 
 The rest of this file is why. Read it before overriding a rule, not before following one.
 
@@ -31,7 +38,8 @@ The rest of this file is why. Read it before overriding a rule, not before follo
 6. [Paper components that need handling](#6-paper-components-that-need-handling)
 7. [Images](#7-images)
 8. [What changes on a tablet](#8-what-changes-on-a-tablet)
-9. [What is deliberately not here](#9-what-is-deliberately-not-here)
+9. [One threshold, five pairs](#9-one-threshold-five-pairs)
+10. [What is deliberately not here](#10-what-is-deliberately-not-here)
 
 ---
 
@@ -46,9 +54,13 @@ many fit:
 columns = floor(availableWidth / minCardWidth)
 ```
 
-A phone gets two, a small tablet three or four, a large tablet five or six — with no breakpoint
-constant, no device check, and no `isTablet` anywhere in the codebase. It also survives split-screen
-and Stage Manager, which a screen-width breakpoint does not (§4).
+A phone gets two, a small tablet three or four, a large tablet five or six — with no threshold, no
+device check, and no `isTablet` anywhere in the codebase. It also survives split-screen and Stage
+Manager, which a screen-width breakpoint does not (§4).
+
+Column count is the case that needs no constant at all. Switching one anatomy for another — a drawer
+for a rail, a card list for a table — cannot be derived from a width the same way, and gets exactly
+one named threshold instead (§9).
 
 The corollary, and the reason this file exists next to `typography.md`: growing a card on a tablet has
 the same failure as growing type on a tablet. Reading distance did not change. Available room did.
@@ -66,7 +78,8 @@ Treating these the same is the most common mistake in this layout.
 
 A row card stretched across 1000dp is unreadable for exactly the measure reason a 110-character line
 is. When a list of rows gets a tablet, it becomes **list on the left, detail on the right**, not
-fatter rows.
+fatter rows. The Register mockup is this rule drawn out: the item pane, the cart and the payment
+block sit side by side on a tablet rather than one wide list.
 
 With `expo-router` that is: render both panes when the container is wide, push a route when it is
 narrow. Same screens, same route table — the wide branch renders the detail component directly
@@ -174,6 +187,9 @@ That last one matters: without a cap, a 200% accessibility setting turns a four-
 card per screen. Cap what is scanned, never what is read — detail views, forms and dialogs stay
 uncapped. Same division as `typography.md` §5.
 
+Controls are not cards. A quantity stepper's buttons, a toggle, a thumbnail in a table row and the
+44dp touch target can have fixed sizes; they hold one glyph or one image, not text that grows.
+
 ---
 
 ## 6. Paper components that need handling
@@ -190,7 +206,8 @@ padding inside it; you will get 32.
 
 **`Dialog` has no maximum width.** Its container is `marginHorizontal: Math.max(left, right, 26)`
 (`Dialog/Dialog.js:95`) — safe-area aware, but on a 1000dp tablet a confirmation dialog spans ~950dp.
-Always pass `style={{ maxWidth: 560, alignSelf: 'center' }}`.
+Always pass `style={{ maxWidth: 560, alignSelf: 'center' }}`. A dialog is a floating surface, so
+centring it on the screen is not the content centring rule 6 forbids.
 
 **`Card` is a `Surface`, and `patches/react-native-paper+5.15.3.patch` exists because of it** — the
 patch adds `flexGrow` to the iOS `Surface` flex computation, without which a card in a flex row would
@@ -206,7 +223,8 @@ targets stay at a 44dp minimum regardless of density.
 
 **`DataTable` is a tablet component.** A table with more than three columns does not work on a phone.
 The responsive move is: `List.Item` or cards on a narrow container, `DataTable` on a wide one — the
-same data, two presentations, chosen by measured width.
+same data, two presentations. For the Merchant screens that choice is one of §9's pairs, not a
+per-screen measurement.
 
 **`List.Item` sits outside the theme** — it reads a raw `fontSize` from its own stylesheet rather
 than a variant (`typography.md` §3). Restyle through `titleStyle` / `descriptionStyle` if it drifts
@@ -247,26 +265,95 @@ baked into a signed token and cannot be changed afterwards.
 
 | Changes | Stays fixed |
 | --- | --- |
-| Column count | Type scale — always a Paper variant |
-| Gutters and padding (two steps, not a ramp) | Corner radius, border width, elevation |
-| List becomes list-detail | Icon sizes |
-| Visible table columns | Touch target minimums (44dp) |
-| Actions inline vs. in a menu | Image aspect ratios |
+| Which anatomy renders (§9) | Type scale — always a Paper variant |
+| Column count | Corner radius (0), border width, elevation |
+| Gutters and padding (two steps, not a ramp) | Icon sizes |
+| List becomes list-detail | Touch target minimums (44dp) |
+| Visible table columns | Image aspect ratios |
+| Form field grid: two columns or one | Alignment — left, everywhere |
 
-And one clamp that applies on every screen size: **single-column content gets a maximum measure.** A
-form, a detail pane, a settings list — `maxWidth: 640, alignSelf: 'center'`. Without it a text field
-spans the full width of an iPad and reads as broken.
+**Nothing is centred.** A form, a detail pane or a settings list fills its pane from the left edge.
+Only running prose — a description, a paragraph of help — gets a maximum measure, `maxWidth: 640` on
+its container with no `alignSelf`, so a paragraph still does not run 110 characters across an iPad.
 
 ---
 
-## 9. What is deliberately not here
+## 9. One threshold, five pairs
 
-**No breakpoint constants and no `isTablet`.** Column count is derived from measured width. A device
-class is a worse proxy for available space than the space itself, and it is wrong the moment the app
-is not full-screen.
+The Merchant mockups draw every screen twice, and the two drawings are different anatomies, not the
+same anatomy at two widths:
 
-**No separate tablet screens.** One screen, one route, a branch on measured width where the layout
-genuinely differs. Two copies of a screen drift within a month.
+| Narrow | Wide | Where |
+| --- | --- | --- |
+| Drawer, off-canvas behind the menu button | Rail, permanent, collapsible to icons | the shell |
+| Card list | `DataTable` with bulk select | Products and Discounts lists |
+| Stepper: "Step n of N", Next, a progress bar | Section list beside the field grid | Products and Discounts forms |
+| Items / Cart tabs, a Charge bar, payment in a bottom sheet | Items pane, cart and payment side by side | Register |
+| Bottom sheet | Dialog | confirms and pickers |
+
+Five pairs is five places a width decision is made, and they must all agree. A drawer beside a
+`DataTable`, or a rail over a stepper, is a state no mockup draws.
+
+So the decision is made once, on the shell's root container, and handed to the screens under it. It
+is not recomputed by each screen from its own pane: a screen's pane is narrower than the shell by the
+rail's width, so a per-screen measurement flips at a different point from the shell's.
+
+The shell layout is an expo-router `Drawer` with `drawerType: 'permanent'` when wide and `'front'`
+when narrow. The vendored navigator accepts both
+(`expo-router/build/react-navigation/drawer/types.d.ts:117`).
+
+The constants, beside `useColumns` in `src/lib/columns.ts`:
+
+```ts
+// ponytail: M3's "expanded" window class. Tune it on a real tablet.
+export const WIDE_MIN = 840;
+
+export const RAIL_EXPANDED = 116;  // icons + labels
+export const RAIL_COLLAPSED = 72;  // icons only, after the menu button
+export const DRAWER_WIDTH = 300;   // the narrow shell's off-canvas drawer
+export const SECTION_LIST = 210;   // a form's section list, wide only
+export const ITEM_PANE = 430;      // the register's items, wide only
+```
+
+`WIDE_MIN`, the two rail widths and `DRAWER_WIDTH` are in the file today, used by the shell.
+`SECTION_LIST` and `ITEM_PANE` get added with their first consumers, the Products form and Register.
+
+840 is roughly where the wide Register fits: 116 of rail, 430 of items, and a cart still wide enough
+for a line with its stepper and total. Portrait tablets below it — most iPads at 768–834 — get the
+narrow anatomy. That is a deliberate trade, and the constant is the knob if a real counter tablet
+says otherwise.
+
+### Why a constant is allowed here when §1 refuses one
+
+§1's refusal is about grids, where the column count follows from the width with no named number at
+all. An anatomy switch does not follow from anything; something has to name the point where a drawer
+becomes a rail. The rule keeps what made the refusal right: it is measured from a container, never
+the window or the device, and it is one number, not a ramp.
+
+### Rejected
+
+- **`useColumns` in every screen.** It measures each screen's own pane, so the shell and the screen
+  under it can disagree at the same width.
+- **`useWindowDimensions`.** Wrong under split-screen and Stage Manager, for the reasons in §4.
+- **A second threshold** for a middle layout. No mockup draws one.
+
+---
+
+## 10. What is deliberately not here
+
+**No `isTablet` and no device classes.** A device class is a worse proxy for available space than the
+space itself, and it is wrong the moment the app is not full-screen. The one threshold in §9 is a
+measured width, not a device.
+
+**No second threshold.** §9.
+
+**No separate tablet screens.** One screen, one route, a branch on the shell's measured width where
+the layout genuinely differs. Two copies of a screen drift within a month.
+
+**No centred content column.** The earlier `maxWidth: 640, alignSelf: 'center'` clamp was right for
+stock MD3. The Merchant mockups fill their panes and align everything left, and a centred form beside
+a left-aligned table reads as two different products. Prose keeps the measure without the centring
+(§8).
 
 **No `react-responsive` or equivalent.** It is a media-query library for the web. `onLayout` is the
 native answer and it needs no dependency.

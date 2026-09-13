@@ -7,8 +7,9 @@ together and explained inline.
 > How the pieces work — the file map, the client options, the session store, the route guard, the
 > sign-in paths and the frontend rules — is in [ARCHITECTURE.md](./ARCHITECTURE.md).
 >
-> The conventions for what you build on top — feature folders, the data layer, tenancy, layout and
-> typography — are in [`docs/`](./docs/), indexed in [CLAUDE.md §2](./CLAUDE.md#2-how-to-work-on-this).
+> The conventions for what you build on top — feature folders, the data layer, tenancy, layout,
+> typography and the visual language — are in [`docs/`](./docs/), indexed in
+> [CLAUDE.md §2](./CLAUDE.md#2-how-to-work-on-this).
 
 **Contents**
 
