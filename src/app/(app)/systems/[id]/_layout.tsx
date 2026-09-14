@@ -1,15 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import Drawer from 'expo-router/drawer';
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
-import { useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Appbar, Avatar, Button, Icon, Surface, Text, TouchableRipple } from 'react-native-paper';
 
-import { useMerchantsQuery } from '../../../../features/merchants/queries';
-import { DRAWER_WIDTH, RAIL_COLLAPSED, RAIL_EXPANDED, WIDE_MIN, useColumns } from '../../../../lib/columns';
+import { ShellMerchantContext, useMerchantsQuery } from '../../../../features/merchants/queries';
+import { DRAWER_WIDTH, RAIL_COLLAPSED, RAIL_EXPANDED, ShellWideContext, WIDE_MIN, useColumns } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import { useAppTheme } from '../../../../lib/theme';
+import { UnsavedGuardContext } from '../../../../lib/unsaved-guard';
+import type { LeaveGuard } from '../../../../lib/unsaved-guard';
 
 // The merchant shell (System-Context/Merchant-Page, M3-Analysis/BottomNav-NavRail.md): a header over
 // a NavigationRail on a wide container, or over an off-canvas drawer on a narrow one. Navigation is a
@@ -59,6 +61,9 @@ export default function SystemLayout() {
   const wide = columns > 1;
   // Only the rail collapses. The narrow drawer's open state belongs to the navigator instead.
   const [expanded, setExpanded] = useState(true);
+  // Filled by a destination with unsaved changes (the product form); the rail asks it before
+  // switching destination. See src/lib/unsaved-guard.ts.
+  const leaveGuard = useRef<LeaveGuard | null>(null);
 
   if (!merchant) {
     // The exit from every state below. dismissTo pops back to the systems list the anchor in
@@ -104,6 +109,11 @@ export default function SystemLayout() {
 
   return (
     <View style={styles.fill} onLayout={onLayout}>
+      {/* The width decision made above, handed to every destination so none re-measures it; and the
+          merchant, because a destination's own params do not carry the shell's id. */}
+      <ShellMerchantContext value={merchant}>
+      <UnsavedGuardContext value={leaveGuard}>
+      <ShellWideContext value={wide}>
       <Drawer
         // `layout` wraps the navigator itself (react-navigation/core/types.d.ts:21), which is what
         // puts the header above the rail at full width, and makes the front drawer and its scrim
@@ -137,6 +147,9 @@ export default function SystemLayout() {
           <Drawer.Screen key={destination.name} name={destination.name} />
         ))}
       </Drawer>
+      </ShellWideContext>
+      </UnsavedGuardContext>
+      </ShellMerchantContext>
     </View>
   );
 }
@@ -195,6 +208,7 @@ type NavProps = DrawerContentComponentProps & {
 // and as drawer rows when narrow. No system switcher — the way out of a system is Profile.
 function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
   const { colors } = useAppTheme();
+  const leaveGuard = useContext(UnsavedGuardContext);
   const active = state.routes[state.index]?.name;
   // The drawer always shows labels; the rail shows them only while expanded.
   const labelled = !wide || expanded;
@@ -226,7 +240,14 @@ function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
             key={destination.name}
             // The drawer router closes the front drawer on any route change (DrawerRouter.js:114-119),
             // so tapping a destination needs no separate close call.
-            onPress={() => navigation.navigate(destination.name)}
+            onPress={() => {
+              const go = () => navigation.navigate(destination.name);
+              // A destination with unsaved changes gets to confirm first. Tapping the destination
+              // already open switches nothing, so it is not asked.
+              const guard = leaveGuard.current;
+              if (guard && !isActive) guard(go);
+              else go();
+            }}
             accessibilityRole="button"
             accessibilityLabel={destination.label}
             accessibilityState={{ selected: isActive }}

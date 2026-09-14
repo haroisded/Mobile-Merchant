@@ -10,6 +10,11 @@
 • Interactives not yet Added
 • Status: In-Complete or Complete
 
+- Then test the page on the emulator per docs/testing-workflow.md: the run is tracked in
+  .claude/context/temp-fold, bugs are fixed and re-verified after the Flow, and the permanent
+  record goes to .claude/context/System-Test-History. Do NOT create a Tests.md (or test.md) in a
+  page directory - that rule is replaced. docs/device-testing.md covers driving the emulator.
+
 - system-context.txt holds the STANDING CONTEXT for each page, under one heading per page directory.
   It is the FIRST thing you read on any pass against a page, ahead of that page's own files. It
   describes UI that is present on every screen of a system, which a page spec written in isolation

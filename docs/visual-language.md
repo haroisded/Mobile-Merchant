@@ -175,7 +175,7 @@ component's corners: `Button/Button.tsx:283`, `SegmentedButtons/SegmentedButtonI
 | --- | --- |
 | 2px rule under a page header, above a totals block, between Home's sections | `View` with `height: 2` and `backgroundColor: onSurface` |
 | 1px rule between blocks | `outlineVariant`; between list rows, `surfaceVariant` |
-| Page header | `labelMedium` kicker in `accent`, `headlineMedium` title, a `bodySmall` count, a contained `Button`; the 2px rule below |
+| Page header | `labelMedium` kicker in `accent`, `headlineMedium` title, a `bodySmall` count, a contained `Button`; the 2px rule below — `src/components/PageHeader.tsx` |
 | Section heading inside a screen | `headlineSmall` plus a `bodySmall` hint on the same baseline |
 
 ### The shell
@@ -194,7 +194,8 @@ component's corners: `Button/Button.tsx:283`, `SegmentedButtons/SegmentedButtonI
 | --- | --- |
 | Wide list | `DataTable`: a `labelMedium` `Text` as each `DataTable.Title`'s child (the title sets no variant of its own — `DataTable/DataTableTitle.tsx` has none), a `Checkbox.Android` column for bulk select, `IconButton` row actions |
 | Narrow list | `FlashList` rows: thumbnail, `titleMedium` name, a badge, `bodySmall` meta, the amount right-aligned |
-| Bulk action bar | a `surfaceVariant` strip with text `Button`s; Delete in `error` |
+| Bulk action bar | a `surfaceVariant` strip: a clear `IconButton`, the count ("3 selected") in `labelLarge`, then text `Button`s; Delete in `error` |
+| Low-stock badge | `labelMedium` in `error` — a warning, so never `accent` |
 | Search | outlined dense `TextInput` with a `TextInput.Icon` search icon |
 | Filter and sort controls | an outlined `Button` anchoring a `Menu` |
 | Type badge | a `View` with a 1px `outlineVariant` border on `surfaceMuted`, holding `labelMedium` |
@@ -209,7 +210,12 @@ component's corners: `Button/Button.tsx:283`, `SegmentedButtons/SegmentedButtonI
 | Stepper (narrow) | "Step n of N" in `labelMedium`, `IconButton` back, a contained Next `Button`, a `ProgressBar` in `accent` |
 | Field label | `labelMedium` above the control, the `*` in `accent`, the hint in `bodySmall` on the right |
 | Text field | outlined dense `TextInput` with no floating `label`; `left` / `right` affixes carry `$` and units |
-| Select | an outlined `TextInput`, not editable, anchoring a `Menu` |
+| Select | an outlined `TextInput`, not editable, anchoring a `Menu` — `src/components/MenuSelect.tsx` |
+| Inline-create select (Category, Tax class, Supplier) | the Select with a last `Menu.Item` "+ New …" in `accent`, opening the confirm-or-picker dialog below; what is created comes back selected |
+| Date or time field | the Select's shape with a `calendar` or `clock` icon, opening `DateTimePicker` from `@expo/ui/community/datetime-picker` — Android's own dialog; on iOS the inline picker inside the dialog pattern, with Done |
+| Date list (Blackout dates) | `Chip`s with an `x` close icon, kept sorted, then an `accent` text `Button` "+ Add date" |
+| Weekly hours editor | seven rows split by 1px `surfaceVariant`: a `Switch` in `accent`, the `titleMedium` day, and opening / closing time fields while open; "Closed" in `onSurfaceFaint` |
+| Variant matrix row | one 1px `outlineVariant` box per combination: the `labelLarge` label ("Small · Hot"), then SKU, barcode, price difference and quantity in the field grid |
 | Segmented field (Status, Duration Type) | `SegmentedButtons` |
 | Toggle | Paper `Switch` with its on colour set to `accent`, and the on/off sentence as `bodyMedium` beside it |
 | Tags | `Chip`s in a wrapping row, then a text `Button` "+ add tag" |
@@ -225,6 +231,7 @@ component's corners: `Button/Button.tsx:283`, `SegmentedButtons/SegmentedButtonI
 | Detail card | `Card mode="outlined"`; its header strip is a `View` on `primary` holding `labelMedium` in `onPrimary`; key and value rows in `bodySmall` and `bodyMedium` |
 | Confirm or picker (wide) | `Portal` + `Dialog` with `maxWidth` ([`layout.md` §6](./layout.md#6-paper-components-that-need-handling)); the kicker in `accent`, or `error` for a delete |
 | Confirm or picker (narrow) | `Portal` + `Modal`, bottom-anchored, full width, with a 2px `primary` top rule |
+| Either of the two above | `src/components/AdaptiveDialog.tsx`, given the shell's width decision (`useShellWide()`) |
 
 ### Register
 

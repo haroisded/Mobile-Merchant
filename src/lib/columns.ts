@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 
 // ponytail: one number, tune it on a real tablet.
@@ -18,6 +18,18 @@ export const WIDE_MIN = 840;
 export const RAIL_EXPANDED = 116; // icons + labels
 export const RAIL_COLLAPSED = 72; // icons only, after the menu action
 export const DRAWER_WIDTH = 300; // the narrow shell's off-canvas drawer
+export const SECTION_LIST = 210; // a form's section list, wide only
+
+/**
+ * The shell's one width decision, handed to the screens under it (docs/layout.md §9).
+ *
+ * Provided by src/app/(app)/systems/[id]/_layout.tsx, which measures its root container once. A screen
+ * reads this instead of measuring its own pane: the pane is narrower than the shell by the rail, so a
+ * second measurement would flip the anatomy at a different width from the rail beside it.
+ */
+export const ShellWideContext = createContext(false);
+
+export const useShellWide = () => useContext(ShellWideContext);
 
 /**
  * Column count derived from the container's measured width.

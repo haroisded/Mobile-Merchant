@@ -315,8 +315,12 @@ export const SECTION_LIST = 210;   // a form's section list, wide only
 export const ITEM_PANE = 430;      // the register's items, wide only
 ```
 
-`WIDE_MIN`, the two rail widths and `DRAWER_WIDTH` are in the file today, used by the shell.
-`SECTION_LIST` and `ITEM_PANE` get added with their first consumers, the Products form and Register.
+`WIDE_MIN`, the two rail widths and `DRAWER_WIDTH` are in the file today, used by the shell, and
+`SECTION_LIST`, used by the Products form. `ITEM_PANE` gets added with its first consumer, Register.
+
+The decision reaches the screens through `ShellWideContext`, provided by the shell layout and read
+with `useShellWide()` — also in `src/lib/columns.ts`. A context rather than a prop because the
+screens are routes: the shell renders them through the navigator and has no props to pass.
 
 840 is roughly where the wide Register fits: 116 of rail, 430 of items, and a cart still wide enough
 for a line with its stepper and total. Portrait tablets below it — most iPads at 768–834 — get the

@@ -91,6 +91,8 @@ so you use it rather than build a second one:
 | [`docs/typography.md`](./docs/typography.md) | the nine Paper `Text` variants, no type at a call site |
 | [`docs/visual-language.md`](./docs/visual-language.md) | the Merchant mockups → theme colours, the accent, icons, and the Paper piece for each pattern |
 | [`docs/migrations.md`](./docs/migrations.md) | revert files, and the generated all-in-one ADD / REVERT SQL |
+| [`docs/device-testing.md`](./docs/device-testing.md) | testing a page or feature on the emulator — the human opens it, the agent drives it with `adb` |
+| [`docs/testing-workflow.md`](./docs/testing-workflow.md) | running a test Flow: temp-fold tracking, the bug-fix loop, System-Test-History, silent operation |
 
 Record a rejected option alongside the chosen one wherever the reasoning lives. A rule without its
 rejected alternative gets re-litigated.

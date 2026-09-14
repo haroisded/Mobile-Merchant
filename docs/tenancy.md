@@ -8,8 +8,8 @@ How rows are scoped to a business, and the shape every RLS policy on a business 
 
 **What this file governs:** `merchant_members`, roles, and every business table that carries a
 `merchant_id`. Read §3 before writing the first of those — designing it against the wrong model is
-the one mistake in this area that is expensive to undo, and the function its policies must call is
-already sitting there with no caller.
+the one mistake in this area that is expensive to undo, and the function its policies must call
+already exists — the product catalogue's tables are its first callers.
 
 ## Rules
 
@@ -115,9 +115,9 @@ now" — which is exactly the rewrite-every-table cost §2 exists to avoid.
 **Trigger condition:** the moment the first business table is being written, the merchant migration
 goes in ahead of it, in the same sitting. Not before then — there is nothing for it to protect.
 
-**Nothing blocks the first business table.** Both prerequisites are in place and
-`current_merchant_ids()` has no caller yet, so go straight to the table: give it a `not null
-merchant_id`, and give every one of its policies the shape below.
+**The first business tables exist.** `20260914092147_products.sql` added the product catalogue —
+`products`, its categories, tax classes, suppliers and six child tables — each with a `not null
+merchant_id` and every policy in the shape below. Copy that migration's shape for the next table.
 
 ### One table, not two
 
@@ -153,6 +153,21 @@ That function satisfies all three requirements in
 so PostgREST never publishes it at `/rest/v1/rpc/`, `search_path` pinned with a fully-qualified body,
 and its own `(select auth.uid())` check inside — so it cannot be made to answer for anyone but its
 caller. `stable` lets the planner call it once per statement rather than once per row.
+
+**Then grant it to `authenticated`, and only to it.** A policy expression runs as the querying role,
+so a policy that calls this function needs that role to hold `usage` on `private` and `execute` on
+the function. The revoke above removes both, and on this project `authenticated` held neither
+(`has_schema_privilege` and `has_function_privilege` both false, 2026-09-14) — so the first policy to
+call it would have refused every read. `20260914092147_products.sql` adds the two grants, and its
+revert takes them back:
+
+```sql
+grant usage on schema private to authenticated;
+grant execute on function private.current_merchant_ids() to authenticated;
+```
+
+This does not publish the function: PostgREST serves only the schemas it is configured to expose,
+and `private` is not one. `anon` and `service_role` keep no grant.
 
 ### The policy every business table gets
 

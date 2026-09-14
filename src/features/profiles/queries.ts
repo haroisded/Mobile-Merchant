@@ -23,9 +23,10 @@ export function useProfileQuery() {
       // maybeSingle, not single. The signup trigger creates this row, so in practice it is always
       // there — but `single()` throws when it is not, which would turn a missing profile into a
       // hard error on a screen that could simply fall back to the session's own metadata.
-      const { data, error } = await supabase.from('profiles').select('*').maybeSingle();
+      //
+      // throwOnError() throws a real PostgrestError; see the note in merchants/queries.ts.
+      const { data } = await supabase.from('profiles').select('*').maybeSingle().throwOnError();
 
-      if (error) throw error;
       return data;
     },
 

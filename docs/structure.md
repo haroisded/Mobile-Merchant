@@ -160,14 +160,15 @@ src/app/(app)/systems/[id]/products/     list, detail, create and edit routes
 src/app/(app)/systems/[id]/discounts/
 ```
 
-The shell and Home exist. Register, Dashboard, Products, Discounts, Employees, Features and Audit are
-one-line stub files (`register.tsx`, `products.tsx`, …) until their screens are built; `products.tsx`
-and `discounts.tsx` then become the directories above. The code behind those routes goes by
-resource, as above:
+The shell, Home and Products exist. Register, Dashboard, Discounts, Employees, Features and Audit are
+one-line stub files (`register.tsx`, `discounts.tsx`, …) until their screens are built;
+`discounts.tsx` then becomes the directory above, as `products.tsx` became `products/`. The code
+behind those routes goes by resource, as above:
 
 | The mockup calls it | Put it in |
 | --- | --- |
-| Products list, form, detail, archive dialog | `src/features/products/` |
+| Products list, form, detail, archive dialog | `src/features/products/` — the form's sections and fields in `form/`, past eight files |
+| Category, tax class and supplier pickers, and their sections of the Products Setup screen | `src/features/categories/`, `tax-classes/`, `suppliers/` — three tables, three folders; the `setup.tsx` route only stacks the sections |
 | Discounts list, form, detail, archive dialog | `src/features/discounts/` |
 | Register's cart, held sales, payment, receipt | `src/features/sales/` — a sale is the resource, Register is the page |
 | The rail and header | `src/app/(app)/systems/[id]/_layout.tsx` |
@@ -246,14 +247,17 @@ So a shared component's home is `src/components/`, created on the day the second
 not before. Two lines of policy, no taxonomy — which is the whole answer, and the reason no directory
 structure has to encode it.
 
-### The first case is already in view
+### The first case
 
 Products and Discounts draw the same anatomy: a list header, a table or card list with bulk select, a
 type selector, a section list or stepper, a field grid, detail cards and an archive dialog.
 
-Build Products with those pieces inside `src/features/products/`. When Discounts is built, lift the
-pieces it actually reuses into `src/components/` in that same pass. Not before: the second screen is
-what shows which parts really repeat, and a kit designed from one screen guesses at the other.
+Products was built with those pieces inside `src/features/products/`. Three left in the same pass,
+because a second screen already needed them: `PageHeader` and `AdaptiveDialog` (the Setup screen
+draws the first, each of its sections' delete confirms the second) and `MenuSelect` (the category, tax class and supplier pickers,
+three folders). Those are `src/components/` today. The field grid, badges and section list stay in
+`features/products/` until Discounts shows which of them really repeat — lift those in that pass,
+not before: a kit designed from one screen guesses at the other.
 
 ---
 

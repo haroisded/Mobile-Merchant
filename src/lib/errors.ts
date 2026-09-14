@@ -1,3 +1,4 @@
+import { PostgrestError } from '@supabase/supabase-js';
 import { onlineManager } from '@tanstack/react-query';
 
 // What a failed action puts on screen when there is no connection. One string, because the cause is
@@ -22,4 +23,19 @@ export const OFFLINE_MESSAGE = "You're offline. Reconnect and try again.";
  */
 export function failureMessage(fallback: string): string {
   return onlineManager.isOnline() ? fallback : OFFLINE_MESSAGE;
+}
+
+/**
+ * The PostgREST error behind a failed call, so a screen can choose its copy for a case it expects —
+ * `23505` a duplicate name, `23503` a row still in use — without ever rendering the message itself.
+ *
+ * `instanceof` rather than probing the shape, which only works because every query ends in
+ * `.throwOnError()`. postgrest-js constructs the PostgrestError class only on that path
+ * (dist/index.mjs:506, :526); the `error` a call returns without it is a plain object, and a thrown
+ * copy of that is never an instance — which silently sent every caller to the generic copy until the
+ * Products device run caught it. Anything else (a dropped connection, an Error thrown in a queryFn) is
+ * correctly "not one": null, and the caller falls back to failureMessage's copy.
+ */
+export function postgrestError(cause: Error | null): PostgrestError | null {
+  return cause instanceof PostgrestError ? cause : null;
 }
