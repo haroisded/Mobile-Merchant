@@ -32,6 +32,8 @@ together and explained inline.
 - **Session handling** in one zustand store — restore, auto-refresh, sign-out
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
+- **A merchant shell with its first business screens** — Products: list, stepped create / edit form,
+  detail, archive and delete, and Setup for categories, tax classes and suppliers
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -120,12 +122,14 @@ session back to the app. The second is the Expo web dev server.
 
 ### Database schema
 
-`supabase/migrations/` holds two tables. `profiles` is keyed to `auth.users` and carries its RLS
-policies, a trigger that creates the profile row on signup, and `delete_current_user()` — the
-function behind the **Delete account** button, since the App Store requires in-app account deletion
-(Guideline 5.1.1(v)) and no client-side key may write to `auth.users`. `merchants` is the tenant
-table — one business per row — with its own policies and `private.current_merchant_ids()`, the
-function every future business table's policies will call.
+`supabase/migrations/` holds the person, the tenant and the first business tables. `profiles` is
+keyed to `auth.users` and carries its RLS policies, a trigger that creates the profile row on signup,
+and `delete_current_user()` — the function behind the **Delete account** button, since the App Store
+requires in-app account deletion (Guideline 5.1.1(v)) and no client-side key may write to
+`auth.users`. `merchants` is the tenant table — one business per row, with its currency — with its
+own policies and `private.current_merchant_ids()`, the function every business table's policies call.
+The product catalogue is the first set of them: categories, tax classes, suppliers, products and
+their child rows, saved through `save_product()` — `ARCHITECTURE.md` describes each.
 
 ```bash
 supabase link --project-ref <ref>

@@ -213,12 +213,12 @@ component's corners: `Button/Button.tsx:283`, `SegmentedButtons/SegmentedButtonI
 | Select | an outlined `TextInput`, not editable, anchoring a `Menu` — `src/components/MenuSelect.tsx` |
 | Inline-create select (Category, Tax class, Supplier) | the Select with a last `Menu.Item` "+ New …" in `accent`, opening the confirm-or-picker dialog below; what is created comes back selected |
 | Date or time field | the Select's shape with a `calendar` or `clock` icon, opening `DateTimePicker` from `@expo/ui/community/datetime-picker` — Android's own dialog; on iOS the inline picker inside the dialog pattern, with Done |
-| Date list (Blackout dates) | `Chip`s with an `x` close icon, kept sorted, then an `accent` text `Button` "+ Add date" |
+| Date list (Blackout dates) | `Chip`s with an `x` close icon, kept sorted, then an `accent` text `Button` "+ Add date"; "Remove …" goes on `closeIconAccessibilityLabel`, never the chip body |
 | Weekly hours editor | seven rows split by 1px `surfaceVariant`: a `Switch` in `accent`, the `titleMedium` day, and opening / closing time fields while open; "Closed" in `onSurfaceFaint` |
 | Variant matrix row | one 1px `outlineVariant` box per combination: the `labelLarge` label ("Small · Hot"), then SKU, barcode, price difference and quantity in the field grid |
 | Segmented field (Status, Duration Type) | `SegmentedButtons` |
 | Toggle | Paper `Switch` with its on colour set to `accent`, and the on/off sentence as `bodyMedium` beside it |
-| Tags | `Chip`s in a wrapping row, then a text `Button` "+ add tag" |
+| Tags | `Chip`s in a wrapping row, then a text `Button` "+ add tag"; each chip's "Remove …" label goes on `closeIconAccessibilityLabel` — on the chip itself it names a body that does nothing |
 | Repeatable rows (Rate Tiers, Components) | rows with a remove `IconButton`, then an `accent` text `Button` "+ Add …" |
 | Note callout | a `View` with a 3px left border in `accent` (or `error` for a warning) on `surfaceMuted`, holding `bodySmall` |
 | Save as Draft / Publish | an outlined and a contained `Button`; pinned to the bottom edge on narrow |

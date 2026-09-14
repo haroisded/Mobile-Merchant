@@ -274,11 +274,15 @@ removes.
 
 ## 6. The database
 
-`supabase/migrations/` holds two tables — `public.profiles` (the person) and `public.merchants` (the
-tenant) — with their policies, the signup trigger, `public.delete_current_user()`,
-`private.current_merchant_ids()`, and `private.rls_auto_enable()` — the function behind an event
-trigger that hosted Supabase will not let this project install (§6.1). Each migration has a revert
-in `supabase/reverts/` (§6.6).
+`supabase/migrations/` holds `public.profiles` (the person) and `public.merchants` (the tenant, with
+its `currency`) — with their policies, the signup trigger, `public.delete_current_user()`,
+`private.current_merchant_ids()`, and `private.rls_auto_enable()`, the function behind an event
+trigger that hosted Supabase will not let this project install (§6.1) — and the product catalogue,
+the first business tables: `product_categories`, `tax_classes`, `suppliers`, `products` and six
+child tables, `public.save_product()`, and `private.assert_no_bundle_cycle()`. The catalogue's
+policies are the first callers of `current_merchant_ids()`, which is why `authenticated` holds
+`usage` on `private` and `execute` on that function (`docs/tenancy.md` §3). Each migration has a
+revert in `supabase/reverts/` (§6.6).
 `ARCHITECTURE.md` describes what they do; `docs/tenancy.md` covers the tenancy model and what is
 still ahead of it. The rules below are what must not be broken when adding to them.
 

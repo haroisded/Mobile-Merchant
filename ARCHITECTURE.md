@@ -388,6 +388,15 @@ chosen by hand are all destructive or category actions reading `useTheme().color
 **Remove** on `src/features/merchants/SystemCard.tsx` — plus the merchant shell, whose header and
 rail sit on `primary` and mark the active item with `accent`, read through `useAppTheme()`.
 
+The shell (`src/app/(app)/systems/[id]/_layout.tsx`) hands three things to every destination through
+context, because the screens under it are routes and receive no props from it:
+`ShellWideContext` (`src/lib/columns.ts`) — the one wide/narrow decision, measured on the shell's
+root; `ShellMerchantContext` (`src/features/merchants/queries.ts`) — the system being shown, since the
+rail navigates with no params and a destination's own params carry no id; and
+`UnsavedGuardContext` (`src/lib/unsaved-guard.ts`) — a ref a screen with unsaved changes fills, which
+the rail asks before switching destination, because a drawer switch removes nothing for
+`usePreventRemove` to catch.
+
 ### The data layer
 
 `src/lib/query.ts` builds the `QueryClient` (`retry: false`, `refetchOnWindowFocus: false`) and, at

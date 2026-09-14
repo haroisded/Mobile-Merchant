@@ -23,6 +23,8 @@ accident. Which directories these files may live in is [`structure.md`](./struct
 9. Check `isPaused` **before** `isPending`, and never show a provider's error string. Offline
    requests are queued, not failed, so `isPending` alone renders a spinner that never ends; and a
    failed one renders copy written for the user through `failureMessage` (`src/lib/errors.ts`). §5.
+10. End every `supabase.from(...)` and `supabase.rpc(...)` call with `.throwOnError()`. Never
+    `const { data, error } = …; if (error) throw error`. §3.
 
 The rest of this file is why. Read it before overriding a rule, not before following one.
 
@@ -121,6 +123,20 @@ wrap one call is the abstraction to delete, not to add.
 
 So `queries.ts` holds the key factory, the hooks, and the `supabase.from(...)` / `supabase.rpc(...)`
 calls, and nothing outside that file knows a table name.
+
+**End every call with `.throwOnError()`.** supabase-js resolves rather than rejects on an API error,
+so a query function has to throw for TanStack Query to see the failure — and the obvious way,
+`const { data, error } = await …; if (error) throw error`, throws the wrong thing. postgrest-js
+constructs a `PostgrestError` only when `throwOnError()` is set (`dist/index.mjs:482, :506, :526`);
+without it the `error` it hands back is a plain object (`:480, :494, :513`). Throwing that gives
+TanStack Query a value with no stack that is not an `Error`, and it fails the `instanceof` in
+`postgrestError()` (`src/lib/errors.ts`) — which is how, until the Products device run caught it,
+every code-specific message (a duplicate name, a SKU clash, a row still in use) silently fell back to
+the generic one. `.throwOnError()` also narrows `data` to non-null in the generated types.
+
+Rejected: teaching `postgrestError()` to accept any object with a `code`. It would work for the copy,
+and leave the app throwing non-`Error` values into the query cache. `src/lib/auth.ts` is outside this
+rule — auth-js returns its own error classes, and its call sites keep their explicit checks.
 
 **Do generate the client types.** `supabase gen types typescript --linked > src/lib/database.types.ts`,
 then `createClient<Database>(...)`. Every `.from('products').select()` becomes typed end to end from
