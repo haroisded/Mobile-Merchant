@@ -25,9 +25,10 @@ This file is only how to exercise both on a running app without paying for the b
 7. End with a report: what was exercised, pass or fail per layer, every irreversible action taken,
    and what stayed unverified with what would verify it. The same goes into the pass's
    System-History entry under **Verification**.
-8. This file is the mechanics. How a run is organised — which cases, the temp-fold tracking files,
-   the bug-fix loop, the circuit breaker, System-Test-History, silent operation — is
-   [`testing-workflow.md`](./testing-workflow.md). No `Tests.md` goes in a page directory.
+8. This file is the mechanics. How a run is organised — which cases, the temp-fold files
+   (`flow-*.md`, `findings-*.md`), the findings loop the device Flow feeds, the circuit breaker,
+   System-Test-History, silent operation — is [`testing-workflow.md`](./testing-workflow.md). A failed
+   case is logged as a finding, never fixed mid-Flow. No `Tests.md` goes in a page directory.
 
 The rest of this file is why, and the commands. Read it before overriding a rule, not before
 following one.
@@ -90,8 +91,10 @@ from SQL written by the agent.
 
 **App — the states around the screen.**
 
-- The route guard: signing in and out moves the user with no router call (`ARCHITECTURE.md`, The
-  route guard).
+- The auth flow: sign-in, sign-out and Delete account, and what the screen does across each. The
+  cases and when they are mandatory are [`testing-workflow.md` §11](./testing-workflow.md) — one
+  list, not two. This bullet used to carry the whole rule and was skipped for the whole of
+  `test-001`, which is why the rule moved to the file that decides what a Flow must contain.
 - Back navigation: the Android back chain, Profile back versus Back to your systems.
 - Offline: turn the network off and confirm the paused copy renders instead of an endless spinner
   (`data-layer.md` §5), then turn it on and confirm a queued write lands.

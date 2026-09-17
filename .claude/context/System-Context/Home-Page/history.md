@@ -109,6 +109,25 @@ pass:
   change the case of the system name the user has to type exactly.
 - **The SystemCard tap destination** is now the Merchant-Page shell, at its Home destination.
 
+### version 5 — the app bar's leading circle becomes the Merchant's logo (System-History 11.1)
+
+- **The leading slot is a logo, not an avatar.** `Avatar.Icon icon="account"` wrapped in a
+  `TouchableRipple` is replaced by `Avatar.Text label=""` — Paper's own circle with no glyph and no
+  initials. The human's instruction: it is the Merchant's logo, and a blank logo has no features.
+- **It is no longer a control.** The `TouchableRipple` and its `openAccount` handler are gone,
+  because a brand mark that opens a screen is the confusion this replaces. Nothing is stranded:
+  Account is the last tab of the Navigation Bar on a narrow container, and the bar's own
+  `Appbar.Action icon="account-circle"` 🏁 on a wide one. **This supersedes the version 1 line
+  above** — "the account action ✅ and the avatar both open the Account tab" recorded what version 1
+  shipped and stays as the log of it; only the account action still does.
+- **No `borderRadius` by hand.** The ripple wrapper needed one to stay circular; `Avatar.Text` is
+  round through Paper's own stylesheet. `styles.avatar` (`borderRadius: 18, marginLeft: 8`) becomes
+  `styles.logo` (`marginLeft: 8`). `docs/visual-language.md` §7 is what permits a round identity mark
+  under `roundness: 0`.
+- **Standing context written.** `system-context.txt` gained its Home-Page section — the page's scope,
+  its single width branch, this logo rule, and that `CreateSystemModal` is the only writer of a
+  merchant row.
+
 ## Where the code lives
 
 There is no `features/home/` folder. A page maps onto however many **resource** folders it touches,
@@ -217,6 +236,16 @@ Nothing on this page was newly left inert. One visible inconsistency is left in 
   unfocused state draws MaterialCommunityIcons (`home-outline`, `bell-outline`). Renaming the tab
   icons to one set is a Home-Page change nobody asked for in this pass.
 
+### version 5
+
+- **The logo itself.** The circle is blank because nothing in the schema carries a logo: `merchants`
+  has `name`, `address`, `category`, `contact_email`, `phone` and `currency`, and `profiles` has
+  `avatar_url` — a person's photo, not a business's mark. Rendering it is one swap to
+  `Avatar.Image source={{ uri }}`, marked with a `ponytail:` comment at the call site so
+  `/ponytail-debt` harvests it. No column was added on spec: where a logo would be stored, and
+  whether it is per-merchant or one brand mark for the app, is not settled — and the Home-Page lists
+  every merchant, so it cannot be showing any one of them.
+
 ## Deviations from the M3 analysis
 
 Resolved in favour of the project rules, which are authoritative:
@@ -246,7 +275,14 @@ same layer.
 **In-Complete** (through version 3) — every priority interaction is wired, including all of the
 revamped CreateSystemModal and all of RemoveSystemDialog, and their markers in
 `Interactives ( Priority ).md` are 🏁. The 10 controls still listed as inert render by design,
-waiting for the filter to promote them. Version 4 added no interactive.
+waiting for the filter to promote them. Version 4 added no interactive. Version 5 **removed** one —
+the app bar avatar's tap-to-Account — because that circle is now the Merchant's logo and not a
+control; `Interactives.md` item 2 was rewritten to match, and Account keeps two routes in (the
+Account tab, and the wide bar's own action 🏁).
+
+**Untested on a device** — versions 1–4 were exercised on the emulator, version 5 has not been. It is
+also the first Home-Page change to land under the Authentication Compatibility rule
+(`docs/testing-workflow.md` §11), and that rule has never been run against this page at all.
 
 **Version 4 is not re-verified on a device.** The theme foundation changes every screen on this page:
 square corners, the smaller type, uppercase `labelMedium`, and Feather glyphs. Only typecheck, lint

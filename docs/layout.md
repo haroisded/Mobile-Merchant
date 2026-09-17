@@ -25,6 +25,11 @@ on a breakpoint is the same reason a card never gets wider on one. What a screen
 8. Exactly one width threshold, `WIDE_MIN`, measured with `onLayout` on the merchant shell's root
    container. It picks between the five pairs in §9 and nothing else. No `isTablet`, no device
    checks, no second breakpoint, no separate tablet screens.
+9. Space with `gap` between siblings and `padding` inside a container, never margins between
+   siblings. Every value is a step on the 4-point scale in §11.
+10. Anything this file does not rule on — list performance, images, safe areas, keyboard, scroll
+    insets — follows the React Native and Expo skills. Where a skill contradicts a rule here, this
+    file wins. §12.
 
 The rest of this file is why. Read it before overriding a rule, not before following one.
 
@@ -40,6 +45,8 @@ The rest of this file is why. Read it before overriding a rule, not before follo
 8. [What changes on a tablet](#8-what-changes-on-a-tablet)
 9. [One threshold, five pairs](#9-one-threshold-five-pairs)
 10. [What is deliberately not here](#10-what-is-deliberately-not-here)
+11. [Spacing](#11-spacing)
+12. [Skills, and where this file overrides them](#12-skills-and-where-this-file-overrides-them)
 
 ---
 
@@ -103,14 +110,14 @@ function useColumns(minWidth = MIN_CARD) {
 }
 ```
 
-With `FlatList`:
+General list performance — virtualizing, memoized items, stable callbacks, item types, images in
+rows — is not restated here. It is `vercel-react-native-skills` (`list-performance-*`) and the
+Callstack `react-native-best-practices` skill (`js-lists-flatlist-flashlist`). What follows is only
+what those do not say, or say wrong for the versions installed here.
 
-- `numColumns={columns}` **and `key={columns}`**. React Native throws on a `numColumns` change
-  without a key change forcing a remount — this is not optional.
-- Item style `flex: 1`, `columnWrapperStyle={{ gap: 12 }}`. `gap` is native in React Native 0.86; no
-  margin arithmetic.
-- **A final row with fewer items will stretch them across the full width.** Either pad the data with
-  blank placeholders, or give the item `flexBasis: \`${100 / columns}%\`` instead of `flex: 1`.
+With `FlatList`: `numColumns={columns}` **and `key={columns}`** (rule 4 — React Native throws
+otherwise), `columnWrapperStyle={{ gap }}`, and a partial last row stretches unless the item takes
+`flexBasis: \`${100 / columns}%\`` instead of `flex: 1`.
 
 ### With `FlashList`, which is what the merchants grid uses
 
@@ -234,11 +241,9 @@ from the scale.
 
 ## 7. Images
 
-`expo-image` is already a dependency and this is where it earns its place.
-
-- `contentFit="cover"` inside a `View` with `aspectRatio` — never a fixed pixel height.
-- Set a `placeholder` so the grid does not jump as images resolve.
-- Its disk cache is what makes scrolling a catalog twice cheap.
+Use `expo-image`, per `vercel-react-native-skills` `ui-expo-image` and `list-performance-images`,
+which cover placeholders, caching and list rows. The one addition here: `contentFit="cover"` inside a
+`View` with `aspectRatio`, never a fixed pixel height (§5).
 
 **Request the size you will display.** Downloading a 3000px product photo to render it at 180dp is
 the largest single performance mistake available in a card grid. Supabase Storage transforms on read:
@@ -266,7 +271,7 @@ baked into a signed token and cannot be changed afterwards.
 | Changes | Stays fixed |
 | --- | --- |
 | Which anatomy renders (§9) | Type scale — always a Paper variant |
-| Column count | Corner radius (0), border width, elevation |
+| Column count | Corner radius (theme `roundness`), border width, elevation |
 | Gutters and padding (two steps, not a ramp) | Icon sizes |
 | List becomes list-detail | Touch target minimums (44dp) |
 | Visible table columns | Image aspect ratios |
@@ -289,7 +294,7 @@ same anatomy at two widths:
 | Card list | `DataTable` with bulk select | Products and Discounts lists |
 | Stepper: "Step n of N", Next, a progress bar | Section list beside the field grid | Products and Discounts forms |
 | Items / Cart tabs, a Charge bar, payment in a bottom sheet | Items pane, cart and payment side by side | Register |
-| Bottom sheet | Dialog | confirms and pickers |
+| Native `formSheet` | Paper `Dialog` | confirms and pickers |
 
 Five pairs is five places a width decision is made, and they must all agree. A drawer beside a
 `DataTable`, or a rail over a stepper, is a state no mockup draws.
@@ -363,3 +368,53 @@ a left-aligned table reads as two different products. Prose keeps the measure wi
 native answer and it needs no dependency.
 
 **No fixed card heights, anywhere.** §5.
+
+---
+
+## 11. Spacing
+
+The mockups pad with 7, 8, 9, 10, 11 and 12px, rounded independently per frame. Built literally,
+every screen carries its own numbers and two screens never line up. Until 2026-09-17 nothing in these
+docs ruled on spacing at all, which is where most of the small misalignments came from.
+
+**One scale, a 4-point grid** — the `expo-design-system` skill's scale, with its two common
+in-between steps named rather than scattered:
+
+| Step | xs | sm | — | md | — | lg | xl | xxl |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Value | 4 | 8 | 12 | 16 | 20 | 24 | 32 | 48 |
+
+- **`gap` between siblings, `padding` within a container** (rule 9). No `marginBottom` on children
+  for rhythm. `vercel-react-native-skills` `ui-styling` and `expo-native-ui` say the same.
+- **Pick the nearest step** when a mockup draws a value between two. The grid is the point.
+- **Screen edge padding is one step, the same on every screen.** A narrow container and a wide one
+  may differ by one step (§8, "two steps, not a ramp").
+- **Pad a `ScrollView` through `contentContainerStyle`**, not the `ScrollView` itself, so the edge
+  content is not clipped.
+- Fixed-size controls (§5 — a stepper button, a 44dp target) are sizes, not spacing, and are not
+  bound to the scale.
+
+**Not yet in code.** The steps become a `spacing` key in both themes in `src/themes.js`, read through
+`useAppTheme()`, in the next coding pass (System-History 12.1 backlog). Until then new code writes the
+step values; existing screens are not reworked piecemeal.
+
+### Rejected: spacing by density per screen
+
+Letting each screen pick a dense or roomy spacing keeps the mockups' look screen by screen, and
+brings back exactly the per-frame drift this section exists to stop.
+
+---
+
+## 12. Skills, and where this file overrides them
+
+The React Native and Expo skills (`vercel-react-native-skills`, `expo-native-ui`, `expo-design-system`,
+Callstack `react-native-best-practices`) own everything this file does not rule on (rule 10). Where
+one of them contradicts a rule above, this file wins. The standing cases:
+
+| Skill says | This file |
+| --- | --- |
+| `expo-native-ui`: prefer `useWindowDimensions` for sizing | Rule 2, §4: the container's `onLayout`, never the window, for any layout decision |
+| `expo-native-ui`: `ScrollView contentInsetAdjustmentBehavior="automatic"` instead of safe-area views | Applies only under a native header. Every navigator here sets `headerShown: false` and draws Paper's `Appbar.Header`, which applies the top inset itself (`src/app/(app)/_layout.tsx`, `systems/[id]/_layout.tsx`). Revisit for `(tabs)` once it moves to `NativeTabs` ([`visual-language.md` §5](./visual-language.md#5-mockup-patterns-built-with-paper)) |
+
+Every row is also in [`false-positives.md` §8](./false-positives.md#8-skills--rules-this-repo-overrides),
+so a skill review that raises one costs a line, not an investigation.

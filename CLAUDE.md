@@ -84,15 +84,23 @@ so you use it rather than build a second one:
 
 | File | Governs |
 | --- | --- |
-| [`docs/structure.md`](./docs/structure.md) | which directories may exist under `src/`, and what is not a feature |
+| [`docs/structure.md`](./docs/structure.md) | which directories may exist under `src/` — data by resource in `features/`, UI by screen in `screens/`, Paper re-exports in `components/`, kebab-case |
 | [`docs/data-layer.md`](./docs/data-layer.md) | Supabase calls, Zod, TanStack Query keys and cache |
 | [`docs/tenancy.md`](./docs/tenancy.md) | merchant scoping and the RLS shape every business table takes |
-| [`docs/layout.md`](./docs/layout.md) | phone and tablet, column counts, the one width threshold |
+| [`docs/layout.md`](./docs/layout.md) | phone and tablet, column counts, the one width threshold, the spacing scale |
 | [`docs/typography.md`](./docs/typography.md) | the nine Paper `Text` variants, no type at a call site |
-| [`docs/visual-language.md`](./docs/visual-language.md) | the Merchant mockups → theme colours, the accent, icons, and the Paper piece for each pattern |
+| [`docs/visual-language.md`](./docs/visual-language.md) | the Merchant mockups → theme colours, the accent, corners, icons, and the Paper or native piece for each pattern |
+| [`docs/expo.md`](./docs/expo.md) | **before code**: the `expo-overview` gate for any Expo API, package, navigation or native UI; SDK 57 pinning; the Expo skill rules adopted and overridden |
+| [`docs/optimization.md`](./docs/optimization.md) | performance review: which skills are the reference, the measure-first evidence bar, what is already decided |
 | [`docs/migrations.md`](./docs/migrations.md) | revert files, and the generated all-in-one ADD / REVERT SQL |
 | [`docs/device-testing.md`](./docs/device-testing.md) | testing a page or feature on the emulator — the human opens it, the agent drives it with `adb` |
-| [`docs/testing-workflow.md`](./docs/testing-workflow.md) | running a test Flow: temp-fold tracking, the bug-fix loop, System-Test-History, silent operation |
+| [`docs/testing-workflow.md`](./docs/testing-workflow.md) | **after code**: fallow-review, `/ponytail-review`, the skill review and the device Flow all writing to one findings file, then the plan → act → re-test loop; the mandatory Authentication Compatibility variant, System-Test-History, silent operation |
+| [`docs/false-positives.md`](./docs/false-positives.md) | findings that are wrong in this repo — fallow, oxlint, Supabase, ponytail, and skill rules this repo overrides — why `fallow fix` must never run here, and what to do with a finding that is not listed |
+
+**Skills and these docs.** The React Native and Expo skills (`expo-*`, `vercel-react-native-skills`,
+`vercel-react-best-practices`, Callstack `react-native-best-practices`) govern everything `docs/`
+does not rule on. Where a skill contradicts a rule in `docs/` or this file, the doc wins, and the
+standing cases are registered in `docs/false-positives.md` §8.
 
 Record a rejected option alongside the chosen one wherever the reasoning lives. A rule without its
 rejected alternative gets re-litigated.
@@ -101,14 +109,22 @@ rejected alternative gets re-litigated.
 
 ## 3. The UI
 
-There is no local UI kit and there should not be one — no `src/styles/`, and no `src/components/`
-until rule 4 below calls for it.
+There is no local UI kit and there should not be one — no `src/styles/`, and nothing in
+`src/components/` that re-implements a primitive. That folder holds one re-export per Paper
+primitive, plus compositions a second screen needs ([`docs/structure.md`](./docs/structure.md)
+rule 6).
+
+Rules 4 and 5 and the icon renderer changed on 2026-09-17 and the code has not moved yet
+(System-History 12.1). New code follows the rules as written here.
 
 ### Rules
 
 1. No custom primitives — `Text`, `Button`, `TextInput`, `Menu`, `Switch`, `SegmentedButtons`,
-   `Checkbox`, `DataTable`, `Dialog`, `Modal`, `ProgressBar` and `Icon` come from React Native Paper.
-   Screen pieces composed from them are fine.
+   `Checkbox`, `DataTable`, `Dialog`, `Modal`, `ProgressBar` and `Icon` come from React Native Paper,
+   imported through their re-exports in `src/components/`. Screen pieces composed from them are fine.
+   The exceptions are native pieces [`docs/visual-language.md`](./docs/visual-language.md) §5 names:
+   `Pressable` for press targets, `NativeTabs` for the `(tabs)` bar, a native `formSheet` for narrow
+   sheets.
 2. No hardcoded or inline colors — every color is a key in `src/themes.js`, read through Paper's
    `useTheme()` — or `useAppTheme()` from `src/lib/theme.ts` for the Merchant keys. A color the design needs and the theme lacks becomes a new key in both themes, never
    a literal — [`docs/visual-language.md`](./docs/visual-language.md) §3.
@@ -119,20 +135,25 @@ until rule 4 below calls for it.
    call site; the same lint rule catches the first five. The scale is
    [`docs/typography.md`](./docs/typography.md) §2, written into `src/themes.js` through one
    `configureFonts` call.
-4. Extract a component only when a second screen needs it.
-5. Corners are square: `roundness: 0` in both themes, never a `borderRadius` by hand. The one
-   exception zeroes react-navigation's own drawer corners, which `roundness` cannot reach —
-   `src/app/(app)/systems/[id]/_layout.tsx`.
+4. Extract a composition into `src/components/` only when a second screen needs it. Until then it
+   lives in its screen's folder in `src/screens/`.
+5. Corners are rounded by the theme: `roundness` in both themes sets Paper's corners, and a surface
+   drawn by hand takes its radius from the theme with `borderCurve: 'continuous'`. Never write a
+   radius number at a call site. The drawer's own corners, which `roundness` cannot reach, are set
+   from the theme in `src/app/(app)/systems/[id]/_layout.tsx`. Rejected: keeping `roundness: 0` to
+   match the square mockups — the human chose rounded corners on 2026-09-17, and one theme value
+   re-rounds every Paper component.
 
 ### Paper, its patch, and icons
 
 - `react-native-paper` is patched by `patches/react-native-paper+5.15.3.patch`, applied by the
   `postinstall` / `patch-package` hook.
-- Paper's icons are pointed at `@expo/vector-icons` through `PaperProvider`'s `settings` prop;
+- Paper's icons are pointed away from its default through `PaperProvider`'s `settings` prop.
   Paper's own default goes through `react-native-vector-icons`, whose fonts nothing loads, so icons
-  would otherwise be blank boxes. The renderer draws Feather first and falls back to
-  MaterialCommunityIcons for names Feather lacks —
-  [`docs/visual-language.md`](./docs/visual-language.md) §6.
+  would otherwise be blank boxes. The renderer maps each name to an `expo-symbols` `SymbolView`
+  (`{ ios, android }` names, Paper's `color` as `tintColor`) and falls back to MaterialCommunityIcons
+  for unmapped names — [`docs/visual-language.md`](./docs/visual-language.md) §6. Today's code still
+  renders Feather first; that changes in the coding pass.
 - `react-native-vector-icons` stays in `package.json` because Paper imports it internally either way.
 
 ---

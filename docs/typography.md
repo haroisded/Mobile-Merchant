@@ -8,7 +8,9 @@ below.
 
 ## Rules
 
-1. Render every string with `Text` from `react-native-paper`, passing a `variant`.
+1. Render every string with Paper's `Text`, passing a `variant`. Import it through its re-export,
+   `@/components/text` ([`structure.md`](./structure.md) rule 6), not straight from
+   `react-native-paper`. A re-export is the same component, not a local wrapper.
 2. Never write `fontSize`, `lineHeight`, `fontWeight`, `letterSpacing`, `fontFamily` or
    `textTransform` at a call site. They live in `src/themes.js`. `anti-slop/no-design-literals` fails
    `npm run lint` on the first five anywhere under `src/` except that file.
@@ -53,7 +55,8 @@ Which gives three prohibitions:
 
 - **No local `Text` component.** A second text primitive means two right answers and a choice at
   every call site. The typed `Text` in §2 is Paper's own component with a wider type, not a second
-  one.
+  one, and `src/components/text.tsx` re-exports those two without wrapping them. The
+  `expo-design-system` skill's `ThemedText` is exactly the wrapper this rules out.
 - **No inline `fontSize`, `lineHeight`, `fontWeight`, `letterSpacing`, `fontFamily` or
   `textTransform`.** If a size is needed that no variant provides, the variant list is wrong — fix
   the theme, not the call site.

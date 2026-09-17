@@ -75,8 +75,9 @@ later on, they're important
    - Mobile: Tapping "Create New System" (filled Button) opens the wizard, starting at Step 1 (UsernameStep).
    - Tablet: Tapping the Action Card opens the same modal but in combined single-scroll view.
 
-2. **Top App Bar Avatar / Account Icon → ProfileDialog**
-   - Tapping the Avatar (mobile) or Account Appbar.Action (tablet) opens the ProfileDialog (full-screen on mobile, centered modal on tablet).
+2. **Top App Bar Account Icon → ProfileDialog**
+   - Tapping the Account Appbar.Action (tablet) opens the ProfileDialog (full-screen on mobile, centered modal on tablet).
+   - The Avatar no longer does this. The leading circle is the **Merchant's logo** — blank while no logo exists, and not a control (System-History 11.1). On mobile the route in is the Account tab of the Navigation Bar.
 
 3. **SystemCard Edit → Edit Flow**
    - Tapping Edit on any SystemCard triggers the edit flow for that specific system (likely opens a modal or navigates to edit screen — not detailed in provided specs).

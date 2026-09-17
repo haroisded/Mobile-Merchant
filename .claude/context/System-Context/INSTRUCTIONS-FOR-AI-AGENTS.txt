@@ -4,16 +4,39 @@
   repo, including passes that touch no page at all. A tooling or migration pass reads that rule and
   nothing else on this page - it has no page directory to visit.
 - Interactives ( Priority ).md is served as a Filter during Creation Process, Interactives.md is served as the full context
-- After Creating a Page, Create a history.md in System-Context/<that page's directory>, fill this out
+- After Creating a Page / Feature, Create a history.md in System-Context/<that page's directory>, fill this out
 • Components and Interactives Added
 • Where the code lives
 • Interactives not yet Added
 • Status: In-Complete or Complete
 
-- Then test the page on the emulator per docs/testing-workflow.md: the run is tracked in
-  .claude/context/temp-fold, bugs are fixed and re-verified after the Flow, and the permanent
-  record goes to .claude/context/System-Test-History. Do NOT create a Tests.md (or test.md) in a
-  page directory - that rule is replaced. docs/device-testing.md covers driving the emulator.
+- BEFORE writing code for a page / feature:
+  • It uses an Expo API or expo-* package, or adds navigation, a sheet, a native control or an
+    animation?  ->  load the expo-overview skill and the leaf skill it routes to, per docs/expo.md.
+  • Frontend: follow docs/layout.md, docs/visual-language.md and docs/typography.md, and the
+    React Native / Expo skills for everything those do not rule on. Where a skill and a doc
+    disagree, the doc wins (docs/false-positives.md section 8).
+
+- AFTER coding, run the findings loop in docs/testing-workflow.md. Every collector writes to ONE
+  file, .claude/context/temp-fold/findings-<name>.md, and NOTHING is fixed while collecting:
+
+    collect:  fallow-review + /ponytail-review
+              skill review (react-native-best-practices, vercel-react-native-skills,
+                            vercel-react-best-practices; docs/optimization.md for performance)
+              the device Flow (flow-<name>.md tracks the cases)
+    plan:     read findings-<name>.md, write the round's plan
+    act:      apply the plan
+    re-test:  reviews in full; on the device, the failed cases + cases touching changed files
+    repeat until a round leaves nothing open, then one full device Flow; clean = done
+
+  All reviews are scoped to THIS pass's diff. The permanent record goes to
+  .claude/context/System-Test-History. Do NOT create a Tests.md (or test.md) in a page directory -
+  that rule is replaced. docs/device-testing.md covers driving the emulator.
+
+  One case variant in that Flow is mandatory and easy to skip: Authentication Compatibility -
+  what the page does across Sign-in, Sign-out and Delete account. Assess EVERY category for it;
+  where it does not apply, write the line saying why, because a missing negative and a forgotten
+  check look identical one pass later. docs/testing-workflow.md section 11.
 
 - system-context.txt holds the STANDING CONTEXT for each page, under one heading per page directory.
   It is the FIRST thing you read on any pass against a page, ahead of that page's own files. It
@@ -28,8 +51,9 @@
   An empty section means that page has no standing context yet. Read it anyway; sections get
   filled in, and an empty one is cheap to check.
 
-- There is NO features/<page-name>/ folder. A page's code goes in as many src/features/<resource>/
-  folders as it touches, plus its route files in src/app/ - see docs/structure.md section 3.
+- There is NO features/<page-name>/ folder. A page's DATA goes in as many src/features/<resource>/
+  folders as it touches (queries.ts, schema.ts); its UI goes in src/screens/<screen-name>/; its
+  route files go in src/app/ - see docs/structure.md sections 1 and 3. New files are kebab-case.
   "Where the code lives" is the page -> file index that replaces a page folder, so fill it in and
   keep it current when files move. Do not create local-features/ or global-features/.
 

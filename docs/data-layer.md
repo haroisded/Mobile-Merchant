@@ -42,14 +42,14 @@ The rest of this file is why. Read it before overriding a rule, not before follo
 
 ## 1. The one rule: by feature, not by layer
 
-**Everything about one resource lives in one folder.** Its schema, its query keys, its queries, its
-mutations, and the screens that use them.
+**Everything about one resource's data lives in one folder.** Its schema, its query keys, its
+queries and its mutations. The screens that use them live in `src/screens/`
+([`structure.md`](./structure.md) rule 3).
 
 ```
 src/features/products/
   queries.ts     keys + useProductsQuery + useUpdateProductMutation
   schema.ts      the zod schema, shared by the form resolver and the mutation
-  ProductForm.tsx
 ```
 
 Not this:
@@ -177,7 +177,16 @@ mutation**, so the thing validated and the thing written cannot disagree.
 
 No `validation/` directory.
 
-### Two things that will bite
+### Three things that will bite
+
+**`zodResolver` can fail type-checking after a Zod minor bump.** `@hookform/resolvers`' branded
+version overloads drift across Zod 4 minors, and the symptom is a red squiggle such as
+`Type '3' is not assignable to type '0'` while the form works at runtime
+([resolvers #842](https://github.com/react-hook-form/resolvers/issues/842),
+[zod #4992](https://github.com/colinhacks/zod/issues/4992)). `CreateSystemModal` and `ProductForm`
+use `zodResolver` and compile today. If it breaks, switch to `standardSchemaResolver` from
+`@hookform/resolvers/standard-schema`, which skips those overloads, rather than casting. Rejected:
+pinning Zod forever to dodge it, because it blocks every later fix in the pair.
 
 **`TextInput` returns strings.** A price or quantity validated with `z.number()` fails on `"49.99"`.
 Use `z.coerce.number()`. This is the first thing that breaks in any form with a numeric field.
@@ -216,6 +225,13 @@ cached data directly.
 | `retry` | `false` | Fail fast and show the user a result with a retry control, rather than three silent attempts. Opt back in per query |
 | `refetchOnWindowFocus` | `false` | On mobile this fires on every app resume. Enable per query where it earns it |
 | `structuralSharing` | leave on | Bluesky disables it to make object identity meaningful for "first seen" timestamps. That is specific to them |
+
+**The `expo-data-fetching` skill's defaults do not apply here.** It suggests `retry: 2`, a
+five-minute `staleTime` in the client defaults, `expo/fetch` over other clients, and a hand-written
+`fetch` wrapper with its own retry loop. This repo keeps `retry: false`, stale times from `STALE`,
+and supabase-js with `.throwOnError()` as the only network client. Its "every screen has four states"
+and paused-offline guidance agree with this section and still apply. The register entry is
+[`false-positives.md` §8](./false-positives.md#8-skills--rules-this-repo-overrides).
 
 **Invalidating an infinite query needs truncating first.** Slice `pages` and `pageParams` to the
 first entry, *then* invalidate — otherwise the refetch pulls every page the user ever scrolled.

@@ -11,7 +11,6 @@ import {
   IconButton,
   Surface,
   Text,
-  TouchableRipple,
 } from 'react-native-paper';
 
 import { CreateSystemModal } from '../../../features/merchants/CreateSystemModal';
@@ -66,13 +65,18 @@ export default function Home() {
   return (
     <Surface style={styles.screen}>
       <Appbar.Header>
-        {/* Tapping the avatar is the account affordance on a narrow container, where the mockup has
-            no account action in the bar. Avatar.Icon takes no onPress of its own, so it is wrapped
-            rather than given a raw touch handler — TouchableRipple is what gives it the platform's
-            own press feedback and its accessibility role. */}
-        <TouchableRipple onPress={openAccount} borderless style={styles.avatar}>
-          <Avatar.Icon size={36} icon="account" />
-        </TouchableRipple>
+        {/* The Merchant's logo, and nothing else: a brand mark is not a control, so it no longer
+            opens the Account screen. That affordance is not lost — Account is the last tab on a
+            narrow container and the bar's own action on a wide one.
+
+            Blank because nothing in the schema carries a logo yet, and a blank logo has no features:
+            no glyph, no initials. `Avatar.Text` with an empty label is Paper's own circle, which is
+            what keeps it round through Paper's stylesheet instead of a `borderRadius` written by
+            hand — identity marks are the one exception to the square corners
+            (docs/visual-language.md §7).
+
+            ponytail: swap to <Avatar.Image source={{ uri }} /> the day branding carries a logo. */}
+        <Avatar.Text label="" size={36} style={styles.logo} />
         <Appbar.Content title="Merchant" />
         {narrow ? (
           // Unticked in the Priority filter: renders, does nothing yet.
@@ -183,6 +187,6 @@ const styles = StyleSheet.create({
   cell: { flex: 1, padding: GUTTER },
   empty: { padding: GUTTER },
   state: { gap: 12, alignItems: 'flex-start' },
-  // Matches Avatar.Icon's size so the ripple is a circle rather than a square around it.
-  avatar: { borderRadius: 18, marginLeft: 8 },
+  // Only an inset from the bar's edge — the circle is Avatar's own, not drawn here.
+  logo: { marginLeft: 8 },
 });
