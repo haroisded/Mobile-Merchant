@@ -4,24 +4,30 @@ import type { Tables } from '../../lib/database.types';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { productsKey } from '../products/queries';
+import type { ResourceScope } from '../products/resources';
 
 export type Category = Tables<'product_categories'>;
 
-// The only file that knows the table is called product_categories (docs/data-layer.md rule 3). Its own
+// The only file that knows the table is called product_categories (instruction_mds/data-layer.md rule 3). Its own
 // folder rather than a helper inside products: a separate table with its own policies and its own
-// screen (docs/structure.md rule 1).
+// screen (instruction_mds/structure.md rule 1).
 //
 // Every call ends in throwOnError(), so a failure rejects with a real PostgrestError and the screens'
 // postgrestError() checks can read its code — see the note in merchants/queries.ts.
 export const categoriesKey = {
   all: ['categories'],
   lists: () => [...categoriesKey.all, 'list'],
-  list: (args: { merchantId: string }) => [...categoriesKey.lists(), args],
+  list: (args: { merchantId: string; scope: ResourceScope }) => [...categoriesKey.lists(), args],
 };
 
-export function useCategoriesQuery({ merchantId }: { merchantId: string }) {
+/**
+ * One screen's categories. `scope` is as load-bearing as `merchant_id`: Products, Rentables and
+ * Inventory each keep their own list, and the database refuses a product pointing at another screen's
+ * category.
+ */
+export function useCategoriesQuery({ merchantId, scope }: { merchantId: string; scope: ResourceScope }) {
   return useQuery({
-    queryKey: categoriesKey.list({ merchantId }),
+    queryKey: categoriesKey.list({ merchantId, scope }),
     queryFn: async () => {
       // The merchant_id filter SCOPES, it does not protect. An owner of two systems may read the
       // categories of both, so without it one system's form would list the other's. What keeps other
@@ -30,6 +36,7 @@ export function useCategoriesQuery({ merchantId }: { merchantId: string }) {
         .from('product_categories')
         .select('*')
         .eq('merchant_id', merchantId)
+        .eq('scope', scope)
         .order('name')
         .throwOnError();
 
@@ -49,14 +56,16 @@ export function childrenOf(categories: Category[], parentId: string) {
   return categories.filter((category) => category.parent_id === parentId);
 }
 
-export function useCreateCategoryMutation({ merchantId }: { merchantId: string }) {
+export function useCreateCategoryMutation({ merchantId, scope }: { merchantId: string; scope: ResourceScope }) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (values: { name: string; parentId: string | null }) => {
+      // scope is not nullable and has no default: a category written without one is a client bug and
+      // fails as one (the migration's own note).
       const { data } = await supabase
         .from('product_categories')
-        .insert({ merchant_id: merchantId, name: values.name, parent_id: values.parentId })
+        .insert({ merchant_id: merchantId, name: values.name, parent_id: values.parentId, scope })
         .select()
         .single()
         .throwOnError();

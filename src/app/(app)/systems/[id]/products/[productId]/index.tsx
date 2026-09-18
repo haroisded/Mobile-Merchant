@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { useShellMerchant } from '../../../../../../features/merchants/queries';
-import { ProductDetail, ProductGate } from '../../../../../../features/products/ProductDetail';
+import { ProductDetail, ProductGate } from '../../../../../../screens/product-detail';
 
 export default function ProductDetailScreen() {
   const merchant = useShellMerchant();
@@ -9,8 +9,10 @@ export default function ProductDetailScreen() {
   const { productId } = useLocalSearchParams<{ productId: string }>();
 
   return (
-    <ProductGate id={productId}>
-      {(product) => <ProductDetail merchantId={merchant.id} currency={merchant.currency} product={product} />}
+    <ProductGate id={productId} scope="products">
+      {(product) => (
+        <ProductDetail merchantId={merchant.id} currency={merchant.currency} product={product} scope="products" />
+      )}
     </ProductGate>
   );
 }

@@ -57,6 +57,7 @@ export type Database = {
           merchant_id: string
           name: string
           parent_id: string | null
+          scope: Database["public"]["Enums"]["category_scope"]
         }
         Insert: {
           created_at?: string
@@ -64,6 +65,7 @@ export type Database = {
           merchant_id: string
           name: string
           parent_id?: string | null
+          scope: Database["public"]["Enums"]["category_scope"]
         }
         Update: {
           created_at?: string
@@ -71,6 +73,7 @@ export type Database = {
           merchant_id?: string
           name?: string
           parent_id?: string | null
+          scope?: Database["public"]["Enums"]["category_scope"]
         }
         Relationships: [
           {
@@ -82,10 +85,10 @@ export type Database = {
           },
           {
             foreignKeyName: "product_categories_parent_fk"
-            columns: ["parent_id", "merchant_id"]
+            columns: ["parent_id", "merchant_id", "scope"]
             isOneToOne: false
             referencedRelation: "product_categories"
-            referencedColumns: ["id", "merchant_id"]
+            referencedColumns: ["id", "merchant_id", "scope"]
           },
         ]
       }
@@ -371,6 +374,7 @@ export type Database = {
           qty_on_hand: number | null
           reorder_qty: number | null
           reorder_threshold: number | null
+          scope: Database["public"]["Enums"]["category_scope"]
           selling_price: number | null
           shelf_life_days: number | null
           sku: string | null
@@ -432,6 +436,7 @@ export type Database = {
           qty_on_hand?: number | null
           reorder_qty?: number | null
           reorder_threshold?: number | null
+          scope: Database["public"]["Enums"]["category_scope"]
           selling_price?: number | null
           shelf_life_days?: number | null
           sku?: string | null
@@ -493,6 +498,7 @@ export type Database = {
           qty_on_hand?: number | null
           reorder_qty?: number | null
           reorder_threshold?: number | null
+          scope?: Database["public"]["Enums"]["category_scope"]
           selling_price?: number | null
           shelf_life_days?: number | null
           sku?: string | null
@@ -514,10 +520,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "products_category_fk"
-            columns: ["category_id", "merchant_id"]
+            columns: ["category_id", "merchant_id", "scope"]
             isOneToOne: false
             referencedRelation: "product_categories"
-            referencedColumns: ["id", "merchant_id"]
+            referencedColumns: ["id", "merchant_id", "scope"]
           },
           {
             foreignKeyName: "products_merchant_id_fkey"
@@ -528,10 +534,10 @@ export type Database = {
           },
           {
             foreignKeyName: "products_subcategory_fk"
-            columns: ["subcategory_id", "merchant_id"]
+            columns: ["subcategory_id", "merchant_id", "scope"]
             isOneToOne: false
             referencedRelation: "product_categories"
-            referencedColumns: ["id", "merchant_id"]
+            referencedColumns: ["id", "merchant_id", "scope"]
           },
           {
             foreignKeyName: "products_supplier_fk"
@@ -643,6 +649,7 @@ export type Database = {
       save_product: { Args: { payload: Json }; Returns: string }
     }
     Enums: {
+      category_scope: "products" | "rentables" | "inventory"
       custom_field_kind: "text" | "number" | "date" | "boolean"
       duration_mode: "fixed_slot" | "flexible_range"
       measure_unit:
@@ -801,6 +808,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      category_scope: ["products", "rentables", "inventory"],
       custom_field_kind: ["text", "number", "date", "boolean"],
       duration_mode: ["fixed_slot", "flexible_range"],
       measure_unit: [

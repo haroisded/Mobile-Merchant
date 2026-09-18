@@ -40,11 +40,28 @@
   "overrides": [
     {
       "files": ["src/**"],
-      "rules": { "anti-slop/no-design-literals": "error" }
+      "rules": {
+        "anti-slop/no-design-literals": "error",
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react-native-paper",
+                "message": "Import the primitive from src/components/<name>.tsx instead (docs/structure.md rule 6). Press targets are Pressable, not TouchableRipple (docs/visual-language.md §5)."
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "files": ["src/themes.js"],
-      "rules": { "anti-slop/no-design-literals": "off" }
+      "rules": { "anti-slop/no-design-literals": "off", "no-restricted-imports": "off" }
+    },
+    {
+      "files": ["src/components/**", "src/lib/theme.ts", "src/app/_layout.tsx"],
+      "rules": { "no-restricted-imports": "off" }
     }
   ]
 }

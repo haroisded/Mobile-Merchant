@@ -1,5 +1,3 @@
-import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,6 +6,7 @@ import type { ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 
+import { renderIcon } from '../lib/icons';
 import { makeQueryClient } from '../lib/query';
 import { useIsSessionLoading, useSession } from '../Store/StoreUser';
 import { DarkTheme, LightTheme } from '../themes';
@@ -16,14 +15,6 @@ import { DarkTheme, LightTheme } from '../themes';
 // Module scope, not awaited, and deliberately so: called from inside a component or hook it can
 // run after the splash has already auto-hidden, which is too late to prevent anything.
 SplashScreen.preventAutoHideAsync();
-
-
-// A type predicate rather than a cast, so a name that passes can be handed to <Feather> as one of its
-// glyphs. Object.hasOwn and not `in`: `in` also matches inherited keys like "toString".
-// glyphMap is exposed on every icon set (@expo/vector-icons createIconSet.d.ts:74).
-function isFeatherGlyph(name: string): name is keyof typeof Feather.glyphMap {
-  return Object.hasOwn(Feather.glyphMap, name);
-}
 
 
 // One QueryClient per mount. The lazy initialiser is what stops a new client being built on every
@@ -69,38 +60,14 @@ export default function RootLayout() {
     <PaperProvider
       theme={theme}
       // Paper's built-in icon renders through react-native-vector-icons, whose font files nothing
-      // here ever loads, so every icon would come out a blank box. @expo/vector-icons wraps the
-      // same sets and loads each font itself through expo-font, locally, with no network fetch.
+      // here ever loads, so every icon would come out a blank box. renderIcon draws each app icon
+      // name as the platform's own symbol — SF Symbols on iOS, Material Symbols on Android — and
+      // falls back to MaterialCommunityIcons for Paper's internal names (src/lib/icons.tsx,
+      // instruction_mds/visual-language.md §6). Some Paper internals (the Appbar back arrow, Checkbox marks)
+      // never reach this function and keep MaterialCommunityIcons.
       //
-      // Feather first, because the Merchant mockups draw thin Lucide line icons and Feather is the
-      // set Lucide grew from. MaterialCommunityIcons is the fallback for every name Feather lacks —
-      // Paper's own names (`magnify`, `menu-down`) and glyphs like `calculator`. A name in both sets
-      // renders from Feather (docs/visual-language.md §6). Some Paper internals (the Appbar back
-      // arrow, DataTable sort arrows) never reach this function and keep MaterialCommunityIcons.
-      //
-      // Paper's `direction` is its own RTL flag, dropped here: the Expo components have no such
-      // prop and would forward it to a Text. The object literal is new each render; reactCompiler
-      // memoizes.
-      settings={{
-        icon: ({ name, color, size, allowFontScaling, testID }) =>
-          isFeatherGlyph(name) ? (
-            <Feather
-              name={name}
-              color={color}
-              size={size}
-              allowFontScaling={allowFontScaling}
-              testID={testID}
-            />
-          ) : (
-            <MaterialCommunityIcons
-              name={name}
-              color={color}
-              size={size}
-              allowFontScaling={allowFontScaling}
-              testID={testID}
-            />
-          ),
-      }}
+      // The object literal is new each render; reactCompiler memoizes.
+      settings={{ icon: renderIcon }}
     >
       {/* Keyed on the user id, which is what makes "sign out, sign in as someone else" structural
           rather than remembered: the key change remounts the provider, which builds a new client
@@ -109,7 +76,7 @@ export default function RootLayout() {
           RLS does not help here. Cached rows are already on the device and render before any
           request goes out, so without this the next account sees the previous one's cards for a
           frame. A queryClient.clear() inside signOut is the version that gets forgotten
-          (docs/data-layer.md §6). */}
+          (instruction_mds/data-layer.md §6). */}
       <QueryProvider key={session?.user.id}>
         {/* contentStyle carries the theme background to the navigator's own screen container,
             which otherwise paints react-navigation's default and flashes white in dark mode. */}

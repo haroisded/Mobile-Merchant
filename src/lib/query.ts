@@ -4,7 +4,7 @@ import { AppState, Platform } from 'react-native';
 
 // The one place a millisecond literal is written. Query hooks name a constant from here rather than
 // inlining `5 * 60 * 1000`, so the freshness policy is readable in one file instead of scattered
-// across every feature folder (docs/data-layer.md §5).
+// across every feature folder (instruction_mds/data-layer.md §5).
 export const STALE = {
   SECONDS: { THIRTY: 30 * 1000 },
   MINUTES: { ONE: 60 * 1000, FIVE: 5 * 60 * 1000 },

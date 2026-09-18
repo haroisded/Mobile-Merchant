@@ -18,7 +18,7 @@ if (!url || !publishableKey) {
 
 // Typed from the real schema, which is what makes runtime validation of reads unnecessary: every
 // .from('merchants').select() is checked end to end against the migration rather than against a
-// hand-written Zod mirror of it (docs/data-layer.md §4).
+// hand-written Zod mirror of it (instruction_mds/data-layer.md §4).
 //
 // Regenerate whenever a migration lands. A stale database.types.ts is worse than none — it
 // type-checks against a schema that no longer exists:

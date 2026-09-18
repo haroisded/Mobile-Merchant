@@ -10,7 +10,7 @@ MCP servers, skills, and plugins installed in this Claude Code environment, with
 | `obscura` | user | stdio | `obscura mcp` |
 | `supabase` | project (**this** repo, via `.mcp.json`) | http | `https://mcp.supabase.com/mcp?project_ref=<ref>&features=docs,account,database,debugging,development,functions,branching` |
 | `Lucid` | claude.ai account connector | http | added in claude.ai → Settings → Connectors, not in `~/.claude.json` |
-| `expo` | shipped by the `expo` plugin | http | `https://mcp.expo.dev/mcp` — Expo docs search. **Needs a one-time authorization in `/mcp`**; unavailable until then ([`docs/expo.md` §5](./docs/expo.md#5-the-expo-mcp-server)) |
+| `expo` | shipped by the `expo` plugin | http | `https://mcp.expo.dev/mcp` — Expo docs search. **Needs a one-time authorization in `/mcp`**; unavailable until then ([`instruction_mds/expo.md` §5](./instruction_mds/expo.md#5-the-expo-mcp-server)) |
 
 ### Install
 
@@ -44,14 +44,14 @@ with something already listed on this page, so nothing below them is a separate 
 
 | Skill | Trigger |
 | --- | --- |
-| `fallow`, `fallow-review` | fallow audits; `fallow-review` is the first collector in [`docs/testing-workflow.md` §2.1](./docs/testing-workflow.md) |
+| `fallow`, `fallow-review` | fallow audits. The review gate runs through `node tools/fallow-verdict.mjs`, never raw ([`instruction_mds/token-budget.md` §1](./instruction_mds/token-budget.md)); `fallow-review` handles a decision the script reports |
 | `find-skills` | "find a skill for X" |
 | `graphify` | `/graphify` |
 | `install-anti-slop` | "add anti-slop lint rules" |
 | `supabase` | any Supabase task |
 | `supabase-postgres-best-practices` | any Postgres schema / RLS / migration work |
-| `vercel-react-native-skills` | React Native / Expo components, lists, animation, navigation — part of the skill review ([`docs/optimization.md`](./docs/optimization.md)) |
-| `vercel-react-best-practices` | React re-render and rendering rules; its Next.js / DOM rules do not apply here ([`docs/optimization.md`](./docs/optimization.md) rule 2) |
+| `vercel-react-native-skills` | lists, animation/gestures, navigator setup, native modules — description narrowed, [below](#narrowed-skill-descriptions) |
+| `vercel-react-best-practices` | render logic, hooks, effects, state outside those areas; its Next.js / DOM rules do not apply here ([`instruction_mds/optimization.md`](./instruction_mds/optimization.md) rule 2) — description narrowed, [below](#narrowed-skill-descriptions) |
 | `web-design-guidelines` | web UI review — arrived with the Vercel pack; this app has no web UI to review |
 
 `~/.claude/CLAUDE.md` makes `graphify` mandatory on `/graphify` before anything else runs.
@@ -75,6 +75,21 @@ Or manually — one directory per skill, each holding a `SKILL.md` with `name` a
 mkdir -p ~/.claude/skills/<skill-name>
 # place SKILL.md (plus any references/, scripts/) inside
 ```
+
+#### Narrowed skill descriptions
+
+The two Vercel skills' stock descriptions both match almost any React Native diff, so they load
+together ([`instruction_mds/token-budget.md` §2](./instruction_mds/token-budget.md)). Their `description` frontmatter is
+narrowed on this machine, in `~/.agents/skills/<name>/SKILL.md` (the real folder behind the
+`~/.claude/skills/` junction). **`npx skills update` or a reinstall restores the stock text** — re-apply
+these afterwards. They are user-scope, so they apply to every project on the machine.
+
+| Skill | `description` |
+| --- | --- |
+| `vercel-react-native-skills` | Use when a diff changes FlatList/FlashList props, item renderers or list keys, Reanimated or gesture code, navigator/tab setup, or native-module calls in a React Native or Expo app. |
+| `vercel-react-best-practices` | Use when a diff changes React component render logic, hooks, effects or state shape outside lists, navigation, animation and native modules. Next.js and DOM rules do not apply to React Native. |
+
+After re-applying, verify in a fresh session: a task that should match loads that skill, and only that one.
 
 ### From plugins — nothing extra to install
 
@@ -118,7 +133,7 @@ Verify all three groups: `/help`, or `claude plugin list` for the plugin half.
 Versions are what is on disk under `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`.
 
 `expo` brings 24 `expo-*` / `eas-*` skills and the Expo MCP server; how this repo uses them is
-[`docs/expo.md`](./docs/expo.md). This repo's `.claude/settings.json` enables it, so a fresh clone
+[`instruction_mds/expo.md`](./instruction_mds/expo.md). This repo's `.claude/settings.json` enables it, so a fresh clone
 still has to install it — the others follow the machine, not the repo.
 
 ### `building-react-native-apps` does not load on Windows
@@ -144,8 +159,9 @@ Fix, once, by the human:
 4. Confirm `react-native-best-practices` is listed in `/help`.
 
 Until step 4 passes, the skill review falls back to the Ultimate Guide markdown it was built from
-([`docs/optimization.md` §2](./docs/optimization.md#2-the-skills-and-the-ultimate-guide)). The pass
-after it passes deletes that markdown.
+(`.claude/context/Documentations-for-AI-Agents/`). The pass after it passes deletes that markdown and
+narrows `react-native-best-practices`' description so it does not overlap the Vercel pair
+([narrowed descriptions](#narrowed-skill-descriptions)).
 
 ### Install
 
@@ -209,18 +225,17 @@ every project on this machine, not just this one.
 
 ### `.claude/settings.json` — project, committed
 
-```json
-{
-  "enabledPlugins": {
-    "expo@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": false
-  }
-}
-```
+Three things, and it is the one piece of tooling config a clone inherits:
 
-The whole file. It is the one piece of tooling config a clone inherits. `frontend-design` is switched
-off for this repo: it steers toward a fresh aesthetic direction, and the look here is already fixed by
-the mockups, `docs/visual-language.md` and `docs/typography.md`.
+- **`enabledPlugins`** — `expo@claude-plugins-official`.
+- **`permissions.ask`** — `adb`, `emulator`, `npx expo run*`, `npx expo start*` and `npm run android*`,
+  for both the Bash and PowerShell tools. The agent does not touch the emulator unless the human allows
+  it ([`instruction_mds/testing-workflow.md`](./instruction_mds/testing-workflow.md) rule 1); these rules make
+  every such command stop for approval, even under `defaultMode: "auto"`. `ask`, not `deny`, so the
+  human can still allow one on the day.
+- **`hooks.PreToolUse`** — written by `graphify claude install`; nudges the agent to query the graph
+  before `Grep` / `Glob` / `Read`. The hook runs an absolute path on this machine's Python install, so
+  a clone on another machine gets it only after running `graphify claude install` itself.
 
 ### `.claude/settings.local.json` — project, **not** committed
 

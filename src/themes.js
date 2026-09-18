@@ -42,7 +42,7 @@ const lightColors = {
     level4: "#E8EDF4",
     level5: "#E4EAF2",
   },
-  // The Merchant keys, from docs/visual-language.md §3 — roles the mockups need and MD3 lacks. Read
+  // The Merchant keys, from instruction_mds/visual-language.md §3 — roles the mockups need and MD3 lacks. Read
   // them through useAppTheme() (src/lib/theme.ts); Paper's plain useTheme() types colors to MD3 only.
   accent: "#EC3013",
   onAccent: "#FFFFFF",
@@ -51,6 +51,10 @@ const lightColors = {
   surfaceMuted: "#F1F5F9",
   surfaceSubtle: "#F8FAFC",
   primaryHighlight: "rgba(255, 255, 255, 0.14)",
+  // The press colour for Pressable's android_ripple on a light surface. Paper's TouchableRipple
+  // derived it from the text colour at 12%; Pressable reads nothing, so it is a key
+  // (instruction_mds/visual-language.md §5). On `primary` the ripple is `primaryHighlight`.
+  ripple: "rgba(30, 41, 59, 0.12)",
 };
 
 
@@ -105,11 +109,12 @@ const darkColors = {
   surfaceMuted: "#1E2632",
   surfaceSubtle: "#1A212C",
   primaryHighlight: "rgba(0, 0, 0, 0.12)",
+  ripple: "rgba(225, 231, 239, 0.12)",
 };
 
 
 
-// The nine-role scale from docs/typography.md §2, shared by both themes — size does not change with
+// The nine-role scale from instruction_mds/typography.md §2, shared by both themes — size does not change with
 // the palette. Keyed by variant, never flat: a config whose values are all non-objects is merged into
 // ALL fifteen variants (fonts.tsx:88-98), so `{ fontSize: 26 }` one level up would resize everything.
 const fonts = configureFonts({
@@ -153,27 +158,46 @@ const fonts = configureFonts({
 
 
 
-// `roundness: 0` squares every Paper component that has a radius, because Paper multiplies it into
-// each one's corners (docs/visual-language.md §5). Both themes need it and both need `fonts`: they are
-// separate objects, and a key on one never reaches the other.
+// Paper multiplies `roundness` into each component's corners — Button and SegmentedButtons ×5, Card
+// ×3, Dialog ×7, Chip ×2, TextInput, Menu and Snackbar ×1 (instruction_mds/visual-language.md §5) — so this one
+// value rounds the whole app. 2 was chosen by the human on 2026-09-17 over 1 (barely rounded) and
+// MD3's 4 (pill buttons, furthest from the mockups).
+const ROUNDNESS = 2;
+
+// The 4-point spacing scale from instruction_mds/layout.md §11. `ms` and `ml` are the two in-between steps (12,
+// 20). Exported as plain constants because StyleSheet.create runs at module scope, where no hook can
+// read the theme; the same objects ride on both themes for code that already holds the theme.
+export const spacing = { xs: 4, sm: 8, ms: 12, md: 16, ml: 20, lg: 24, xl: 32, xxl: 48 };
+
+// Radii for surfaces drawn by hand, in step with what Paper derives from ROUNDNESS: `sm` for a note
+// callout or an input-like box (×1), `md` for a badge or chip-like tag (×2), `lg` for a thumbnail or
+// card-like block (×3), `xl` for a modal surface that stands in for a Dialog (×7). Never a number at a
+// call site (instruction_mds/visual-language.md rule 4).
+export const radius = { sm: ROUNDNESS, md: ROUNDNESS * 2, lg: ROUNDNESS * 3, xl: ROUNDNESS * 7 };
+
+// Both themes need every key: they are separate objects, and a key on one never reaches the other.
 export const LightTheme = {
   ...MD3LightTheme,
-  roundness: 0,
+  roundness: ROUNDNESS,
   colors: {
     ...MD3LightTheme.colors,
     ...lightColors,
   },
   fonts,
+  spacing,
+  radius,
 };
 
 
 
 export const DarkTheme = {
   ...MD3DarkTheme,
-  roundness: 0,
+  roundness: ROUNDNESS,
   colors: {
     ...MD3DarkTheme.colors,
     ...darkColors,
   },
   fonts,
+  spacing,
+  radius,
 };

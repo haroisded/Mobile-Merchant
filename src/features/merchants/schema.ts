@@ -1,14 +1,16 @@
 import * as z from 'zod';
 
+import type { IconName } from '../../lib/icons';
+
 // Zod earns its place here because this is *form input* — user-typed, untrusted, and needing
 // per-field messages. Reads are not validated with it: the generated database.types.ts already
 // expresses the schema, and a Zod mirror of a migration is the migration written twice in two
-// languages, drifting from the day it is committed (docs/data-layer.md §4).
+// languages, drifting from the day it is committed (instruction_mds/data-layer.md §4).
 
 // The single source of the category list on the client. The values are the Postgres enum's labels
 // verbatim, and two call sites pin the two lists equal at compile time with no type assertion:
 //
-//   CATEGORY_META[merchant.category]   in SystemCard.tsx  -> every DB value must exist here
+//   CATEGORY_META[merchant.category]   in src/screens/home/system-card.tsx  -> every DB value must exist here
 //   .insert({ category: values.category })  in queries.ts -> every value here must exist in the DB
 //
 // Add a category in a migration of its own (`alter type public.store_category add value`), then
@@ -36,20 +38,20 @@ export type StoreCategory = z.infer<typeof storeCategory>;
 // actually has — which is what anti-slop/no-known-value-widening rejects. This keeps the inference
 // and still checks the shape.
 //
-// Icon names are MaterialCommunityIcons, which is what PaperProvider's `settings.icon` renders
-// (src/app/_layout.tsx).
+// Icon names are the app's own (src/lib/icons.tsx), which PaperProvider's `settings.icon` renders as
+// each platform's symbol. Typed as IconName, so a name missing from the map is a compile error here.
 export const CATEGORY_META = {
-  restaurant: { label: 'Restaurant', icon: 'silverware-fork-knife' },
-  cafe: { label: 'Cafe', icon: 'coffee' },
-  clothing: { label: 'Clothing', icon: 'tshirt-crew' },
+  restaurant: { label: 'Restaurant', icon: 'restaurant' },
+  cafe: { label: 'Cafe', icon: 'cafe' },
+  clothing: { label: 'Clothing', icon: 'apparel' },
   grocery: { label: 'Grocery', icon: 'cart' },
-  bakery: { label: 'Bakery', icon: 'bread-slice' },
+  bakery: { label: 'Bakery', icon: 'bakery' },
   electronics: { label: 'Electronics', icon: 'laptop' },
-  pharmacy: { label: 'Pharmacy', icon: 'pill' },
-  bookstore: { label: 'Bookstore', icon: 'book-open-variant' },
-  fitness: { label: 'Fitness', icon: 'dumbbell' },
-  other: { label: 'Others', icon: 'dots-horizontal' },
-} satisfies Record<StoreCategory, { label: string; icon: string }>;
+  pharmacy: { label: 'Pharmacy', icon: 'pharmacy' },
+  bookstore: { label: 'Bookstore', icon: 'books' },
+  fitness: { label: 'Fitness', icon: 'fitness' },
+  other: { label: 'Others', icon: 'more-horizontal' },
+} satisfies Record<StoreCategory, { label: string; icon: IconName }>;
 
 // The address limit the counter shows the user. The same 255 is a check constraint on the
 // table — this one reports it before a round trip, that one is what actually enforces it.
@@ -88,7 +90,7 @@ export type Country = (typeof COUNTRIES)[number];
 // so the offset between them is the whole conversion.
 //
 // The M3 analysis specifies a flag `Image`. This is the same pixels with no asset pipeline, no
-// bundle weight and nothing to keep in step with the list above. docs/typography.md §6 already
+// bundle weight and nothing to keep in step with the list above. instruction_mds/typography.md §6 already
 // records that the system font carries emoji here, which is what makes it safe.
 export function countryFlag(iso: string): string {
   return String.fromCodePoint(
@@ -110,7 +112,7 @@ export function normalizePhone(raw: string): string {
 }
 
 // One schema for the whole wizard, shared by the form resolver and the mutation, so the thing
-// validated and the thing written cannot disagree (docs/data-layer.md §4).
+// validated and the thing written cannot disagree (instruction_mds/data-layer.md §4).
 //
 // The mobile flow gates each step with `trigger([...fields])` over a subset of THIS schema. There
 // are deliberately no per-step schemas: three schemas plus a merge is three places for the rules to

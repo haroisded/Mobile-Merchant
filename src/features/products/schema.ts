@@ -4,7 +4,7 @@ import { Constants } from '../../lib/database.types';
 import type { Enums } from '../../lib/database.types';
 import type { ProductDetail } from './queries';
 
-// Form input only. Reads are typed by database.types.ts, never parsed with Zod (docs/data-layer.md §4).
+// Form input only. Reads are typed by database.types.ts, never parsed with Zod (instruction_mds/data-layer.md §4).
 // One schema for the create and edit form, shared with the save mutation through toSavePayload.
 
 export type ProductType = Enums<'product_type'>;
@@ -52,7 +52,7 @@ export const TYPE_META = {
   },
 } satisfies Record<ProductType, { label: string; badge: string; skuPrefix: string; hint: string }>;
 
-// The status colours from docs/visual-language.md §4. Archived is not in that table; it reads as
+// The status colours from instruction_mds/visual-language.md §4. Archived is not in that table; it reads as
 // Inactive, which is what an archived product is from a till's point of view.
 export const STATUS_META = {
   draft: { label: 'Draft', tone: 'onSurfaceMuted' },
@@ -113,7 +113,8 @@ export type SectionId =
   | 'variants'
   | 'recipe'
   | 'media'
-  | 'advanced';
+  | 'advanced'
+  | 'review';
 
 export const SECTION_META = {
   general: { name: 'General', hint: 'Identity, classification and whether it can be sold on its own.' },
@@ -124,6 +125,9 @@ export const SECTION_META = {
   recipe: { name: 'Recipe / Bundle', hint: 'Composition — several products sold as one line.' },
   media: { name: 'Media', hint: 'Gallery and alt text.' },
   advanced: { name: 'Advanced', hint: 'Anything the default schema does not carry.' },
+  // The last step of every form. Appended by the form rather than listed per type below, because every
+  // type ends the same way: check it over, choose how it saves, save it.
+  review: { name: 'Review', hint: 'Check it over, choose how it saves, and save it.' },
 } satisfies Record<SectionId, { name: string; hint: string }>;
 
 type SectionEntry = { id: SectionId; optional: boolean };
@@ -386,7 +390,8 @@ export const FIELD_SECTION = {
   barcode: 'general',
   description: 'general',
   tags: 'general',
-  status: 'general',
+  // Status is chosen on the Review step, not buried in General.
+  status: 'review',
   soldDirectly: 'general',
   sellingPrice: 'pricing',
   costPrice: 'pricing',

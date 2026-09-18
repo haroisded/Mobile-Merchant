@@ -17,7 +17,7 @@ export const taxClassesKey = {
 
 /**
  * Presets offered in the create dialog. Suggestions the merchant taps, not rows seeded into the table:
- * a trigger that writes rows on merchant creation is the thing docs/tenancy.md §5 refuses, and a
+ * a trigger that writes rows on merchant creation is the thing instruction_mds/tenancy.md §5 refuses, and a
  * merchant outside the Philippines should not start with a VAT class they have to delete.
  */
 export const TAX_CLASS_PRESETS = [

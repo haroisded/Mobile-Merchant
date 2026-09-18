@@ -4,6 +4,7 @@ import type { Tables } from '../../lib/database.types';
 import { postgrestError } from '../../lib/errors';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
+import type { ResourceScope } from './resources';
 import { fromProductDetail, toSavePayload } from './schema';
 import type { ProductFormValues, ProductStatus, ProductType } from './schema';
 
@@ -13,6 +14,8 @@ export type ProductSort = 'name' | 'price' | 'stock' | 'created';
 
 export type ProductFilters = {
   merchantId: string;
+  /** Which Resources screen is asking. A list never shows another screen's items. */
+  scope: ResourceScope;
   search: string;
   categoryId: string | null;
   type: ProductType | null;
@@ -49,7 +52,10 @@ export function useProductsQuery(filters: ProductFilters) {
         .from('products')
         .select('*, category:product_categories!products_category_fk(name)')
         // Scoping to this system, not security — see the note in categories/queries.ts.
-        .eq('merchant_id', filters.merchantId);
+        .eq('merchant_id', filters.merchantId)
+        // …and to this Resources screen. products.scope is written by the database from the type
+        //, so this cannot disagree with what the row is.
+        .eq('scope', filters.scope);
 
       const search = filters.search.trim();
       if (search !== '') {

@@ -8,7 +8,7 @@ together and explained inline.
 > sign-in paths and the frontend rules — is in [ARCHITECTURE.md](./ARCHITECTURE.md).
 >
 > The conventions for what you build on top — feature folders, the data layer, tenancy, layout,
-> typography and the visual language — are in [`docs/`](./docs/), indexed in
+> typography and the visual language — are in [`instruction_mds/`](./instruction_mds/), indexed in
 > [CLAUDE.md §2](./CLAUDE.md#2-how-to-work-on-this).
 
 **Contents**
@@ -152,7 +152,7 @@ Every statement is re-runnable, so pasting `supabase/all-in-one/add.sql` — eve
 though: follow it with `supabase migration repair --status applied <version> …` for each file, or
 `supabase migration list` shows them as never applied. Its counterpart `supabase/all-in-one/revert.sql` undoes the lot and
 destroys the data with it; both are generated, never edited — see
-[`docs/migrations.md`](./docs/migrations.md).
+[`instruction_mds/migrations.md`](./instruction_mds/migrations.md).
 
 > **You have to enable RLS on every table you add.** Nothing in this scaffold does it for you.
 > A new table in `public` is published over HTTP by PostgREST the moment it exists, and the

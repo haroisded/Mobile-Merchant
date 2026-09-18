@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 
-import { ProfileScreen } from '../../features/profiles/ProfileScreen';
+import { ProfileScreen } from '../../screens/profile';
 
 // Profile opened from inside a system: the shell header's account action pushes this over the shell.
 // It has two exits, and they differ:

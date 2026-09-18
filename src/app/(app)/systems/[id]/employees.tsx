@@ -1,9 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { Text } from 'react-native-paper';
+import { PlaceholderScreen } from '../../../../components/placeholder-screen';
 
 // A stub. Employees has no screen or mockup yet, but its rail item needs somewhere to land.
 export default function Employees() {
-  return <Text variant="bodyMedium" style={styles.stub}>Nothing here yet.</Text>;
+  return <PlaceholderScreen />;
 }
-
-const styles = StyleSheet.create({ stub: { padding: 24 } });

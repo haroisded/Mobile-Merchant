@@ -8,7 +8,7 @@ import { useSession } from '../../Store/StoreUser';
 export type Profile = Tables<'profiles'>;
 
 // A separate resource from merchants — its own table, its own policies, its own key — so it gets its
-// own folder rather than being folded in as a helper (docs/structure.md rule 1).
+// own folder rather than being folded in as a helper (instruction_mds/structure.md rule 1).
 export const profileKey = {
   all: ['profile'],
   detail: () => [...profileKey.all, 'detail'],

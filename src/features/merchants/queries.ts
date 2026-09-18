@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext } from 'react';
+import { createContext, use } from 'react';
 
 import type { Tables } from '../../lib/database.types';
 import { STALE } from '../../lib/query';
@@ -14,12 +14,12 @@ import type { CreateSystemValues } from './schema';
 export type Merchant = Tables<'merchants'>;
 
 // This is the only file in the app that knows the table is called `merchants`. Screens import the
-// hooks below; nothing outside this file calls supabase.from() (docs/data-layer.md rules 2-3).
+// hooks below; nothing outside this file calls supabase.from() (instruction_mds/data-layer.md rules 2-3).
 
 // Key factory, most generic to most specific, so `merchantsKey.all` invalidates everything about
 // merchants while a narrower key can still be targeted later. Args go in an OBJECT, never
 // positionally, so adding a second argument cannot silently reorder an existing call site
-// (docs/data-layer.md rule 6).
+// (instruction_mds/data-layer.md rule 6).
 //
 // Deliberately no owner id in the key: the QueryClient itself is keyed on session.user.id in
 // src/app/_layout.tsx, so a different user gets a different cache entirely. Scoping the key too
@@ -44,7 +44,7 @@ export function useMerchantsQuery() {
       // not a PostgrestError: throwing that copy gives React Query a non-Error with no stack, and it
       // fails the `instanceof` in postgrestError() (src/lib/errors.ts), so every screen's
       // code-specific copy silently fell back to the generic line. throwOnError() throws the real
-      // class (:506, :526). Found on the device, System-History 10.3.
+      // class (:506, :526). Found on the device.
       const { data } = await supabase
         .from('merchants')
         .select('*')
@@ -70,7 +70,7 @@ export function useMerchantsQuery() {
 export const ShellMerchantContext = createContext<Merchant | null>(null);
 
 export function useShellMerchant(): Merchant {
-  const merchant = useContext(ShellMerchantContext);
+  const merchant = use(ShellMerchantContext);
   if (!merchant) throw new Error('useShellMerchant is only available inside the merchant shell.');
   return merchant;
 }

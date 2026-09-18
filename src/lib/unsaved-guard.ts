@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, use } from 'react';
 import type { RefObject } from 'react';
 
 /** Runs `proceed` now, or holds it behind a "Discard your changes?" confirm. */
@@ -17,5 +17,5 @@ export type LeaveGuard = (proceed: () => void) => void;
 export const UnsavedGuardContext = createContext<RefObject<LeaveGuard | null>>({ current: null });
 
 export function useUnsavedGuard() {
-  return useContext(UnsavedGuardContext);
+  return use(UnsavedGuardContext);
 }

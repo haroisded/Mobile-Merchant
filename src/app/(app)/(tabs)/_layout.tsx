@@ -1,97 +1,62 @@
-// From expo-router, not from '@react-navigation/bottom-tabs': SDK 57 vendors react-navigation
-// inside expo-router and does not install it as a package, so that import has nothing to resolve.
-// js-tabs re-exports the vendored bottom-tabs types (build/layouts/Tabs.d.ts:2).
-import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { Tabs } from 'expo-router/js-tabs';
-import { View } from 'react-native';
-import { BottomNavigation } from 'react-native-paper';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { StyleSheet, View } from 'react-native';
 
 import { useColumns } from '../../../lib/columns';
+import { ICONS } from '../../../lib/icons';
+import { useAppTheme } from '../../../lib/theme';
 
-// Icon and label per route, keyed by the route's file name. An array rather than a lookup object so
-// the match is a plain comparison — indexing a Record<string, …> with `route.name` would need a
-// type assertion, which .oxlintrc.json rejects.
+// The merchant-level tab bar: the platform's own (instruction_mds/visual-language.md §5, `vercel-react-native-skills`
+// `navigation-native-navigators`). Four tabs, under the five Android's native bar allows
+// (react-native-screens TabsHost.kt:89) — which is also why the eight-destination merchant shell stays a
+// Drawer.
 //
-// Order here is only metadata; the tab ORDER comes from the <Tabs.Screen> declarations below.
-const TAB_META = [
-  { name: 'index', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline' },
-  { name: 'notifications', title: 'Notifications', focusedIcon: 'bell', unfocusedIcon: 'bell-outline' },
-  { name: 'settings', title: 'Settings', focusedIcon: 'cog', unfocusedIcon: 'cog-outline' },
-  { name: 'account', title: 'Account', focusedIcon: 'account', unfocusedIcon: 'account-outline' },
-];
-
-// Paper's own bottom bar rather than the default React Navigation one, so the active indicator,
-// elevation and colour roles are MD3's without a single colour being passed by hand: the Bar
-// already resolves its background to theme.colors.elevation.level2 and its active indicator to
-// secondaryContainer (BottomNavigationBar.js:290, :460). Those are the roles the M3 analysis asks
-// for under the names `surfaceContainer` and `secondaryContainer` — the first of which does not
-// exist in Paper 5.15.3, which is why the substitution is "pass nothing".
-function PaperTabBar({ state, navigation, insets }: BottomTabBarProps) {
-  // The bar measures itself. On a wide container the M3 tablet layout has no bottom navigation at
-  // all — it swaps to a wider content grid with the actions in the app bar — so the bar simply does
-  // not render there.
-  //
-  // The wrapper View stays mounted and full-width either way. If it unmounted with the bar it would
-  // stop reporting a width, columns would fall back to 1, and the bar would reappear: a measure /
-  // render loop.
+// Nothing native reads PaperProvider, so every colour is passed from the theme. They are the roles
+// Paper's own BottomNavigation.Bar resolved to before this moved (BottomNavigationBar.js:290, :460):
+// `elevation.level2` for the bar, `secondaryContainer` for the active indicator. Icons are the same
+// { ios, android } pairs Paper's renderer draws (src/lib/icons.tsx).
+export default function TabsLayout() {
+  const { colors } = useAppTheme();
+  // On a wide container the M3 tablet layout has no bottom navigation — Home moves its actions into
+  // the app bar — so the bar hides. The wrapper stays mounted either way: it is what reports the width.
   const { columns, onLayout } = useColumns();
 
   return (
-    <View onLayout={onLayout}>
-      {columns === 1 ? (
-        <BottomNavigation.Bar
-          navigationState={{
-            index: state.index,
-            routes: state.routes.map((route) => {
-              const meta = TAB_META.find((tab) => tab.name === route.name);
-              return {
-                key: route.key,
-                title: meta?.title ?? route.name,
-                focusedIcon: meta?.focusedIcon,
-                unfocusedIcon: meta?.unfocusedIcon,
-              };
-            }),
-          }}
-          safeAreaInsets={insets}
-          onTabPress={({ route, preventDefault }) => {
-            // The Bar hands back the route object it was given, whose `key` is the real navigation
-            // key — so find the source route by key rather than by title.
-            const target = state.routes.find((candidate) => candidate.key === route.key);
-            if (!target) return;
-
-            // Emit the event first and honour a listener that cancels it; skipping this breaks
-            // scroll-to-top-on-retap and any other tabPress handler a screen registers.
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: target.key,
-              canPreventDefault: true,
-            });
-
-            if (event.defaultPrevented) {
-              preventDefault();
-              return;
-            }
-
-            navigation.navigate(target.name);
-          }}
-        />
-      ) : null}
+    <View style={styles.fill} onLayout={onLayout}>
+      {/* Each trigger is declared explicitly so the tab ORDER is this list, not the order the files
+          happen to be discovered in. Left to discovery, `account` would sort second instead of last. */}
+      <NativeTabs
+        hidden={columns > 1}
+        // Android's bar labels only the selected tab by default, which hid three of the four labels
+        // Paper's bar used to show.
+        labelVisibilityMode="labeled"
+        backgroundColor={colors.elevation.level2}
+        indicatorColor={colors.secondaryContainer}
+        rippleColor={colors.ripple}
+        iconColor={{ default: colors.onSurfaceVariant, selected: colors.onSecondaryContainer }}
+        labelStyle={{ default: { color: colors.onSurfaceVariant }, selected: { color: colors.onSurface } }}
+        tintColor={colors.onSecondaryContainer}
+      >
+        <NativeTabs.Trigger name="index">
+          <NativeTabs.Trigger.Icon sf={ICONS.home.ios} md={ICONS.home.android} />
+          <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="notifications">
+          <NativeTabs.Trigger.Icon sf={ICONS.bell.ios} md={ICONS.bell.android} />
+          <NativeTabs.Trigger.Label>Notifications</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="settings">
+          <NativeTabs.Trigger.Icon sf={ICONS.settings.ios} md={ICONS.settings.android} />
+          <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="account">
+          <NativeTabs.Trigger.Icon sf={ICONS.account.ios} md={ICONS.account.android} />
+          <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
     </View>
   );
 }
 
-export default function TabsLayout() {
-  // `Tabs` from expo-router/js-tabs, not from 'expo-router' — the root export is @deprecated in
-  // SDK 57 (expo-router/build/exports.d.ts:41) and points here.
-  //
-  // Each screen is declared explicitly so the tab ORDER is this list, not the order the files
-  // happen to be discovered in. Left to discovery, `account` would sort second instead of last.
-  return (
-    <Tabs tabBar={(props) => <PaperTabBar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="notifications" />
-      <Tabs.Screen name="settings" />
-      <Tabs.Screen name="account" />
-    </Tabs>
-  );
-}
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});

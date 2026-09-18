@@ -1,5 +1,41 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "permissions": {
+    "ask": [
+      "Bash(adb *)",
+      "PowerShell(adb *)",
+      "Bash(emulator *)",
+      "PowerShell(emulator *)",
+      "Bash(npx expo run*)",
+      "PowerShell(npx expo run*)",
+      "Bash(npx expo start*)",
+      "PowerShell(npx expo start*)",
+      "Bash(npm run android*)",
+      "PowerShell(npm run android*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/uel36/AppData/Roaming/Python/Python312/Scripts/graphify.EXE hook-guard search"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/uel36/AppData/Roaming/Python/Python312/Scripts/graphify.EXE hook-guard read"
+          }
+        ]
+      }
+    ]
   }
 }

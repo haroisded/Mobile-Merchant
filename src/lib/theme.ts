@@ -13,13 +13,13 @@ export type AppTheme = typeof LightTheme;
 /**
  * Paper's useTheme() with the Merchant keys typed. Paper types `theme.colors` to MD3's roles only, so
  * `colors.accent` does not compile through the plain hook. A generic, not a type assertion, so it
- * passes .oxlintrc.json (docs/visual-language.md §3).
+ * passes .oxlintrc.json (instruction_mds/visual-language.md §3).
  */
 export const useAppTheme = () => useTheme<AppTheme>();
 
 /**
  * Paper's own Text, typed to also accept `display` and `amount`. customText is a cast of the same
  * component (Text.tsx:185), not a second primitive, so CLAUDE.md §3 rule 1 still holds
- * (docs/typography.md §2). Import it only where one of those two variants is used.
+ * (instruction_mds/typography.md §2). Import it only where one of those two variants is used.
  */
 export const AppText = customText<`${MD3TypescaleKey}` | 'display' | 'amount'>();

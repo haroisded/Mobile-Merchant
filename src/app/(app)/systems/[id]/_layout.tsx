@@ -1,38 +1,65 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import Drawer from 'expo-router/drawer';
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
-import { useContext, useRef, useState } from 'react';
+import { use, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Appbar, Avatar, Button, Icon, Surface, Text, TouchableRipple } from 'react-native-paper';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { ActivityIndicator } from '../../../../components/activity-indicator';
+import { Appbar } from '../../../../components/appbar';
+import { Avatar } from '../../../../components/avatar';
+import { Button } from '../../../../components/button';
+import { Icon } from '../../../../components/icon';
+import { Surface } from '../../../../components/surface';
+import { Text } from '../../../../components/text';
 import { ShellMerchantContext, useMerchantsQuery } from '../../../../features/merchants/queries';
 import { DRAWER_WIDTH, RAIL_COLLAPSED, RAIL_EXPANDED, ShellWideContext, WIDE_MIN, useColumns } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
+import type { IconName } from '../../../../lib/icons';
 import { useAppTheme } from '../../../../lib/theme';
 import { UnsavedGuardContext } from '../../../../lib/unsaved-guard';
 import type { LeaveGuard } from '../../../../lib/unsaved-guard';
+import { radius, spacing } from '../../../../themes';
 
 // The merchant shell (System-Context/Merchant-Page, M3-Analysis/BottomNav-NavRail.md): a header over
 // a NavigationRail on a wide container, or over an off-canvas drawer on a narrow one. Navigation is a
-// layout, not a component (docs/structure.md rule 4), so every piece of the shell lives in this file.
+// layout, not a component (instruction_mds/structure.md rule 4), so every piece of the shell lives in this file.
 //
 // One expo-router Drawer serves both widths — drawerType 'permanent' is the rail, 'front' is the
-// drawer — so the two share one route table and one destination list (docs/layout.md §9).
+// drawer — so the two share one route table and one destination list (instruction_mds/layout.md §9).
 
-// Rail order. `name` is the route file under this directory; icons are Feather names except
-// `calculator`, which Feather lacks and the root layout's renderer draws from MaterialCommunityIcons
-// (docs/visual-language.md §6). An array rather than a lookup object, so matching the focused route is
-// a plain comparison with no type assertion.
-const DESTINATIONS = [
+type Destination = { name: string; label: string; icon: IconName };
+
+// The three Resources screens. One catalogue split by what a merchant is looking
+// at: things sold as a line, things rented or booked, and things counted on a shelf.
+const RESOURCES: Destination[] = [
+  { name: 'products', label: 'Products', icon: 'list' },
+  { name: 'rentables', label: 'Rentables', icon: 'key' },
+  { name: 'inventory', label: 'Inventory', icon: 'inventory' },
+];
+
+// Rail order. `name` is the route file under this directory; icons are the app's own names, drawn as
+// each platform's symbol (src/lib/icons.tsx, instruction_mds/visual-language.md §6). An array rather than a lookup
+// object, so matching the focused route is a plain comparison with no type assertion.
+//
+// Resources is the one row that is not a destination: it has no route and navigates nowhere, it only
+// shows and hides the three screens under it.
+const DESTINATIONS: (Destination | { group: 'resources'; label: string; icon: IconName })[] = [
   { name: 'index', label: 'Home', icon: 'home' },
   { name: 'register', label: 'Register', icon: 'calculator' },
-  { name: 'dashboard', label: 'Dashboard', icon: 'bar-chart-2' },
-  { name: 'products', label: 'Products', icon: 'list' },
+  { name: 'dashboard', label: 'Dashboard', icon: 'bar-chart' },
+  { group: 'resources', label: 'Resources', icon: 'layers' },
   { name: 'discounts', label: 'Discounts', icon: 'percent' },
   { name: 'employees', label: 'Employees', icon: 'users' },
-  { name: 'features', label: 'Features', icon: 'toggle-right' },
+  { name: 'features', label: 'Features', icon: 'toggle' },
   { name: 'audit', label: 'Audit', icon: 'clipboard' },
+];
+
+/** Every route the drawer navigator holds: the rail's own destinations plus the three Resources. */
+const ROUTES: Destination[] = [
+  // A predicate, not a plain filter: `!('group' in entry)` does not narrow the array's element type.
+  ...DESTINATIONS.filter((entry): entry is Destination => !('group' in entry)),
+  ...RESOURCES,
 ];
 
 /** "Cafe 67" → "C6": the first letter of up to two words, for the system badge. */
@@ -56,7 +83,7 @@ export default function SystemLayout() {
   // The shell's one width decision. useColumns with WIDE_MIN as the "card" width yields a second
   // column exactly when the container reaches WIDE_MIN, so `columns > 1` reads as "wide". Measured
   // here, on the shell's root, and handed down — never re-measured by a screen under it, whose pane
-  // is narrower by the rail and would flip at a different width (docs/layout.md §9).
+  // is narrower by the rail and would flip at a different width (instruction_mds/layout.md §9).
   const { columns, onLayout } = useColumns(WIDE_MIN);
   const wide = columns > 1;
   // Only the rail collapses. The narrow drawer's open state belongs to the navigator instead.
@@ -77,7 +104,7 @@ export default function SystemLayout() {
     return (
       <ShellState>
         {/* Paused first: a query with no connection is queued, not failed, and isPending stays true
-            the whole time, so checking isPending first would spin forever (docs/data-layer.md §5).
+            the whole time, so checking isPending first would spin forever (instruction_mds/data-layer.md §5).
             No retry control on this branch — the query resumes on its own when the device
             reconnects. */}
         {merchants.isPaused ? (
@@ -133,18 +160,24 @@ export default function SystemLayout() {
           </View>
         )}
         drawerContent={(props) => (
-          <SystemNav {...props} name={merchant.name} wide={wide} expanded={expanded} />
+          <SystemNav
+            {...props}
+            name={merchant.name}
+            wide={wide}
+            expanded={expanded}
+            onExpandRail={() => setExpanded(true)}
+          />
         )}
         screenOptions={{
           headerShown: false,
           drawerType: wide ? 'permanent' : 'front',
-          drawerStyle: [styles.drawer, { backgroundColor: colors.primary, width: drawerWidth }],
+          drawerStyle: [wide ? styles.rail : styles.drawer, { backgroundColor: colors.primary, width: drawerWidth }],
           overlayColor: colors.backdrop,
           sceneStyle: { backgroundColor: colors.background },
         }}
       >
-        {DESTINATIONS.map((destination) => (
-          <Drawer.Screen key={destination.name} name={destination.name} />
+        {ROUTES.map((route) => (
+          <Drawer.Screen key={route.name} name={route.name} />
         ))}
       </Drawer>
       </ShellWideContext>
@@ -158,7 +191,7 @@ type HeaderProps = {
   onMenu: () => void;
 };
 
-// Component A. Paper picks the title's variant (docs/typography.md rule 5), so only colour is passed.
+// Component A. Paper picks the title's variant (instruction_mds/typography.md rule 5), so only colour is passed.
 function MerchantHeader({ onMenu }: HeaderProps) {
   const { colors } = useAppTheme();
 
@@ -169,7 +202,7 @@ function MerchantHeader({ onMenu }: HeaderProps) {
       {/* Rendered, not wired: there is no notifications screen inside a system yet. */}
       <Appbar.Action icon="bell" color={colors.onPrimary} accessibilityLabel="Notifications" />
       <Appbar.Action
-        icon="user"
+        icon="account"
         color={colors.onPrimary}
         // Pushed over the shell, so back returns here. Profile is also the way out of a system.
         onPress={() => router.push('/profile')}
@@ -202,16 +235,30 @@ type NavProps = DrawerContentComponentProps & {
   name: string;
   wide: boolean;
   expanded: boolean;
+  /** Tapping Resources on the icon-only rail widens the rail first, so its children are readable. */
+  onExpandRail: () => void;
 };
 
-// Components B and C: the same header, divider and eight destinations, laid out as a rail when wide
-// and as drawer rows when narrow. No system switcher — the way out of a system is Profile.
-function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
+// Components B and C: the same header, divider and destinations, laid out as a rail when wide and as
+// drawer rows when narrow. No system switcher — the way out of a system is Profile.
+function SystemNav({ state, navigation, name, wide, expanded, onExpandRail }: NavProps) {
   const { colors } = useAppTheme();
-  const leaveGuard = useContext(UnsavedGuardContext);
+  const leaveGuard = use(UnsavedGuardContext);
   const active = state.routes[state.index]?.name;
   // The drawer always shows labels; the rail shows them only while expanded.
   const labelled = !wide || expanded;
+  // Open when one of the three is the screen being shown, so a reload into Inventory does not hide it.
+  // Initial state only: after that the merchant's last tap on the group decides.
+  const [resourcesOpen, setResourcesOpen] = useState(() => RESOURCES.some((entry) => entry.name === active));
+
+  // A destination with unsaved changes gets to confirm first. Tapping the destination already open
+  // switches nothing, so it is not asked.
+  const go = (target: string) => {
+    const navigate = () => navigation.navigate(target);
+    const guard = leaveGuard.current;
+    if (guard && target !== active) guard(navigate);
+    else navigate();
+  };
 
   return (
     <View>
@@ -233,44 +280,114 @@ function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
 
       <View style={[styles.divider, { backgroundColor: colors.onPrimary }]} />
 
-      {DESTINATIONS.map((destination) => {
-        const isActive = destination.name === active;
-        return (
-          <TouchableRipple
-            key={destination.name}
-            // The drawer router closes the front drawer on any route change (DrawerRouter.js:114-119),
-            // so tapping a destination needs no separate close call.
-            onPress={() => {
-              const go = () => navigation.navigate(destination.name);
-              // A destination with unsaved changes gets to confirm first. Tapping the destination
-              // already open switches nothing, so it is not asked.
-              const guard = leaveGuard.current;
-              if (guard && !isActive) guard(go);
-              else go();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={destination.label}
-            accessibilityState={{ selected: isActive }}
-            // Active: the lightened ground and the 4px accent bar. Inactive: no ground, no bar, 68%.
-            // The bar is a left border on every item, transparent when inactive, so selecting an item
-            // never shifts its content sideways (docs/visual-language.md §4).
-            style={[
-              styles.item,
-              isActive ? { backgroundColor: colors.primaryHighlight, borderLeftColor: colors.accent } : styles.inactive,
-            ]}
-          >
-            <View style={wide ? styles.railItem : styles.drawerItem}>
-              <Icon source={destination.icon} size={wide ? 24 : 22} color={colors.onPrimary} />
-              {labelled ? (
-                <Text variant="labelLarge" numberOfLines={1} maxFontSizeMultiplier={1.3} style={{ color: colors.onPrimary }}>
-                  {destination.label}
-                </Text>
-              ) : null}
-            </View>
-          </TouchableRipple>
-        );
-      })}
+      <View style={styles.items}>
+        {DESTINATIONS.map((entry) => {
+          if ('group' in entry) {
+            // Resources: no route of its own, so it is never "active" — it only opens and closes.
+            return (
+              <View key={entry.group}>
+                <NavItem
+                  label={entry.label}
+                  icon={entry.icon}
+                  wide={wide}
+                  labelled={labelled}
+                  trailing={resourcesOpen ? 'chevron-down' : 'chevron-right'}
+                  expandedState={resourcesOpen}
+                  onPress={() => {
+                    // On the icon-only rail the children would be three unlabelled icons under an
+                    // unlabelled one, so widening the rail is the first half of opening the group.
+                    if (wide && !expanded) onExpandRail();
+                    setResourcesOpen((open) => !open);
+                  }}
+                />
+                {resourcesOpen
+                  ? RESOURCES.map((child) => (
+                      <NavItem
+                        key={child.name}
+                        label={child.label}
+                        icon={child.icon}
+                        wide={wide}
+                        labelled={labelled}
+                        nested
+                        active={child.name === active}
+                        onPress={() => go(child.name)}
+                      />
+                    ))
+                  : null}
+              </View>
+            );
+          }
+
+          return (
+            <NavItem
+              key={entry.name}
+              label={entry.label}
+              icon={entry.icon}
+              wide={wide}
+              labelled={labelled}
+              active={entry.name === active}
+              onPress={() => go(entry.name)}
+            />
+          );
+        })}
+      </View>
     </View>
+  );
+}
+
+type ItemProps = {
+  label: string;
+  icon: IconName;
+  wide: boolean;
+  labelled: boolean;
+  active?: boolean;
+  /** One of the three screens under Resources: indented, and a step smaller. */
+  nested?: boolean;
+  /** The group row's chevron. */
+  trailing?: IconName;
+  /** The group row's open state, for the screen reader. */
+  expandedState?: boolean;
+  onPress: () => void;
+};
+
+// One rail or drawer row. Active: the lightened ground and the 4px accent bar. Inactive: no ground, no
+// bar, 68%. The bar is a left border on every item, transparent when inactive, so selecting an item
+// never shifts its content sideways (instruction_mds/visual-language.md §4).
+function NavItem({ label, icon, wide, labelled, active, nested, trailing, expandedState, onPress }: ItemProps) {
+  const { colors } = useAppTheme();
+
+  return (
+    <Pressable
+      // The drawer router closes the front drawer on any route change (DrawerRouter.js:114-119), so
+      // tapping a destination needs no separate close call.
+      onPress={onPress}
+      // On `primary` the press colour is the same lightened ground the active item wears.
+      android_ripple={{ color: colors.primaryHighlight }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active, expanded: expandedState }}
+      style={[
+        styles.item,
+        active ? { backgroundColor: colors.primaryHighlight, borderLeftColor: colors.accent } : styles.inactive,
+      ]}
+    >
+      <View style={[wide ? styles.railItem : styles.drawerItem, nested && styles.nested]}>
+        <Icon source={icon} size={wide ? 24 : 22} color={colors.onPrimary} />
+        {labelled ? (
+          <View style={styles.labelRow}>
+            <Text
+              variant="labelLarge"
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.3}
+              style={[styles.fill, { color: colors.onPrimary }]}
+            >
+              {label}
+            </Text>
+            {trailing ? <Icon source={trailing} size={18} color={colors.onPrimary} /> : null}
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
   );
 }
 
@@ -278,18 +395,26 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   // react-navigation draws its own chrome on the drawer: a hairline right border in its theme's
   // `border` colour on the permanent rail, and 16-radius corners on the front drawer
-  // (DrawerView.js:55, :184-206). `roundness: 0` reaches Paper only, so both are zeroed here — the
-  // one hand-set radius in the project, and it removes a corner rather than adding one.
-  drawer: { borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 },
-  systemRail: { alignItems: 'flex-start', gap: 8, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 18 },
-  systemDrawer: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 16 },
+  // (DrawerView.js:55, :184-206). `roundness` reaches Paper only, so both are set here from the theme:
+  // the rail is chrome flush with the content beside it and keeps square edges, and the front drawer
+  // takes the radius a Dialog-sized surface gets (instruction_mds/visual-language.md rule 4).
+  rail: { borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 },
+  drawer: { borderRightWidth: 0, borderTopRightRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  systemRail: { alignItems: 'flex-start', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.md },
+  systemDrawer: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, padding: spacing.md },
   systemText: { flexShrink: 1 },
   subtitle: { opacity: 0.7 },
-  divider: { height: 1, opacity: 0.28, marginBottom: 8 },
-  // 4 of border plus 10 of padding keeps the icon at the mockup's 14 from the edge.
+  divider: { height: 1, opacity: 0.28 },
+  items: { paddingTop: spacing.sm },
+  // 4 of border plus `ms` of padding puts every icon `md` from the edge, level with the badge above.
   item: { borderLeftWidth: 4, borderLeftColor: 'transparent' },
   inactive: { opacity: 0.68 },
-  railItem: { alignItems: 'flex-start', gap: 7, paddingVertical: 13, paddingLeft: 10, paddingRight: 14 },
-  drawerItem: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 15, paddingLeft: 12, paddingRight: 16 },
-  state: { gap: 12, alignItems: 'flex-start', padding: 24 },
+  railItem: { alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.ms, paddingLeft: spacing.ms, paddingRight: spacing.ms },
+  // Label and chevron share a row in both anatomies: beside the icon in the drawer, under it in the
+  // rail, where the item itself is a column.
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 },
+  drawerItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingLeft: spacing.ms, paddingRight: spacing.md },
+  // One step in from its group row, so the three Resources screens read as under it.
+  nested: { paddingLeft: spacing.lg },
+  state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.lg },
 });
