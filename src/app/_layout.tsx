@@ -1,13 +1,14 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 
 import { renderIcon } from '../lib/icons';
 import { makeQueryClient } from '../lib/query';
+import { useIsDarkTheme } from '../Store/StoreTheme';
 import { useIsSessionLoading, useSession } from '../Store/StoreUser';
 import { DarkTheme, LightTheme } from '../themes';
 
@@ -32,8 +33,9 @@ function QueryProvider({ children }: { children: ReactNode }) {
 export default function RootLayout() {
   const session = useSession();
   const isLoading = useIsSessionLoading();
-  // app.json sets userInterfaceStyle: "automatic", so this follows the OS setting.
-  const theme = useColorScheme() === 'dark' ? DarkTheme : LightTheme;
+  // The OS setting unless the Themes row in Profile has overridden it (src/Store/StoreTheme.ts).
+  const dark = useIsDarkTheme();
+  const theme = dark ? DarkTheme : LightTheme;
 
   // hide() is a native side effect, so it cannot live in the render body: app.json sets
   // experiments.reactCompiler, which assumes render is pure and may re-order or re-run it.
@@ -69,6 +71,13 @@ export default function RootLayout() {
       // The object literal is new each render; reactCompiler memoizes.
       settings={{ icon: renderIcon }}
     >
+      {/* The bar's own icons, not its background: the Android build is edge-to-edge
+          (android/gradle.properties), so the app draws under the status bar and owns the contrast
+          there. Without this the icons follow the OS, and choosing dark on a light phone leaves a
+          dark clock on a dark surface. The Android navigation bar's buttons are a separate module
+          (expo-navigation-bar) that is not installed. */}
+      <StatusBar style={dark ? 'light' : 'dark'} />
+
       {/* Keyed on the user id, which is what makes "sign out, sign in as someone else" structural
           rather than remembered: the key change remounts the provider, which builds a new client
           and throws the old cache away entirely.

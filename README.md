@@ -27,8 +27,8 @@ together and explained inline.
 ## What ships
 
 - **Expo SDK 57** — React Native 0.86, React 19.2, expo-router v7, New Architecture
-- **Google and Facebook social login** — native Google sheet on device, browser OAuth for Facebook
-  and on web
+- **Google and Facebook social login** — native Google sheet on device, system-browser OAuth for
+  Facebook
 - **Session handling** in one zustand store — restore, auto-refresh, sign-out
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
@@ -37,14 +37,17 @@ together and explained inline.
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
-- **Runs on web** (`npm run web`), so the whole session lifecycle is debuggable in a browser
 
 Exact versions are in `package.json`.
 
 > **Expo Go will not work.** The Google sign-in module is native code, and a custom `scheme` has
-> no effect in Expo Go at all, so device testing needs a development build (`npm run ios` /
-> `npm run android`). The web target (`npm run web`) needs nothing extra and is the fastest way
-> to iterate on session logic.
+> no effect in Expo Go at all, so every test needs a development build (`npm run ios` /
+> `npm run android`).
+>
+> **There is no web target.** This is a phone and tablet app and will not become a website. Nothing
+> here is built, run or debugged in a browser. The one place a browser appears is Facebook sign-in,
+> which opens the *device's* system browser and hands the session back through
+> `mobilemerchant://` — see [5. Facebook sign-in](#5-facebook-sign-in).
 
 ---
 
@@ -98,27 +101,27 @@ Never put the secret key (`sb_secret_…`) in an `EXPO_PUBLIC_` variable — it 
 
 ### Redirect URLs
 
-**Authentication → URL Configuration → Redirect URLs** — add both:
+**Authentication → URL Configuration → Redirect URLs** — one entry:
 
 ```
 mobilemerchant://**
-http://localhost:8081/**
 ```
 
-The first is this app's scheme (set in `app.json`), used by the Facebook browser flow to hand the
-session back to the app. The second is the Expo web dev server.
+That is this app's scheme (set in `app.json`), and it is how the Facebook browser flow hands the
+session back to the app. There is no web entry: this app has no web target, so nothing ever
+redirects to `localhost`.
 
 ### Site URL
 
-**Authentication → URL Configuration → Site URL** — set it to `http://localhost:8081`.
+**Authentication → URL Configuration → Site URL** — Supabase requires a value here even though this
+app never opens one. Leave it at whatever the project was created with.
 
-> **Do not skip this one.** It defaults to `http://localhost:3000`, and when Supabase cannot match a
-> `redirect_to` against the allow-list above it **silently falls back to Site URL** rather than
-> erroring. On web that lands the browser on a different origin, which means a different
-> `localStorage`, which means the PKCE code verifier written at the start of the flow is invisible
-> on return. `auth-js` then treats the incoming `?code=` as *not a callback* at all — no exchange,
-> no error, no log. A wrong Site URL is the single most likely cause of a sign-in that appears to
-> do nothing.
+> **Why it still matters.** When Supabase cannot match a `redirect_to` against the allow-list above
+> it **silently falls back to Site URL** rather than erroring. So a typo in the scheme, or a missing
+> `mobilemerchant://**` entry, does not produce an error — the browser is sent somewhere the app is
+> not listening, `openAuthSessionAsync` never sees its prefix, and the sign-in appears to do
+> nothing. That silence is the single most likely cause of a Facebook sign-in that hangs, and
+> `auth.ts` logs the exact `redirectTo` on a dismiss for that reason.
 
 ### Database schema
 
@@ -235,7 +238,7 @@ Two things already address it, and a third is not possible:
 
 - `queryParams: { auth_type: 'reauthenticate' }` (`auth.ts:84`) forces Facebook's login screen
   rather than clearing anything. This is the only portable lever.
-- `preferEphemeralSession: true` (`auth.ts:92`) makes the auth browser a throwaway session with no
+- `preferEphemeralSession: true` (`auth.ts:97`) makes the auth browser a throwaway session with no
   shared cookies — **iOS only**, and honored at the browser's discretion.
 - Clearing the cookies on Android is not possible. The Custom Tab runs in Chrome's process against
   Chrome's cookie jar; nothing in your app can reach it. Signing the user out of Facebook after a
@@ -247,7 +250,6 @@ Two things already address it, and a third is not possible:
 ## 6. Run it
 
 ```bash
-npm run web       # browser — full session flow, both providers via redirect OAuth
 npm run ios       # development build (macOS + Xcode), native Google sheet
 npm run android   # development build, native Google sheet
 ```
@@ -264,14 +266,17 @@ npm run typecheck
 npm run lint    # oxlint + the anti-slop rules
 ```
 
-End-to-end, on web:
+End-to-end, on a development build:
 
-1. `npm run web` → sign in with Google → lands on the account screen with no explicit navigation
-   call anywhere in the app.
-2. Reload the page — the session is restored from storage, no sign-in screen flash.
+1. Sign in with Google → lands on the account screen with no explicit navigation call anywhere in
+   the app.
+2. Swipe the app away and reopen it — the session is restored from the Keychain / Keystore, no
+   sign-in screen flash.
 3. Sign out, then sign in with Facebook → same screen, "Signed in with facebook" on the card.
+4. Sign in with Facebook again and press **Cancel** inside Facebook's own dialog → back on the
+   sign-in screen with no error message.
 
-On a dev build, before debugging any redirect:
+Before debugging any redirect:
 
 ```bash
 npx uri-scheme open mobilemerchant:// --android    # or --ios

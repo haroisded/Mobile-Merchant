@@ -69,8 +69,11 @@ export const ICONS = {
 
   // Profile
   'account-details': { ios: 'person.text.rectangle', android: 'badge' },
-  appearance: { ios: 'moon', android: 'dark_mode' },
   device: { ios: 'iphone', android: 'smartphone' },
+  // The Themes row and its toggle. A palette rather than a moon: the row is the way into every
+  // appearance choice, and light/dark is only the first one it carries.
+  themes: { ios: 'paintpalette', android: 'palette' },
+  'theme-switch': { ios: 'arrow.triangle.2.circlepath', android: 'autorenew' },
   'person-remove': { ios: 'person.badge.minus', android: 'person_remove' },
   shield: { ios: 'person.badge.shield.checkmark', android: 'shield_person' },
   storefront: { ios: 'storefront', android: 'storefront' },

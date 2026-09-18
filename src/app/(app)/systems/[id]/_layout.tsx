@@ -76,7 +76,7 @@ function initials(name: string) {
 export default function SystemLayout() {
   const { id } = useLocalSearchParams<{ id: string }>();
   // The same list the systems grid fetched, so arriving from a SystemCard is a cache hit and no
-  // request goes out. A deep link or a web reload fetches it once.
+  // request goes out. A deep link fetches it once.
   const merchants = useMerchantsQuery();
   const merchant = merchants.data?.find((candidate) => candidate.id === id);
   const { colors } = useAppTheme();

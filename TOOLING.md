@@ -52,7 +52,7 @@ with something already listed on this page, so nothing below them is a separate 
 | `supabase-postgres-best-practices` | any Postgres schema / RLS / migration work |
 | `vercel-react-native-skills` | lists, animation/gestures, navigator setup, native modules — description narrowed, [below](#narrowed-skill-descriptions) |
 | `vercel-react-best-practices` | render logic, hooks, effects, state outside those areas; its Next.js / DOM rules do not apply here ([`instruction_mds/optimization.md`](./instruction_mds/optimization.md) rule 2) — description narrowed, [below](#narrowed-skill-descriptions) |
-| `web-design-guidelines` | web UI review — arrived with the Vercel pack; this app has no web UI to review |
+| `web-design-guidelines` | web UI review — arrived with the Vercel pack. **Uninstall candidate:** this app has no web UI and no web target, so the description is pure per-turn token cost. A human action on the machine, not something the agent does |
 
 `~/.claude/CLAUDE.md` makes `graphify` mandatory on `/graphify` before anything else runs.
 

@@ -27,7 +27,9 @@ That tapping **Resources** in the side menu only shows or hides the three screen
 The same menu on the narrow tablet side bar.
 
 ### What do you need before starting?
-- Signed in, inside a system, on a tablet held in landscape, side bar collapsed to icons.
+- Signed in, inside a system, on a tablet wide enough to show the side bar as a permanent rail,
+  collapsed to icons. (The app is locked to portrait, so do not rotate it — if the rail is not
+  showing, this tablet is too narrow and the test does not apply.)
 
 ### Steps
 1. Tap the **Resources** icon.

@@ -1,6 +1,6 @@
 import { QueryClient, focusManager, onlineManager } from '@tanstack/react-query';
 import * as Network from 'expo-network';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 
 // The one place a millisecond literal is written. Query hooks name a constant from here rather than
 // inlining `5 * 60 * 1000`, so the freshness policy is readable in one file instead of scattered
@@ -50,7 +50,7 @@ onlineManager.setEventListener((setOnline) => {
 // refresh timer; this one tells React Query the app came back to the foreground. Both exist, and
 // neither substitutes for the other.
 AppState.addEventListener('change', (status) => {
-  if (Platform.OS !== 'web') focusManager.setFocused(status === 'active');
+  focusManager.setFocused(status === 'active');
 });
 
 // A factory, not a shared singleton. The provider builds one client per signed-in user and throws it

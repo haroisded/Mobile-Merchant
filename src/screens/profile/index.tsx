@@ -12,7 +12,6 @@ import { FAB } from '../../components/fab';
 import { HelperText } from '../../components/helper-text';
 import { List } from '../../components/list';
 import { Surface } from '../../components/surface';
-import { Switch } from '../../components/switch';
 import { Text } from '../../components/text';
 import { useProfileQuery } from '../../features/profiles/queries';
 import { signOut } from '../../lib/auth';
@@ -21,6 +20,7 @@ import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
 import { spacing } from '../../themes';
+import { PreferencesCard } from './preferences-card';
 
 type Props = {
   /** The back arrow (narrow) and the Go Back button (wide). Where it goes depends on the route. */
@@ -129,17 +129,6 @@ export function ProfileScreen({ onBack, onExitSystem }: Props) {
                 <Divider />
                 <List.Item title="Terms of Service" left={(p) => <List.Icon {...p} icon="terms" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
               </Card>
-
-              <Text variant="labelMedium">Preferences</Text>
-              <Card>
-                {/* The Switch has no onValueChange — the Appearance toggle is unticked. The theme
-                    still follows the OS setting through useColorScheme() in the root layout. */}
-                <List.Item
-                  title="Appearance"
-                  left={(p) => <List.Icon {...p} icon="appearance" />}
-                  right={() => <Switch value={false} />}
-                />
-              </Card>
             </>
           ) : (
             // Wide condenses the same identity into one details card, per the M3 tablet analysis.
@@ -165,6 +154,9 @@ export function ProfileScreen({ onBack, onExitSystem }: Props) {
               </Card.Content>
             </Card>
           )}
+
+          {/* Outside the width branch on purpose: a phone and a tablet both get it. */}
+          <PreferencesCard />
 
           <View style={styles.actions}>
             {narrow ? null : (

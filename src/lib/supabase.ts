@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 import type { Database } from './database.types';
 import { secureStorage } from './secure-storage';
 
@@ -31,7 +31,7 @@ export const supabase = createClient<Database>(url, publishableKey, {
     storage: secureStorage,
     flowType: 'pkce',
 
-    // The only instrumentation that reaches inside detectSessionInUrl on web, where failures
+    // The only instrumentation that reaches inside auth-js's own flow handling, where failures
     // are otherwise completely silent. __DEV__ is stripped from release builds; debug output
     // can contain token material.
     debug: __DEV__,
@@ -39,9 +39,7 @@ export const supabase = createClient<Database>(url, publishableKey, {
 });
 
 
-if (Platform.OS !== 'web') {
-  AppState.addEventListener('change', (state) => {
-    if (state === 'active') supabase.auth.startAutoRefresh();
-    else supabase.auth.stopAutoRefresh();
-  });
-}
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') supabase.auth.startAutoRefresh();
+  else supabase.auth.stopAutoRefresh();
+});

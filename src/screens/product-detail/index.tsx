@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { useArchiveUndo } from '../../components/archive-undo';
@@ -412,14 +413,15 @@ export function ProductDetail({ merchantId, currency, product, scope }: Props) {
       </ScrollView>
 
       {wide ? null : (
-        <View style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
+        // SafeAreaView, not View: edge-to-edge draws this bar behind the system navigation bar.
+        <SafeAreaView edges={['bottom']} style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
           <Button mode="outlined" icon={archived ? 'restore' : 'archive'} onPress={toggleArchive} style={styles.fill}>
             {archived ? 'Restore' : 'Archive'}
           </Button>
           <Button mode="contained" icon="edit" onPress={edit} style={styles.fill}>
             Edit
           </Button>
-        </View>
+        </SafeAreaView>
       )}
 
       {deleting ? (

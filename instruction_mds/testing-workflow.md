@@ -16,7 +16,7 @@ writing the acceptance tests the human runs ([`acceptance-tests.md`](./acceptanc
    race between two writes, a missing loading state — is fixed in the plan, not handed to a tester.
 3. **After code, run the static checks** (§1). Screen every finding against
    [`false-positives.md`](./false-positives.md) before acting on it. **Never run `fallow fix`.**
-4. **Write or refresh `tests/<feature>.md`** per [`acceptance-tests.md`](./acceptance-tests.md), in the
+4. **Write or refresh `.claude/tests/<feature>.md`** per [`acceptance-tests.md`](./acceptance-tests.md), in the
    same pass as the code it tests.
 5. **A reported failure is fixed from the report** (§2). The human names the test number and what
    they saw; the agent reproduces it from the code, not from the device.
@@ -24,7 +24,8 @@ writing the acceptance tests the human runs ([`acceptance-tests.md`](./acceptanc
    here. `graphify affected "<node>"` ([`context-policy.md`](./context-policy.md) §3) answers what a
    change touches.
 7. **The permanent record is the commit** ([`context-policy.md`](./context-policy.md) §2). **The agent
-   never commits.**
+   never commits** — when §1 passes and the page or feature is finished, it writes the message, prints
+   it, hands over the `git commit -F` line, and stops there.
 
 ---
 
@@ -41,9 +42,14 @@ writing the acceptance tests the human runs ([`acceptance-tests.md`](./acceptanc
 Fix what they find, re-run what found it, then write the tests. No findings file, no scratch loop —
 the plan for a fix lives in the conversation.
 
+Then, and only once all of that is green, prompt for the commit
+([`context-policy.md`](./context-policy.md) §2). A failing check is not something to commit around.
+
 ## 2. When the human reports a failure
 
-1. Read the test in `tests/<feature>.md` and trace its steps through the code.
+1. Read the test in `.claude/tests/<feature>.md`, and the tester's answer in
+   `.claude/tests/test-report/<feature>-test-report.md` ([`acceptance-tests.md`](./acceptance-tests.md) §4).
+   Trace its steps through the code.
 2. Plan the fix; name the files it touches.
 3. Apply it, re-run §1, and update any test whose steps or expected output changed.
 4. Tell the human which test numbers to re-run.

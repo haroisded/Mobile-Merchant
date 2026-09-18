@@ -5,6 +5,7 @@ import type { NavigationAction } from 'expo-router/react-navigation';
 import { useEffect, useState } from 'react';
 import { FormProvider, useForm, useFormState, useWatch } from 'react-hook-form';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdaptiveDialog } from '../../components/adaptive-dialog';
 import { Button } from '../../components/button';
@@ -341,7 +342,10 @@ export function ProductForm({ merchantId, currency, scope, type: newType, produc
             <ScrollView key={current.id} style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
               {body}
             </ScrollView>
-            <View style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
+            {/* SafeAreaView, not View: the Android build is edge-to-edge
+                (android/gradle.properties), so a bar pinned to the bottom draws behind the system
+                navigation bar. `additive` adds the inset to styles.footer's own padding. */}
+            <SafeAreaView edges={['bottom']} style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
               {notice ? (
                 <HelperText type={notice.type} padding="none">
                   {notice.text}
@@ -362,7 +366,7 @@ export function ProductForm({ merchantId, currency, scope, type: newType, produc
                   </Button>
                 )}
               </View>
-            </View>
+            </SafeAreaView>
           </>
         )}
       </View>

@@ -37,7 +37,7 @@ export const useIsSessionLoading = () => useUserStore((s) => s.session === undef
 // write the same value, so it is a dev-only wart.)
 //
 // This one subscription is the only source of truth — no getSession() alongside it that could
-// disagree. INITIAL_SESSION (restored from AsyncStorage) is emitted only after
+// disagree. INITIAL_SESSION (restored from SecureStore) is emitted only after
 // `await this.initializePromise` (GoTrueClient.js:3627,3635), so it lands a tick later rather than
 // during this call. That gap is exactly what `undefined` names.
 //

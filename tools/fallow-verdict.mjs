@@ -23,8 +23,8 @@ const TOP = Number(process.argv[2]) || 5;
 const REGISTERED_DEPS = new Set([
   'expo-build-properties', 'expo-image', 'expo-glass-effect', 'expo-symbols',
   'react-native-gesture-handler', 'react-native-reanimated', 'react-native-worklets',
-  'react-native-web', 'react-native-vector-icons', 'expo-dev-client', 'expo-atlas',
-  'expo-device', 'expo-status-bar', 'expo-system-ui',
+  'react-native-web', 'react-dom', 'react-native-vector-icons', 'expo-dev-client', 'expo-atlas',
+  'expo-device', 'expo-system-ui',
 ]);
 
 // `review` always exits 0 (the verdict is in the JSON), so a throw here is fallow itself failing.

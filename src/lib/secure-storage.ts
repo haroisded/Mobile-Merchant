@@ -1,9 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 
 /**
- * Where supabase.ts keeps the session.
+ * Where supabase.ts keeps the session, and StoreTheme.ts the one-word theme preference.
  *
  * AsyncStorage writes plaintext — an unencrypted SQLite row on Android, an unencrypted file on
  * iOS. Anything with filesystem access on a rooted or jailbroken device, and any unencrypted
@@ -39,19 +37,9 @@ const options: SecureStore.SecureStoreOptions = {
 // throw, and auth-js only ever puts one in a *value* (helpers.js:392).
 
 export const secureStorage = {
-  // Web has no SecureStore at all: ExpoSecureStore.web.js exports `{}` and SecureStore.js calls
-  // the native method with no availability guard, so every call there is a TypeError. AsyncStorage
-  // on web is localStorage, which is where supabase-js would have put the session by default.
-  getItem: (key: string) =>
-    Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key, options),
+  getItem: (key: string) => SecureStore.getItemAsync(key, options),
 
-  setItem: (key: string, value: string) =>
-    Platform.OS === 'web'
-      ? AsyncStorage.setItem(key, value)
-      : SecureStore.setItemAsync(key, value, options),
+  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value, options),
 
-  removeItem: (key: string) =>
-    Platform.OS === 'web'
-      ? AsyncStorage.removeItem(key)
-      : SecureStore.deleteItemAsync(key, options),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key, options),
 };

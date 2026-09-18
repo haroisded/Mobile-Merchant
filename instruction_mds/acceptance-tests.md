@@ -1,11 +1,11 @@
 # Acceptance tests
 
-How the agent writes `tests/<feature>.md` — the script a human tester follows on a real phone or
+How the agent writes `.claude/tests/<feature>.md` — the script a human tester follows on a real phone or
 tablet. The testers are people who will use the POS, not developers.
 
 ## Rules
 
-1. **One file per page or feature: `tests/<feature>.md`, kebab-case, committed.** When the feature
+1. **One file per page or feature: `.claude/tests/<feature>.md`, kebab-case, committed.** When the feature
    changes, rewrite its file in the same pass. Never a second file for the same feature.
 2. **Written for a shop owner, not a developer.** No code, file, table, API, query or error-class
    names. Name what is on the screen, in the words the screen uses ("tap **Save**", "the product list").
@@ -19,6 +19,8 @@ tablet. The testers are people who will use the POS, not developers.
    that appears or disappears. Never "the row is written" — say where the tester sees it.
 7. **Test data is made through the app.** Two sample records per feature (§3), created in the test
    steps, never assumed to exist.
+8. **Results come back in `.claude/tests/test-report/<feature>-test-report.md`, never in the test file.** The
+   tester writes it; the agent reads it and fixes from it (§4).
 
 ---
 
@@ -85,7 +87,25 @@ Record 2: create → edit → view → delete
 
 The cap is on records, not on groups — groups 2–4 still apply to the feature.
 
-## 4. Rejected
+## 4. The report that comes back
+
+The tester answers in a separate file, one per feature:
+
+```
+.claude/tests/<feature>.md                              the script — written by the agent
+.claude/tests/test-report/<feature>-test-report.md      the answers — written by the tester
+.claude/tests/test-report/images/test-<n>-related.jpg   a screenshot, when one says it faster
+```
+
+The report repeats each test's number and title, then a status and a feedback line. A **blank status
+means not yet run** — not a pass, and not a failure. Say so when handing the report back, and list
+which numbers are still owed rather than treating the file as complete.
+
+The agent reads this file and works from it ([`testing-workflow.md`](./testing-workflow.md) rule 5).
+It does not write into it, does not tick anything off in it, and does not reproduce the failure on a
+device — it traces the reported steps through the code.
+
+## 5. Rejected
 
 - **A `Result` / pass-fail field in each test.** Testers report failures by number; a field in a
   committed file turns into stale ticks from an old run.

@@ -1,37 +1,30 @@
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
 /**
- * Native: mobilemerchant://  — allow-list this in Supabase as `mobilemerchant://**`.
- * Web:    http://localhost:8081 (createURL.web.js:15 strips the trailing slash).
+ * mobilemerchant:// — allow-list this in Supabase as `mobilemerchant://**`.
  * Log it rather than assume it: createURL returns a different string per environment.
  */
 export const redirectTo = Linking.createURL('/');
 
 
-// configure() must run before any other GoogleSignin call. The package ships a web build whose
-// methods only warn, so this is skipped on web to keep that warning out of the console.
-if (Platform.OS !== 'web') {
-  GoogleSignin.configure({
-    // Android verifies the ID token against the *web* client ID — which is why .env.example has
-    // no Android entry. iosClientId defaults to GoogleService-Info.plist; this project ships
-    // none, so it is required here rather than optional.
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  });
-}
+// configure() must run before any other GoogleSignin call.
+GoogleSignin.configure({
+  // Android verifies the ID token against the *web* client ID — which is why .env.example has
+  // no Android entry. That ID names a Google OAuth client type; it has nothing to do with this
+  // app running in a browser, which it never does. iosClientId defaults to
+  // GoogleService-Info.plist; this project ships none, so it is required here rather than optional.
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+});
 
 
 /** A cancelled sign-in resolves quietly. Everything else throws. */
 export type SignInResult = 'signed-in' | 'cancelled';
 
 export async function signInWithGoogle(): Promise<SignInResult> {
-  // The native module has no real web implementation, so web takes the browser flow instead.
-  if (Platform.OS === 'web') return browserOAuth('google');
-
   await GoogleSignin.hasPlayServices();
   const response = await GoogleSignin.signIn();
   // SignInResponse is success | cancelled in v16 — a cancel is a response, not a thrown error.
@@ -54,9 +47,7 @@ export function signInWithFacebook(): Promise<SignInResult> {
 export async function signOut() {
   // Supabase alone leaves the native Google session cached, so the next sign-in silently
   // reuses the last account instead of showing the picker.
-  if (Platform.OS !== 'web') {
-    await GoogleSignin.signOut().catch(() => {}); // never signed in with Google: nothing to clear
-  }
+  await GoogleSignin.signOut().catch(() => {}); // never signed in with Google: nothing to clear
 
   // The default scope is 'global', which ends the session on every device this user is signed
   // in on. It is also a server call, so it throws when offline — stranding the user signed in.
@@ -100,11 +91,6 @@ async function browserOAuth(provider: 'google' | 'facebook'): Promise<SignInResu
     },
   });
   if (error) throw error;
-
-
-  // On web the library has already navigated the page away, and detectSessionInUrl performs the
-  // exchange when it reloads on the ?code= URL. Nothing below this line runs there.
-  if (Platform.OS === 'web') return 'signed-in';
 
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {

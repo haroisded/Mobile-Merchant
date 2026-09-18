@@ -43,6 +43,19 @@ Prefer a comment naming the mechanism over a clever line, and keep every claim t
 
 ## 2. How to work on this
 
+### There is no web target, and there will not be one
+
+Phones and tablets only. `npm run web` is gone, `app.json` has no `web` key, and nothing under
+`src/` branches on `Platform.OS === 'web'` any more. Do not add a web branch, a `.web.tsx` file, a
+`localhost` redirect URL, or a "works on web too" note to any document.
+
+`react-native-web` and `react-dom` stay installed as optional peers of the Expo packages — kept, not
+required ([`instruction_mds/false-positives.md`](./instruction_mds/false-positives.md) §1).
+
+**The system browser is not the web target.** Facebook sign-in opens the *device's* browser through
+`expo-web-browser` and comes back on `mobilemerchant://`. That path is native, it is load-bearing,
+and §4.5 and §5 below are about it. Nothing in this rule touches it.
+
 ### Verify against `node_modules`, not against the docs
 
 The published Supabase pages render client-side and are behind the installed version. Read these
@@ -94,7 +107,7 @@ so you use it rather than build a second one:
 | [`instruction_mds/optimization.md`](./instruction_mds/optimization.md) | performance review: which skills are the reference, the measure-first evidence bar, what is already decided |
 | [`instruction_mds/migrations.md`](./instruction_mds/migrations.md) | revert files, and the generated all-in-one ADD / REVERT SQL |
 | [`instruction_mds/testing-workflow.md`](./instruction_mds/testing-workflow.md) | **planning and after code**: the human tests on the device and **the agent never touches the emulator** unless allowed that session; what to fix in the plan vs hand to a tester; lint, typecheck, `tools/fallow-verdict.mjs`, `/ponytail-review`, the gated skill; fixing a failure the human reports |
-| [`instruction_mds/acceptance-tests.md`](./instruction_mds/acceptance-tests.md) | writing `tests/<feature>.md` — plain-language user-acceptance scripts for non-developer testers, including account switching and outside-the-app cases (battery, network, interruptions) |
+| [`instruction_mds/acceptance-tests.md`](./instruction_mds/acceptance-tests.md) | writing `.claude/tests/<feature>.md` — plain-language user-acceptance scripts for non-developer testers, including account switching and outside-the-app cases (battery, network, interruptions) |
 | [`instruction_mds/token-budget.md`](./instruction_mds/token-budget.md) | keeping a pass cheap: wrap large tool output in a script, narrow skill descriptions instead of merging, a fixed budget on every retrieval |
 | [`instruction_mds/false-positives.md`](./instruction_mds/false-positives.md) | findings that are wrong in this repo — fallow, oxlint, Supabase, ponytail, and skill rules this repo overrides — why `fallow fix` must never run here, and what to do with a finding that is not listed |
 
@@ -177,16 +190,14 @@ It is `@deprecated` in 2.112.3 and the legacy lock path is removed in v3. The cl
 single-flights refreshes itself and lets the GoTrue server resolve cross-tab races. Setting it opts
 into the legacy path.
 
-**Do not set `detectSessionInUrl: Platform.OS === 'web'`.**
+**Do not set `detectSessionInUrl`.**
 The library gates it on `isBrowser() = typeof window !== 'undefined' && typeof document !== 'undefined'`
-(`helpers.js:24`, used at `GoTrueClient.js:389`). React Native has no `document`, so it is already
-inert on native; `react-native-web` has both, so it is already on for web. The default is correct on
-all three platforms.
+(`helpers.js:24`, used at `GoTrueClient.js:389`). React Native has no `document`, so the option is
+inert whatever it is set to. `browserOAuth` (`auth.ts`) does the code exchange by hand instead.
 
 **Do not set `skipBrowserRedirect`.**
-Same shape as `detectSessionInUrl`: the redirect is gated `if (isBrowser() && !options.skipBrowserRedirect)`
-at `GoTrueClient.js:4047`, so it is already unreachable on native, and on web `Platform.OS !== 'web'`
-evaluates to `false` — identical to omitting it.
+Same shape: the redirect is gated `if (isBrowser() && !options.skipBrowserRedirect)` at
+`GoTrueClient.js:4047`, so it is unreachable here — identical to omitting it.
 
 **`persistSession` and `autoRefreshToken` are already the defaults.**
 Setting them configures nothing.
@@ -228,10 +239,12 @@ the wrong verifier. Distinct from `appendPkceFlowIdToRedirects`, which is still 
 
 ### 4.4 The Google native module
 
-**It has a web build** (`lib/module/signIn/GoogleSignin.web.js`) whose methods only warn or throw, so
-a static import is safe on all three platforms — no dynamic `import()` needed. In 16.1.4 a cancel is
-a response type (`SignInResponse = success | cancelled`), not a thrown error, so the
+A static import is safe and `configure()` runs unconditionally at module scope. In 16.1.4 a cancel
+is a response type (`SignInResponse = success | cancelled`), not a thrown error, so the
 `statusCodes.SIGN_IN_CANCELLED` catch is dead code.
+
+`webClientId` is not about this app running in a browser — it never does. Google issues the Android
+ID token against a client of type *web*, and that is the ID Supabase verifies.
 
 ### 4.5 Cancel in the browser flow
 
@@ -262,7 +275,7 @@ below give the per-platform reason and name the lever that is already in place. 
 
 ### iOS — already solved and already on
 
-`preferEphemeralSession: true` (`auth.ts:92`) is exactly that concept —
+`preferEphemeralSession: true` (`auth.ts:98`) is exactly that concept —
 `WebBrowser.types.d.ts:100-109`, *"the browser doesn't share cookies or other browsing data between
 the authentication session and the user's normal browser session"*, `@platform ios`,
 `@default false`. Its own caveat: *"Whether the request is honored depends on the user's default web
@@ -276,13 +289,9 @@ cookie-related, and no clear-cookies call exists in the module. `openAuthSession
 Custom Tab, which runs in Chrome's process against Chrome's cookie jar; the app never owns it.
 Third-party cookie managers clear the app's own WebView store, which the Custom Tab does not use.
 
-### Web — out of reach
-
-The cookies are on the provider's origin.
-
 ### The portable substitute is already in place
 
-`queryParams: { auth_type: 'reauthenticate' }` for Facebook (`auth.ts:84`). It does not clear the
+`queryParams: { auth_type: 'reauthenticate' }` for Facebook (`auth.ts:90`). It does not clear the
 cookie; it forces the login screen anyway. `_getUrlForProvider` (`GoTrueClient.js:4787-4790`)
 confirms the client appends it to Supabase's `/authorize` URL.
 
@@ -292,7 +301,7 @@ confirms the client appends it to Supabase's `/authorize` URL.
 ### Rejected: logging the user out of Facebook after success
 
 `facebook.com/logout.php` ends their Facebook session in their everyday browser and needs a `next`
-URL under an app domain this project does not have (`web.output: "single"`).
+URL under a web domain this project does not have and never will — there is no web target.
 `DELETE /{user-id}/permissions` de-authorizes the app instead, but needs `session.provider_token`
 (`types.d.ts:276`), which Supabase returns only on the initial sign-in response and never persists —
 and it re-prompts for permissions every sign-in, which is more friction than the "Continue as X" it

@@ -17,7 +17,7 @@ rule.** Never read a whole file for context — see [`context-policy.md`](./cont
 | Anything Expo-touching | [`expo.md`](./expo.md) — gate before code |
 | Building the screen | [`layout.md`](./layout.md), [`typography.md`](./typography.md), [`visual-language.md`](./visual-language.md) |
 | Planning and after code | [`testing-workflow.md`](./testing-workflow.md) — the human tests on the device, the agent never touches it |
-| Writing the tester's script | [`acceptance-tests.md`](./acceptance-tests.md) — `tests/<feature>.md` |
+| Writing the tester's script | [`acceptance-tests.md`](./acceptance-tests.md) — `.claude/tests/<feature>.md` |
 | Reviewing for performance | [`optimization.md`](./optimization.md) — gated, loads only when the diff triggers it |
 | Keeping a pass cheap | [`token-budget.md`](./token-budget.md) |
 | Reacting to a tool finding | [`false-positives.md`](./false-positives.md) |

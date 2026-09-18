@@ -3,8 +3,8 @@ import { Stack } from 'expo-router';
 import { useAppTheme } from '../../lib/theme';
 import { radius } from '../../themes';
 
-// The systems list is always the bottom of this stack. Without an anchor, a deep link or a web reload
-// straight into /systems/<id> builds the stack with that screen alone: back has nowhere to go, and
+// The systems list is always the bottom of this stack. Without an anchor, a deep link straight into
+// /systems/<id> builds the stack with that screen alone: back has nowhere to go, and
 // "Back to your systems" would push a second list instead of returning to the first. Read by
 // expo-router at getRoutesCore.js:655.
 export const unstable_settings = { anchor: '(tabs)' };
@@ -13,11 +13,16 @@ export const unstable_settings = { anchor: '(tabs)' };
 // Declared here, as leaf routes of this stack, because an Android formSheet cannot host a nested
 // stack (react-native-screens types.d.ts:470) — and one set then serves Home, Profile and every stack
 // under the shell. The route files are in ./sheets/.
+//
+// This list must name every file in ./sheets/, and nothing else. Both halves fail silently: a name
+// with no file is ignored, and a file with no name here still routes — as an ordinary full-screen
+// push with no sheet presentation and no contentStyle, which is how delete-product shipped as a
+// top-aligned white screen (tests/test-report/resources-test-report.md, Test 7).
 const SHEETS = [
-  'sheets/archive-product',
   'sheets/category',
   'sheets/delete-account',
   'sheets/delete-category',
+  'sheets/delete-product',
   'sheets/delete-supplier',
   'sheets/delete-tax-class',
   'sheets/remove-system',

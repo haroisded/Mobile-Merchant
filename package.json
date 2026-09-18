@@ -7,7 +7,6 @@
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^5.9.1",
     "@quidone/react-native-wheel-picker": "^1.7.1",
-    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-google-signin/google-signin": "^16.1.4",
     "@shopify/flash-list": "2.0.2",
     "@supabase/supabase-js": "^2.112.3",
@@ -58,10 +57,8 @@
     "postinstall": "patch-package",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "check:history": "node tools/check-history-paths.mjs",
     "build:migrations": "node tools/build-migrations.mjs",
     "check:migrations": "node tools/build-migrations.mjs --check",
     "atlas": "node tools/atlas.mjs"

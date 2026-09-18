@@ -7,7 +7,8 @@ history documents.
 ## Rules
 
 1. **History comes from git, not from markdown.** `git log`, `git show`, `git diff` are the history
-   record. Do not write, read or maintain per-pass history files.
+   record. Do not write, read or maintain per-pass history files. When a page or feature is
+   finished, the agent writes the commit message and asks; the human commits (§2).
 2. **System context comes from one file plus the graph.** Read `.claude/context/system-context.txt`
    for the summary. For anything more specific, query the knowledge graph — never `grep`/`find` your
    way across the repo to orient.
@@ -45,20 +46,76 @@ writing it down means updating the owning `instruction_mds/` file — not creati
 ## 2. Commit as the history record
 
 A finished page or feature ends in one commit, scoped to that page or feature. The commit message
-carries what a history file used to:
+carries what a history file used to. This replaces per-pass history markdown entirely — do not
+recreate it under another name.
+
+**One page or feature, one message file, always.** Two finished in the same session are still two
+files and two commits — never one message covering both, and never a second page appended to a file
+already written. The session is not the unit; the page or feature is. Where that means staging by
+hand, the agent says which files belong to which commit rather than merging them.
+
+### When to prompt
+
+When a page or feature **the user asked for** is finished *and*
+[`testing-workflow.md`](./testing-workflow.md) §1 has passed, the agent writes the message and asks
+the human to commit it. Not on a partial change, not between two halves of one feature, not after a
+check that is still failing.
+
+### How
+
+The agent **never runs a git write** — no `commit`, no `branch`, no `push`. It:
+
+1. writes the message to `.claude/commit-history/<timestamp>.txt`, where `<timestamp>` is the
+   current local date and time as `YYYY-MM-DD_HH-MM-SS` — `2026-09-19_14-32-08.txt`. Sortable, and
+   nothing is ever overwritten. Seconds are in the name because two features can finish inside the
+   same minute and each still gets its own file.
+2. prints the message in the reply so it can be read without opening anything,
+3. gives the human the one line that uses it:
+
+```bash
+git commit -F ".claude/commit-history/<timestamp>.txt"
+```
+
+That folder is a **handoff, not a history**. It is gitignored, the agent writes into it and never
+reads it back to orient, and rule 1 is unchanged: `git log` remains the record. Keeping the file out
+of the commit is what stops it becoming a second, quietly diverging one.
+
+`-F` is not optional. `git commit` opened in an editor runs cleanup `strip`, which deletes every
+line beginning with `#` — the whole body below would vanish. `-F` and `-m` run cleanup `whitespace`,
+which keeps them.
+
+### The message
 
 ```
-<page or feature>: <what shipped>
+<Session Title>
 
-- what was built
-- what was verified, and on what
-- what was deliberately left out, and why
-- anything still open
+# What were the Changes?
+
+## Added
+- …
+
+## Removed
+- …
+
+## Edited
+- …
+
+# Additional Notes
+
+## <a category this change needs>
+- …
 ```
 
-The human makes the commit. The agent finishes the work and leaves the tree ready.
-
-This replaces per-pass history markdown entirely. Do not recreate it under another name.
+- **The title line carries no `#`.** It is what `git log --oneline` shows, so it reads as a sentence
+  and stays under about 72 characters. It summarises the session, not the last file touched.
+- **`Added`, `Removed` and `Edited` are always all three present.** An empty one reads `- none`. A
+  reader can then tell "nothing was removed" from "nobody checked".
+- **`# Additional Notes` is optional, and its sub-headings are invented per commit** — whatever this
+  change needs a reader to know that `Added` / `Removed` / `Edited` cannot say. Something deliberately
+  left out, a device test still owed, a decision that will be revisited. Omit the whole section when
+  there is nothing.
+- **Every bullet names a file or a thing the user can see**, not a diff. `src/lib/auth.ts` or
+  "the Next button now clears the navigation bar" — never "refactored the auth module".
 
 ## 3. graphify
 
@@ -118,7 +175,7 @@ Every file in `instruction_mds/` is Rules first, then numbered sections.
 | [`tenancy.md`](./tenancy.md) | `merchant_id`, RLS policy shape |
 | [`migrations.md`](./migrations.md) | Migration and revert pairing |
 | [`testing-workflow.md`](./testing-workflow.md) | Before/after code; the agent never touches the device |
-| [`acceptance-tests.md`](./acceptance-tests.md) | How `tests/<feature>.md` is written for human testers |
+| [`acceptance-tests.md`](./acceptance-tests.md) | How `.claude/tests/<feature>.md` is written for human testers |
 | [`optimization.md`](./optimization.md) | Performance review and the one skill gate table |
 | [`token-budget.md`](./token-budget.md) | Wrapped tool output, narrow skill triggers, bounded retrieval |
 | [`false-positives.md`](./false-positives.md) | Tool findings that are wrong here |
@@ -141,6 +198,6 @@ on the same diff get narrower descriptions, never a merge — [`token-budget.md`
 
 **No `System-Context/` directory, no per-page history markdown, no `Tests.md` in a page directory,
 no index file listing where code lives.** Git, the graph and the single system-context file replace
-all of them. The one exception is `tests/<feature>.md` at the root: it is written for human testers,
+all of them. The one exception is `.claude/tests/<feature>.md`: it is written for human testers,
 not as agent context, and the agent does not read it to orient ([`acceptance-tests.md`](./acceptance-tests.md)). An index nothing checks is an index that rots, and a table that has quietly started
 lying is worse than no table.

@@ -53,6 +53,10 @@ desktop.ini
 # Claude Code local overrides (per-machine permission grants)
 .claude/settings.local.json
 
+# commit messages staged for `git commit -F` — the handoff, not a second history
+# (instruction_mds/context-policy.md §2)
+.claude/commit-history/
+
 # Supabase CLI (link state, local stack scratch)
 supabase/.temp/
 supabase/.branches/
