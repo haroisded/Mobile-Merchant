@@ -1,4 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { failureMessage, postgrestError } from '../lib/errors';
@@ -55,6 +56,15 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
     return `${held} ${held === 1 ? noun[0] : noun[1]}`;
   };
   const words = (node: T) => [node.is_group ? count(node) : null, ...status(node), node.disabled ? 'Disabled' : null].filter((word) => word !== null);
+  // The open folder was deleted (its own Edit Group, or by someone else): this page has nothing left to
+  // show, so it steps back to the folder that held it. On focus, not on the refetch: the delete's form
+  // and confirm may still sit above this page, and a back from here would close them instead.
+  const gone = parent !== undefined && query.data !== undefined && !query.data.some((node) => node.id === parent);
+  useFocusEffect(
+    useCallback(() => {
+      if (gone) router.back();
+    }, [gone])
+  );
 
   if (!query.data) {
     return (
@@ -83,7 +93,7 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
             // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
             android_ripple={{ color: colors.ripple }}
             accessibilityRole="button"
-            accessibilityLabel={`${label(item)}, ${words(item).join(', ')}`}
+            accessibilityLabel={[label(item), ...words(item)].join(', ')}
             accessibilityHint={item.is_group ? 'Opens the group' : undefined}
             style={[styles.row, { borderBottomColor: colors.surfaceVariant }]}
           >

@@ -140,6 +140,7 @@ function YearForm({ merchantId, existing: opened, initial, onDismiss }: FormProp
           <ControlledSwitch
             control={control}
             name="is_short_year"
+            deps={['year_end_date']}
             label="Short Year"
             span="full"
             disabled={!editable}

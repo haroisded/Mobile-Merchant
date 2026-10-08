@@ -47,13 +47,14 @@ function Form({ merchantId, abbr, accounts, existing, parentId, onDismiss }: For
   const remove = useDeleteAccountMutation();
   const confirm = useConfirm();
   const label = (account: Account) => accountLabel(account, abbr);
+  const parent = accounts.find((account) => account.id === parentId);
   // A root stays: there is no way to add one back.
   const deletable = existing?.parent_id && can(usePermissions({ merchantId }).data, 'Account', 'delete');
   const notice = mutationNotice(save, treeFailure(save.error, "Couldn't save this account. Try again."));
 
   const { control, handleSubmit } = useForm<AccountValues>({
     resolver: zodResolver(accountSchema),
-    defaultValues: defaults(existing, accounts.find((account) => account.id === parentId)),
+    defaultValues: defaults(existing, parent),
     mode: 'onTouched',
   });
 
@@ -75,7 +76,8 @@ function Form({ merchantId, abbr, accounts, existing, parentId, onDismiss }: For
         asPage
         onDismiss={onDismiss}
         dismissable={!(save.isPending && !save.isPaused)}
-        kicker="Account"
+        // The root type, as the folder page above it shows: an account takes its parent's.
+        kicker={existing?.root_type ?? parent?.root_type ?? 'Account'}
         title={existing ? label(existing) : 'New account'}
         notice={notice}
         actions={<FormActions mutation={save} onCancel={onDismiss} onSave={submit} onDelete={existing && deletable ? () => askDelete(existing) : undefined} />}

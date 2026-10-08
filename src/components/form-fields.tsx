@@ -2,7 +2,7 @@ import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { createContext, use, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useController } from 'react-hook-form';
-import type { Control, FieldPathByValue, FieldValues } from 'react-hook-form';
+import type { Control, FieldPath, FieldPathByValue, FieldValues } from 'react-hook-form';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 
@@ -235,11 +235,22 @@ export function ControlledSwitch<T extends FieldValues>({
   name,
   on,
   off,
+  deps,
   disabled,
   ...field
-}: ControlledProps<T, boolean> & { on: string; off: string }) {
+}: ControlledProps<T, boolean> & {
+  on: string;
+  off: string;
+  /** Fields whose rules read this switch, re-checked when it flips (Short Year → the end date). */
+  deps?: FieldPath<T>[];
+}) {
   const { colors } = useAppTheme();
-  const { field: input } = useController({ control, name });
+  const { field: input } = useController({ control, name, rules: { deps } });
+  // Touched on the flip, as the checklist is: a switch has no blur, and `deps` run only once it is.
+  const flip = (value: boolean) => {
+    input.onChange(value);
+    input.onBlur();
+  };
 
   return (
     <Field {...field}>
@@ -249,7 +260,7 @@ export function ControlledSwitch<T extends FieldValues>({
           // SAFETY: `name` is a FieldPathByValue<T, boolean>, so the value at it is a boolean; TypeScript
           // cannot resolve the generic path's value type inside the component.
           value={input.value as boolean}
-          onValueChange={input.onChange}
+          onValueChange={flip}
           disabled={disabled}
           color={colors.accent}
           accessibilityLabel={field.label}
@@ -322,7 +333,14 @@ export function ControlledChecklist<T extends FieldValues>({
   };
 
   return (
-    <Field {...field} error={fieldState.error?.message}>
+    // The error above the list, not under it as Field puts it: a list of every role runs past the bottom
+    // of a phone, and Save's "Choose at least one role." would land out of sight.
+    <Field {...field}>
+      {fieldState.error ? (
+        <HelperText type="error" padding="none">
+          {fieldState.error.message}
+        </HelperText>
+      ) : null}
       <View style={[styles.checklist, { borderColor: colors.outlineVariant }]}>
         {options.map((option, index) => (
           <Pressable

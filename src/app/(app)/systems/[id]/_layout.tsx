@@ -90,7 +90,7 @@ export default function SystemLayout() {
             <View style={styles.fill}>{children}</View>
           </View>
         )}
-        drawerContent={(props) => <SystemNav {...props} name={merchant.name} wide={wide} expanded={expanded} />}
+        drawerContent={(props) => <SystemNav {...props} id={id} name={merchant.name} wide={wide} expanded={expanded} />}
         screenOptions={{
           headerShown: false,
           drawerType: wide ? 'permanent' : 'front',
@@ -188,6 +188,7 @@ function ShellState({ children }: StateProps) {
 }
 
 type NavProps = DrawerContentComponentProps & {
+  id: string;
   name: string;
   wide: boolean;
   expanded: boolean;
@@ -195,7 +196,7 @@ type NavProps = DrawerContentComponentProps & {
 
 // Components B and C: the same header, divider and destinations, laid out as a rail when wide and as
 // drawer rows when narrow. No system switcher — the way out of a system is the header's Your systems.
-function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
+function SystemNav({ state, navigation, id, name, wide, expanded }: NavProps) {
   const { colors } = useAppTheme();
   const active = state.routes[state.index]?.name;
   // The drawer always shows labels; the rail shows them only while expanded.
@@ -233,9 +234,12 @@ function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
             // A destination with a stack of its own opens at its first screen: tapping Setup from deep
             // inside Setup returns to its index, as a rail item should, rather than to wherever the
             // stack was left. `pop`: without it, React Navigation 7's NAVIGATE pushes a second index
-            // over the pages above the first (StackRouter.js, 'NAVIGATE').
+            // over the pages above the first (StackRouter.js, 'NAVIGATE'). `params`: a nested screen gets
+            // only the params passed here, so without `id` the index reads no system at all.
             onPress={() =>
-              entry.stack ? navigation.navigate(entry.name, { screen: 'index', pop: true }) : navigation.navigate(entry.name)
+              entry.stack
+                ? navigation.navigate(entry.name, { screen: 'index', params: { id }, pop: true })
+                : navigation.navigate(entry.name)
             }
           />
         ))}

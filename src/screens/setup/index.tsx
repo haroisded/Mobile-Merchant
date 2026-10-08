@@ -82,13 +82,15 @@ const SECTIONS: Section[] = [
 const SECTION_CARD = 320;
 
 /** Setup: the index of a system's foundation records, the rail's second destination. */
-export function SetupIndex({ merchantId, merchantName }: { merchantId: string; merchantName: string }) {
+export function SetupIndex({ merchantId, merchantName, isOwner }: { merchantId: string; merchantName: string; isOwner: boolean }) {
   const { columns, onLayout } = useColumns(SECTION_CARD);
   const permissions = usePermissions({ merchantId });
-  // A row shows only to whom may read it; a section with none left goes.
+  // A row shows only to whom may read it; a section with none left goes. The owner may read everything,
+  // and the systems list already says who that is — so the owner's rows need no my_permissions, which a
+  // fresh start in airplane mode has not fetched.
   const sections = SECTIONS.map((section) => ({
     ...section,
-    entries: section.entries.filter((entry) => can(permissions.data, entry.doctype, 'read')),
+    entries: section.entries.filter((entry) => isOwner || can(permissions.data, entry.doctype, 'read')),
   })).filter((section) => section.entries.length > 0);
   // Rows of `columns` sections, the last one padded with empty cells so every card keeps the same width.
   const rows = Array.from({ length: Math.ceil(sections.length / columns) }, (_, row) =>
@@ -99,7 +101,7 @@ export function SetupIndex({ merchantId, merchantName }: { merchantId: string; m
     <View style={styles.fill}>
       <PageHeader kicker={merchantName} title="Setup" meta="Set these up before the first item is sold" />
       <ScrollView contentContainerStyle={styles.body}>
-        {permissions.data ? null : (
+        {isOwner || permissions.data ? null : (
           <View style={styles.state}>
             <QueryState query={permissions} offline="You're offline. Setup will load when you reconnect." failure="Couldn't load Setup. Try again." />
           </View>

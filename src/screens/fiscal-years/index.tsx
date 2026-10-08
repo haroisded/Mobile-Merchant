@@ -33,9 +33,13 @@ export function FiscalYears({ merchantId }: Props) {
   const permissions = usePermissions({ merchantId }).data;
   const rows = years.data ?? [];
   const today = todayDate();
-  // A sale can only be posted on a day an enabled year holds.
+  // A sale can only be posted on a day an enabled year holds. Told only to whom may add the missing year:
+  // a helper a User Permission holds to other years sees too few to judge.
+  // ponytail: a restricted helper who may create still gets it; ask the server if that role appears.
   const uncovered =
-    years.data !== undefined && !rows.some((year) => !year.disabled && year.year_start_date <= today && today <= year.year_end_date);
+    can(permissions, 'Fiscal Year', 'create') &&
+    years.data !== undefined &&
+    !rows.some((year) => !year.disabled && year.year_start_date <= today && today <= year.year_end_date);
 
   const empty = (
     <View style={styles.state}>

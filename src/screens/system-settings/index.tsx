@@ -18,17 +18,11 @@ import type { SystemSettings } from '../../features/system-settings/queries';
 import { ROUNDING_METHODS, systemSettingsSchema } from '../../features/system-settings/schema';
 import type { SystemSettingsValues } from '../../features/system-settings/schema';
 import { failureMessage, mutationNotice } from '../../lib/errors';
-import { asRoundingMethod, formatNumber, NUMBER_FORMATS } from '../../lib/money';
+import { asRoundingMethod, NUMBER_FORMAT_OPTIONS } from '../../lib/money';
 import { spacing } from '../../themes';
 
 const PRECISIONS = Array.from({ length: 10 }, (_, places) => ({ value: String(places), label: String(places) }));
 
-// Each format with what it does to a sample, so the choice reads as a number, not a pattern.
-const FORMAT_OPTIONS = [...NUMBER_FORMATS.keys()].map((format) => ({
-  value: format,
-  label: formatNumber(1234567.891, format, 2, "Banker's Rounding"),
-  hint: format,
-}));
 
 const ROUNDING_OPTIONS = [
   { value: ROUNDING_METHODS[0], label: ROUNDING_METHODS[0], hint: 'A half goes to the even neighbour: 2.345 → 2.34, 2.355 → 2.36' },
@@ -96,7 +90,7 @@ function SettingsForm({ merchantId, saved, countries }: { merchantId: string; sa
       )}
       <FieldGrid>
         <ControlledSelect control={control} name="time_zone" label="Time Zone" required title="Time Zone" span="full" options={timeZoneOptions(countries)} disabled={!editable} />
-        <ControlledSelect control={control} name="number_format" label="Number Format" required title="Number Format" span="full" options={FORMAT_OPTIONS} disabled={!editable} />
+        <ControlledSelect control={control} name="number_format" label="Number Format" required title="Number Format" span="full" options={NUMBER_FORMAT_OPTIONS} disabled={!editable} />
         <ControlledSelect
           control={control}
           name="float_precision"

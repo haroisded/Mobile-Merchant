@@ -220,13 +220,20 @@ function WithNotice({ notice, children }: { notice: Notice | null | undefined; c
  * page form to its new values. Refused while the write is pending, paused included: a keyboard's Done
  * submits too, and a second write would queue behind the first (.claude/instruction_mds/data-layer.md §5).
  * Pass it to react-hook-form's handleSubmit.
+ *
+ * `isPending` alone is not enough: it is the value from the render this handler was made in, so two taps
+ * landing before the next render both read false and both write. `sent` closes that gap for the handler
+ * the taps share; the render after the first write hands out a new handler that reads `isPending` true.
  */
 export function saveOnce<V>(
   mutation: { isPending: boolean; mutate: (values: V, options: { onSuccess: () => void }) => void },
   onDone: (values: V) => void
 ) {
+  let sent = false;
   return (values: V) => {
-    if (!mutation.isPending) mutation.mutate(values, { onSuccess: () => onDone(values) });
+    if (sent || mutation.isPending) return;
+    sent = true;
+    mutation.mutate(values, { onSuccess: () => onDone(values) });
   };
 }
 

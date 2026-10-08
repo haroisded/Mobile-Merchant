@@ -20,12 +20,10 @@ import type { Merchant } from '../../features/merchants/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../features/system-settings/queries';
 import { failureMessage, mutationNotice } from '../../lib/errors';
-import { asRoundingMethod, cashRound, formatMoney, moneyInWords, NUMBER_FORMATS, roundTo } from '../../lib/money';
+import { asRoundingMethod, cashRound, formatMoney, moneyInWords, NUMBER_FORMAT_OPTIONS, roundTo } from '../../lib/money';
 import type { CurrencyFormat } from '../../lib/money';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
-
-const FORMAT_OPTIONS = [...NUMBER_FORMATS.keys()].map((format) => ({ value: format, label: format }));
 
 // A sample total with a half in its last place, so the rounding method shows.
 const SAMPLE = 1234.565;
@@ -100,7 +98,7 @@ function CurrencyForm({ merchantId, saved }: { merchantId: string; saved: Curren
           maxLength={12}
           disabled={!editable}
         />
-        <ControlledSelect control={control} name="number_format" label="Number Format" required title="Number Format" options={FORMAT_OPTIONS} disabled={!editable} />
+        <ControlledSelect control={control} name="number_format" label="Number Format" required title="Number Format" options={NUMBER_FORMAT_OPTIONS} disabled={!editable} />
       </FieldGrid>
       <Sample merchantId={merchantId} code={saved.code} control={control} />
     </PageForm>

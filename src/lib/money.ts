@@ -47,7 +47,7 @@ export function cashRound(value: number, smallestFraction: number | null, precis
 type FormatInfo = { decimal: string; group: string; decimals: number };
 
 /** ERPNext's number formats: decimal separator, group separator, decimals (frappe get_number_format_info). */
-export const NUMBER_FORMATS = new Map<string, FormatInfo>([
+const NUMBER_FORMATS = new Map<string, FormatInfo>([
   ['#,###.##', { decimal: '.', group: ',', decimals: 2 }],
   ['#.###,##', { decimal: ',', group: '.', decimals: 2 }],
   ['# ###.##', { decimal: '.', group: ' ', decimals: 2 }],
@@ -61,6 +61,16 @@ export const NUMBER_FORMATS = new Map<string, FormatInfo>([
 ]);
 
 const DEFAULT_FORMAT: FormatInfo = { decimal: '.', group: ',', decimals: 2 };
+
+/**
+ * The formats as Select options: each labelled with what it does to a sample at its own decimals, so the
+ * choice reads as a number, not a pattern — System Settings' and Currency's Number Format.
+ */
+export const NUMBER_FORMAT_OPTIONS = [...NUMBER_FORMATS].map(([format, info]) => ({
+  value: format,
+  label: formatNumber(1234567.891, format, info.decimals, "Banker's Rounding"),
+  hint: format,
+}));
 
 /** A format's separators; the Indian format also groups by two above the first three digits. */
 function formatInfo(format: string) {
