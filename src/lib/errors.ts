@@ -1,3 +1,4 @@
+import { PostgrestError } from '@supabase/supabase-js';
 import { onlineManager } from '@tanstack/react-query';
 
 // What a failed action puts on screen when there is no connection. One string, because the cause is
@@ -22,6 +23,17 @@ const OFFLINE_MESSAGE = "You're offline. Reconnect and try again.";
  */
 export function failureMessage(fallback: string): string {
   return onlineManager.isOnline() ? fallback : OFFLINE_MESSAGE;
+}
+
+/**
+ * The PostgREST error behind a failed write, when there is one — so a screen can pick its own copy for a
+ * case it expects (a duplicate name is SQLSTATE 23505, an overlapping fiscal year 23P01) instead of the
+ * generic failure line. `.throwOnError()` is what makes this a real PostgrestError rather than a plain
+ * object (.claude/instruction_mds/data-layer.md §2). Anything else — a dropped connection, an Error thrown
+ * in a mutationFn — is not one: null, and the caller falls back to failureMessage's copy.
+ */
+export function postgrestError(cause: Error | null): PostgrestError | null {
+  return cause instanceof PostgrestError ? cause : null;
 }
 
 /** The line under a form or confirm: an offline wait, or what went wrong. */

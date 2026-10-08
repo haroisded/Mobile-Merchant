@@ -8,6 +8,9 @@ import { AppState } from 'react-native';
 export const STALE = {
   SECONDS: { THIRTY: 30 * 1000 },
   MINUTES: { ONE: 60 * 1000, FIVE: 5 * 60 * 1000 },
+  // Reference data a migration seeds and no client can write (countries, currency presets): it cannot
+  // change while the app runs, so it is fetched once and never refetched, invalidation included.
+  STATIC: 'static' as const,
 };
 
 // Module scope, like the auth subscription in Store/StoreUser.ts and the refresh listener in

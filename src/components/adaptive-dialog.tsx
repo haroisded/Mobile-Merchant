@@ -1,9 +1,10 @@
 import { useNavigation } from 'expo-router';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
+import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useShellWide } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
 import { Dialog } from './dialog';
@@ -13,9 +14,15 @@ import { Text } from './text';
 type Props = {
   /**
    * The content of a native formSheet route (src/app/(app)/sheets/). The OS draws the sheet's frame,
-   * so this draws only what goes inside it. Otherwise a Dialog over the screen that mounted it.
+   * so this draws only what goes inside it.
    */
   inSheet?: boolean;
+  /**
+   * The content of a small-form route (src/app/(app)/forms/). Narrow, a full page; wide, a Dialog over
+   * the screen it was opened from, the route being a transparentModal (src/app/(app)/_layout.tsx,
+   * .claude/instruction_mds/frontend.md §4.4).
+   */
+  asPage?: boolean;
   onDismiss: () => void;
   /** False while a request is genuinely in flight, so the backdrop and back button cannot close it. */
   dismissable?: boolean;
@@ -24,20 +31,24 @@ type Props = {
   kickerTone?: 'accent' | 'error';
   title: string;
   children?: ReactNode;
-  /** Buttons. Laid out in a row in the Dialog and stacked full width in the sheet. */
+  /** Buttons. Laid out in a row in the Dialog and stacked full width in a sheet or page. */
   actions: ReactNode;
 };
 
 /**
- * A confirm — the pair in .claude/instruction_mds/frontend.md §4.4, in two presentations:
+ * A confirm, picker or small form — the pairs in .claude/instruction_mds/frontend.md §4.4, in four
+ * presentations:
  *
- * - **wide:** a Paper Dialog with a maximum width, mounted by the screen that opened it.
- * - **inSheet:** the body of a native formSheet route. Narrow confirms open that way.
+ * - **Dialog:** a Paper Dialog with a maximum width, mounted by the screen that opened it.
+ * - **inSheet:** the body of a native formSheet route. Narrow confirms and pickers open that way.
+ * - **asPage, narrow:** the body of a full-page route — a small form on a phone.
+ * - **asPage, wide:** the Dialog as the whole of a transparentModal route — that form on a tablet.
  *
  * Mounted by its caller only while open, so every field inside starts empty with no reset logic.
  */
 export function AdaptiveDialog({
   inSheet,
+  asPage,
   onDismiss,
   dismissable = true,
   kicker,
@@ -47,17 +58,18 @@ export function AdaptiveDialog({
   actions,
 }: Props) {
   const { colors } = useAppTheme();
+  const wide = useShellWide();
   const kickerColor = kickerTone === 'error' ? colors.error : colors.accent;
 
-  if (inSheet) {
+  if (inSheet || (asPage && !wide)) {
     return (
-      <SheetBody dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions}>
+      <SheetBody page={!!asPage} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions}>
         {children}
       </SheetBody>
     );
   }
 
-  return (
+  const dialog = (
     <Portal>
       <Dialog
         visible
@@ -86,6 +98,27 @@ export function AdaptiveDialog({
       </Dialog>
     </Portal>
   );
+
+  return asPage ? <PageDialog dismissable={dismissable}>{dialog}</PageDialog> : dialog;
+}
+
+/**
+ * A wide form route: a transparentModal whose whole content is the Dialog, so the screen it was opened
+ * from shows under the backdrop.
+ *
+ * `Portal.Host` keeps the Dialog, and any confirm inside it, in this route: on iOS a modal is a view
+ * controller of its own, above the root host. KeyboardAvoidingView shrinks the host as the keyboard
+ * rises and the Dialog's maxHeight keeps its buttons above it — the Android build is edge-to-edge, so
+ * the window does not resize for the keyboard.
+ */
+function PageDialog({ dismissable, children }: { dismissable: boolean; children: ReactNode }) {
+  useHoldRoute(dismissable);
+
+  return (
+    <KeyboardAvoidingView behavior="padding" style={styles.page}>
+      <Portal.Host>{children}</Portal.Host>
+    </KeyboardAvoidingView>
+  );
 }
 
 /**
@@ -112,7 +145,8 @@ type SheetProps = {
 };
 
 /**
- * The body of a formSheet route: kicker, title, scrolling body and stacked actions.
+ * The body of a formSheet or full-page route: kicker, title, scrolling body and stacked actions. A page
+ * fills the screen under the status bar, its content held to the Dialog's width.
  *
  * While a request is in flight the sheet holds still (useHoldRoute). What nothing stops is Android's
  * swipe-down and scrim tap: react-native-screens makes every Android
@@ -120,38 +154,49 @@ type SheetProps = {
  * then finishes on its own, and TanStack Query drops a `mutate` callback whose component unmounted, so
  * the sheet's `onSuccess` never navigates back from the screen underneath.
  *
- * `Portal.Host` scopes any Portal inside to the sheet: the root host sits behind a native sheet.
+ * `Portal.Host` scopes any Portal inside to the sheet or page: the root host sits behind a native sheet.
  */
-function SheetBody({ dismissable, kicker, kickerColor, title, children, actions }: SheetProps & { dismissable: boolean }) {
+function SheetBody({ page, dismissable, kicker, kickerColor, title, children, actions }: SheetProps & { page: boolean; dismissable: boolean }) {
   const { colors } = useAppTheme();
-  // A sheet reaches the bottom edge, so its last button would sit under the gesture bar. The native
-  // formSheet does not pad for it.
-  const { bottom } = useSafeAreaInsets();
+  // A sheet or page reaches the bottom edge, so its last button would sit under the gesture bar. The
+  // native formSheet does not pad for it, and neither does a page on the edge-to-edge Android build.
+  const { top, bottom } = useSafeAreaInsets();
   useHoldRoute(dismissable);
+
+  const content = (
+    <>
+      <View style={styles.sheetHeader}>
+        {kicker ? (
+          <Text variant="labelMedium" style={{ color: kickerColor }}>
+            {kicker}
+          </Text>
+        ) : null}
+        <Text variant="headlineSmall">{title}</Text>
+      </View>
+      <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
+        {children}
+      </ScrollView>
+      <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant, paddingBottom: spacing.md + bottom }]}>
+        {actions}
+      </View>
+    </>
+  );
 
   return (
     <Portal.Host>
-      <View style={[styles.routeSheet, { backgroundColor: colors.surface, borderTopColor: colors.primary }]}>
-        <View style={styles.sheetHeader}>
-          {kicker ? (
-            <Text variant="labelMedium" style={{ color: kickerColor }}>
-              {kicker}
-            </Text>
-          ) : null}
-          <Text variant="headlineSmall">{title}</Text>
-        </View>
-        <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
-          {children}
-        </ScrollView>
-        <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant, paddingBottom: spacing.md + bottom }]}>
-          {actions}
-        </View>
-      </View>
+      {page ? (
+        <KeyboardAvoidingView behavior="padding" style={[styles.page, { backgroundColor: colors.surface, paddingTop: top }]}>
+          <View style={styles.pageColumn}>{content}</View>
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={[styles.routeSheet, { backgroundColor: colors.surface, borderTopColor: colors.primary }]}>{content}</View>
+      )}
     </Portal.Host>
   );
 }
 
 const styles = StyleSheet.create({
+  // maxHeight: over a form route the rising keyboard shrinks the space the Dialog is centred in.
   dialog: { maxWidth: 560, width: '100%', maxHeight: '90%', alignSelf: 'center' },
   dialogKicker: { paddingHorizontal: spacing.lg, paddingTop: spacing.ml },
   titleUnderKicker: { marginTop: spacing.xs },
@@ -174,6 +219,9 @@ const styles = StyleSheet.create({
   sheetBody: { gap: spacing.ms, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   // The 2px primary rule on the sheet's top edge (.claude/instruction_mds/frontend.md §5).
   routeSheet: { borderTopWidth: 2 },
+  page: { flex: 1 },
+  // Left-aligned measure, not a centred column (.claude/instruction_mds/frontend.md rule 18, §9).
+  pageColumn: { flex: 1, width: '100%', maxWidth: 560 },
   sheetHeader: { gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
   sheetActions: { gap: spacing.sm, padding: spacing.md, borderTopWidth: 1 },
 });

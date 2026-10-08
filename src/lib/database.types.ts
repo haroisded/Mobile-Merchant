@@ -14,26 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      merchants: {
+      countries: {
+        Row: {
+          code: string
+          country_name: string
+          currency_code: string | null
+          number_format: string
+          time_zones: string[]
+        }
+        Insert: {
+          code: string
+          country_name: string
+          currency_code?: string | null
+          number_format: string
+          time_zones?: string[]
+        }
+        Update: {
+          code?: string
+          country_name?: string
+          currency_code?: string | null
+          number_format?: string
+          time_zones?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "countries_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currency_presets"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      currency_presets: {
+        Row: {
+          code: string
+          currency_name: string
+          fraction: string | null
+          fraction_units: number | null
+          number_format: string
+          smallest_currency_fraction_value: number | null
+          symbol: string | null
+        }
+        Insert: {
+          code: string
+          currency_name: string
+          fraction?: string | null
+          fraction_units?: number | null
+          number_format: string
+          smallest_currency_fraction_value?: number | null
+          symbol?: string | null
+        }
+        Update: {
+          code?: string
+          currency_name?: string
+          fraction?: string | null
+          fraction_units?: number | null
+          number_format?: string
+          smallest_currency_fraction_value?: number | null
+          symbol?: string | null
+        }
+        Relationships: []
+      }
+      fiscal_years: {
         Row: {
           created_at: string
+          disabled: boolean
+          id: string
+          is_default: boolean
+          is_short_year: boolean
+          merchant_id: string
+          year: string
+          year_end_date: string
+          year_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_default?: boolean
+          is_short_year?: boolean
+          merchant_id: string
+          year: string
+          year_end_date: string
+          year_start_date: string
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_default?: boolean
+          is_short_year?: boolean
+          merchant_id?: string
+          year?: string
+          year_end_date?: string
+          year_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_years_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merchants: {
+        Row: {
+          abbr: string
+          country_code: string
+          created_at: string
+          default_currency: string
           id: string
           name: string
           owner_id: string
         }
         Insert: {
+          abbr: string
+          country_code: string
           created_at?: string
+          default_currency: string
           id?: string
           name: string
           owner_id: string
         }
         Update: {
+          abbr?: string
+          country_code?: string
           created_at?: string
+          default_currency?: string
           id?: string
           name?: string
           owner_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "merchants_country_fk"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "merchants_default_currency_fk"
+            columns: ["default_currency"]
+            isOneToOne: false
+            referencedRelation: "currency_presets"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       profiles: {
         Row: {

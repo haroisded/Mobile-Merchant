@@ -91,7 +91,9 @@ createQueryKey('products', { categoryId })   // ['products', { categoryId }, {}]
 | `structuralSharing` | leave on |
 | `networkMode` | leave default (`'online'`) |
 
-Stale times come from `STALE` (`STALE.MINUTES.FIVE`), never `5 * 60 * 1000`.
+Stale times come from `STALE` (`STALE.MINUTES.FIVE`), never `5 * 60 * 1000`. Reference data a
+migration seeds and no client can write (countries, currency presets) is `STALE.STATIC` — TanStack's
+`'static'`: fetched once, never refetched, invalidation included.
 
 **Wire `onlineManager` and `focusManager`** per the TanStack React Native guide, or queries never
 learn they are offline and never refetch on resume. This is separate from the `AppState` listener in
@@ -106,6 +108,9 @@ log plain network errors — the user is already being told.
 **Error copy:** render `failureMessage` (`src/lib/errors.ts`), which swaps in the offline message
 when `onlineManager` says so. A PostgREST or GoTrue string names columns and policies, tells the
 user nothing, and leaks the schema. Zod messages are the exception — they already read for the user.
+A case the screen expects gets its own copy from the SQLSTATE: `postgrestError(mutation.error)?.code`
+(`src/lib/errors.ts`) — `23505` a duplicate name, `23P01` an exclusion constraint (overlapping fiscal
+years).
 
 **A form's or confirm's line under its buttons** is `mutationNotice(mutation, errorText, fallback)`
 (`src/lib/errors.ts`): the paused copy first (§5), then `errorText` on a failed write, then the

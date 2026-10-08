@@ -215,7 +215,7 @@ OS setting scales `fontSize` + `lineHeight`. Layout must hold at 200%.
 - `numberOfLines` only where full text is reachable (detail view). Never truncate errors, prices,
   field labels
 - Wide table unreadable at large scale → narrow anatomy for that list: table only when wide and OS
-  font scale ≤ 1.15 (`useTableFits()`†, `src/lib/columns.ts`). Table-vs-cards only; dialog-vs-sheet
+  font scale ≤ 1.15 (`useTableFits()`, `src/lib/columns.ts`). Table-vs-cards only; dialog-vs-sheet
   stays on `useShellWide()`
 - Width holding a label (rail, tile) → `fontScaled(width)`, grows to the 1.5 cap. Layout, not type
   (rule 10)
@@ -271,7 +271,7 @@ rail is narrower than the window.
 | Item opened from list | own route | detail pane beside list |
 | Long forms | stepper: "Step n of N", Next, progress bar | section list beside field grid |
 | Confirms, pickers, Filters panel | native `formSheet` route | Paper `Dialog` |
-| Small create/edit forms (a name and a few fields) | full-page route | Paper `Dialog` over the screen it was opened from: the same route as a `transparentModal` (the `forms/` routes †) |
+| Small create/edit forms (a name and a few fields) | full-page route | Paper `Dialog` over the screen it was opened from: the same route as a `transparentModal` (the `forms/` routes) |
 | Profile | the Account tab | the Account tab, reached from the systems list's account icon (the tab bar is hidden) |
 | Multi-step flow ending in a review | stepper, Review as the last step | stepper left, Review sidebar right |
 | Systems list | Create button + row cards | grid, Create System card first |
@@ -328,7 +328,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | --- | --- |
 | 2px rule: under page header, above totals, between Home sections | `View`, `height: 2`, `onSurface` |
 | 1px rule | between blocks `outlineVariant`; between list rows `surfaceVariant` |
-| Page header | `src/components/page-header.tsx`†: `labelMedium` kicker in `accent`, `headlineMedium` title, `bodySmall` count, contained `Button`, 2px rule. Actions beside title wide, own row under it narrow |
+| Page header | `src/components/page-header.tsx`: `labelMedium` kicker in `accent`, `headlineMedium` title, `bodySmall` count, contained `Button`, 2px rule. Actions beside title wide, own row under it narrow |
 | Section heading | `headlineSmall` + `bodySmall` hint on same baseline |
 | Full-width button | Paper centres label → `contentStyle` with `justifyContent: 'flex-start'` |
 | Button width | narrow: full width, label left. Wide: content width (`alignSelf: 'flex-start'`), several in a wrapping row. Never a full-width button across a tablet |
@@ -341,7 +341,8 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Header | `Appbar.Header` on `primary`: menu `Appbar.Action`, `Appbar.Content`, bell + Your systems (`grid`) actions. Your systems is the way out of a system: on iOS the left-edge swipe opens the drawer, so there is no back gesture |
 | Rail / drawer | expo-router `Drawer`, `drawerType` `'permanent'` wide, `'front'` narrow. `drawerStyle` zeroes the hairline border, front-drawer corners `radius.xl`. Rail square + flush |
 | Rail / drawer item | `Pressable`: `Icon` + `labelLarge`. Active: `primaryHighlight` ground, 4px `accent` bar left |
-| Group row | opens / closes its screens, not a destination (none now: Home is the only destination) |
+| Group row | opens / closes its screens, not a destination (none now: Home and Setup are the destinations) |
+| Destination with a stack | Setup (`systems/[id]/setup/`, its own `Stack`): a tap on it always lands on its index, as a rail item should |
 | Collapse to icons | menu action toggles `RAIL_EXPANDED` / `RAIL_COLLAPSED` |
 | `(tabs)` bar | `NativeTabs`. Colours passed as props from `useAppTheme()` — `PaperProvider` does not reach native views. Icons: `{ sf, md }` halves of the map |
 | System badge | `Avatar.Text` on `onPrimary` |
@@ -350,8 +351,9 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 
 | Pattern | Build |
 | --- | --- |
-| Wide list | `DataTable`: `src/components/header-title.tsx`† per column (label string, `textStyle` = `labelMedium`, start-aligned), `Checkbox.Android` bulk column, `IconButton` row actions |
+| Wide list | `DataTable`: `src/components/header-title.tsx` per column (label string, `textStyle` = `labelMedium`, start-aligned), `Checkbox.Android` bulk column, `IconButton` row actions |
 | Narrow list | `FlashList` rows: thumbnail, `titleMedium` name, badge, `bodySmall` meta, amount right-aligned |
+| Index of records (Setup) | `src/screens/setup/index.tsx`: a section heading over a 1px `outlineVariant` box of rows — `titleMedium` + `bodySmall` hint + chevron, `surfaceVariant` hairlines. Sections in columns from `useColumns` |
 | Bulk action bar | `surfaceVariant` strip: clear `IconButton`, count in `labelLarge`, text `Button`s, Delete in `error` |
 | Search | outlined dense `TextInput` + `TextInput.Icon` |
 | Filter + sort | wide: one toolbar row — Search, outlined `Button` "Filters · n", Sort `Button` anchoring `Menu`. Narrow: Search on its own row, the two buttons under it. Active filters: `Chip`s with `x`, then `accent` text `Button` "Clear all" |
@@ -369,16 +371,18 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Field label | `labelMedium` above control. Required: label ends ` (required)`. Optional: no marker. Hint `bodySmall` right |
 | Text field | outlined dense `TextInput`, no floating `label`. `left` / `right` affixes for currency + units |
 | Select | `src/components/menu-select.tsx`†: non-editable outlined `TextInput` anchoring `Menu` |
+| Searchable select (a list too long for a `Menu`: countries, currencies) | `src/components/search-select.tsx`: the Select shape + `chevron-down`, opening a picker with a Search box. Narrow: `src/app/(app)/sheets/pick.tsx` — options and callback handed over in `src/Store/picker.ts`, since a route takes neither as a param. Wide: `AdaptiveDialog` |
+| Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` bound to a react-hook-form `control` |
 | Inline-create select | Select + last `Menu.Item` "+ New …" in `accent`. Created row comes back selected |
-| Date / time field | Select shape + `calendar` / `clock` icon → `DateTimePicker` (`@expo/ui/community/datetime-picker`). iOS: inline picker in dialog, Done |
+| Date / time field | Select shape + `calendar` / `clock` icon → `DateTimePicker` (`@expo/ui/community/datetime-picker`; `ControlledDate`). Android: its own Material dialog. iOS: inline picker in dialog, Done. Held as `YYYY-MM-DD` (`src/lib/dates.ts`) |
 | Segmented field, type selector | `SegmentedButtons`. Wrap two per row narrow |
 | Toggle | Paper `Switch`, on colour `accent`, sentence in `bodyMedium` beside |
 | Tags, date list | `Chip`s with `x` in wrapping row, then text `Button` "+ add …". Remove label on `closeIconAccessibilityLabel` |
 | Repeatable rows | rows + remove `IconButton`, then `accent` text `Button` "+ Add …" |
 | Weekly hours | seven rows, 1px `surfaceVariant` between: `Switch`, `titleMedium` day, time fields. Closed in `onSurfaceFaint` |
 | Variant matrix row | one 1px `outlineVariant` box per combination: `labelLarge` label, SKU, barcode, price difference, quantity |
-| Note callout | `src/components/note-callout.tsx`†: 3px left border `accent` or `error`, `surfaceMuted`, `bodySmall` |
-| Footer | `src/components/form-footer.tsx`†: outlined Save as Draft + contained Publish. Pinned bottom narrow |
+| Note callout | `src/components/note-callout.tsx`: 3px left border `accent` or `error`, `surfaceMuted`, `bodySmall` |
+| Footer | `src/components/form-footer.tsx`: the write's notice, then the buttons (Company: Save). Pinned bottom, padded above the gesture bar |
 | Line under buttons | `mutationNotice(...)` (`src/lib/errors.ts`) |
 
 ### Detail and dialogs
@@ -389,12 +393,12 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Detail card | `Card mode="outlined"`. Header strip: `View` on `primary`, `labelMedium` in `onPrimary`. Rows: `bodySmall` key, `bodyMedium` value |
 | Confirm or picker | `src/components/adaptive-dialog.tsx`. Wide: `Portal` + `Dialog` with `maxWidth`. Narrow: route in `src/app/(app)/sheets/`, `presentation: 'formSheet'`, `sheetAllowedDetents: 'fitToContents'`, `sheetCornerRadius: radius.xl`. Opener decides |
 | Sheet body | OS owns frame + scrim → content carries theme: 2px `primary` top rule, kicker, title, actions padded above gesture bar |
-| Destructive confirm | `AdaptiveDialog` with `kickerTone="error"`: Cancel, red confirm, notice under body (`src/components/remove-system-dialog.tsx`, `delete-account-dialog.tsx`; the generic `confirm-dialog.tsx`†) |
+| Destructive confirm | `AdaptiveDialog` with `kickerTone="error"`: Cancel, red confirm, notice under body (`src/components/remove-system-dialog.tsx`, `delete-account-dialog.tsx`; the generic `confirm-dialog.tsx` that Setup deletes use) |
 | Unsaved changes | `src/components/discard-dialog.tsx`† + `src/lib/unsaved-guard.ts`†. Stays a Paper bottom sheet narrow |
-| Create / edit form | full-page route (`src/app/(app)/create-system.tsx`). Wide, a small form is a Dialog (`src/app/(app)/forms/`† with `AdaptiveDialog asPage wide`†, §4.4); a created row returns through `src/Store/sheet-result.ts`† |
+| Create / edit form | full-page route (`src/app/(app)/create-system.tsx`). Wide, a small form is a Dialog (`src/app/(app)/forms/` with `AdaptiveDialog asPage`, §4.4); a created row returns through `src/Store/sheet-result.ts`† |
 | Multi-step flow | full-screen pushed route, every width |
 | Request in flight | `Dialog` `dismissable={false}`, full-page form back blocked. Sheet: `gestureEnabled` off, Android back swallowed. A paused (offline) write is not in flight — but its submit stays disabled (`.claude/instruction_mds/data-layer.md` §5) |
-| Loading / error / retry | inline in the screen (`src/screens/home/index.tsx`, the shell in `src/app/(app)/systems/[id]/_layout.tsx`); the shared `src/components/query-state.tsx`† |
+| Loading / error / retry | inline in the screen (`src/screens/home/index.tsx`, the shell in `src/app/(app)/systems/[id]/_layout.tsx`); the shared `src/components/query-state.tsx` |
 
 ### Home
 
@@ -450,7 +454,7 @@ Symptom → cause → rule. Entry stays while the stack that caused it stays. Pr
 | Bold renders regular on Android | system font: numeric weights unreliable, no 800 | max 700 |
 | Font-scale user gets double inflation | width-scaled font + OS scale stack | rule 10 |
 | Title squeezed to a few letters per line beside its buttons, narrow | `flexWrap` row: Yoga shrinks the flexible child instead of wrapping | pick the anatomy from `useShellWide()`, not `flexWrap` (page header, list toolbar) |
-| Table column titles centred over left-aligned cells | `DataTable.Title` is a row; a cell style's `justifyContent: 'center'` centres it horizontally | `header-title.tsx`† forces `flex-start` |
+| Table column titles centred over left-aligned cells | `DataTable.Title` is a row; a cell style's `justifyContent: 'center'` centres it horizontally | `header-title.tsx` forces `flex-start` |
 | Rail labels missing, icons only | `flex: 1` label row in a column item has zero basis → zero height | `flexGrow`, not `flex: 1`, under the rail icon |
 | Tile name broken mid-word at large font scale | fixed tile min width, growing name | `fontScaled(<tile min>)` |
 | Rail labels truncated at large font scale ("Resour…") | fixed rail width, growing label | `fontScaled(RAIL_EXPANDED)` |
@@ -458,8 +462,8 @@ Symptom → cause → rule. Entry stays while the stack that caused it stays. Pr
 | `Card.Title` blank at content width | its title is `flex: 1`: zero basis in a hugging card | content-width action → `Button`, not `Card` |
 | Tablet ignores `orientation: portrait` | Android 16, `targetSdk` 36: `screenOrientation` ignored at smallest width ≥ 600dp | accepted. Phones stay portrait, tablets rotate; layout follows the window (§4.1) |
 | Small form squeezed into the left half of a tablet | full-page route, its 560dp column left-aligned | small forms = Dialog over the screen wide (§4.4) |
-| Lone half field stretched across its row | `flexGrow` on a half `Field` with no partner beside it | `FieldGrid`† caps a half at one column (measured, `HalfWidthContext`) |
-| Crash when the window widens past `WIDE_MIN` | a hook called after `wide &&`, so the hook order changed | call every hook unconditionally (`useTableFits`†) |
+| Lone half field stretched across its row | `flexGrow` on a half `Field` with no partner beside it | `FieldGrid` caps a half at one column (measured, `HalfWidthContext`) |
+| Crash when the window widens past `WIDE_MIN` | a hook called after `wide &&`, so the hook order changed | call every hook unconditionally (`useTableFits`) |
 | "Invalid prop `compact` supplied to `React.Fragment`" | `Dialog.Actions` clones `compact` onto each child, and the child was the caller's Fragment | `AdaptiveDialog` lays out its own actions row |
 
 ## 8. Skill overrides
@@ -469,13 +473,14 @@ Symptom → cause → rule. Entry stays while the stack that caused it stays. Pr
 | `expo-native-ui`, `expo-overview`: check `@expo/ui` first | Paper (rule 1) |
 | `expo-native-ui`, `expo-design-system`: `Color` from `expo-router`, `Platform.select` palette | theme keys (§2) |
 | `expo-native-ui`, `vercel-react-native-skills` `ui-styling`: `boxShadow` strings | flat, ruled, outlined. Paper owns elevation |
-| `expo-native-ui`: navigation stack title | `PageHeader`† (§5) |
+| `expo-native-ui`: navigation stack title | `PageHeader` (§5) |
 | `expo-native-ui`: inline styles | `StyleSheet.create` (rule 21) |
 | `expo-native-ui`: `useWindowDimensions` for sizing | breakpoint only (§4.1). Columns: `onLayout` |
 | `expo-native-ui`: `contentInsetAdjustmentBehavior="automatic"` | only under native header. Navigators here set `headerShown: false`, `Appbar.Header` applies top inset. Sheets pad with `useSafeAreaInsets` |
 | `expo-design-system`: local `ThemedText`, Apple text ramp | Paper `Text` + variant (§3) |
 | `vercel-react-native-skills` `ui-styling`: hierarchy by weight + colour | variants |
 | `vercel-react-native-skills` `ui-menus`: zeego native menus | Paper `Menu` — native menu cannot draw accent "+ New …" row, needs rebuild |
+| `ponytail-review` `yagni`: a `src/components/` file or `src/lib/` helper with one caller | a † file is restored at its own path when the first screen needs it (the teardown note at the top) — not inlined, and not moved into the screen until a second one arrives |
 
 ## 9. Not used
 

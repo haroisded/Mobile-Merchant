@@ -4,7 +4,7 @@ import type { Tables } from '../../lib/database.types';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../Store/StoreUser';
-import type { CreateSystemValues } from './schema';
+import type { CompanyValues } from './schema';
 
 // The row type comes from the generated types, not from a hand-written interface. One less thing to
 // keep in step with the migration.
@@ -57,15 +57,17 @@ export function useCreateSystemMutation() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: async (values: CreateSystemValues) => {
+    mutationFn: async (values: CompanyValues) => {
       const userId = session?.user.id;
       if (!userId) throw new Error('Not signed in.');
 
       const { data } = await supabase
         .from('merchants')
         // merchants_insert_own checks owner_id against auth.uid(); sending anyone else's id is
-        // rejected by the database, not merely by this line.
-        .insert({ owner_id: userId, name: values.name })
+        // rejected by the database, not merely by this line. The insert is the whole of the setup:
+        // the merchants_seed_* triggers create the company's first fiscal year in the same
+        // transaction, as ERPNext's setup wizard does.
+        .insert({ owner_id: userId, ...values })
         .select()
         .single()
         .throwOnError();
@@ -77,6 +79,24 @@ export function useCreateSystemMutation() {
       // Mutation then invalidation is the whole CRUD loop here. Awaiting keeps the mutation in
       // `pending` until the refetch lands, so the form closes onto a list that already has the new
       // card rather than one that pops in a moment later.
+      await queryClient.invalidateQueries({ queryKey: merchantsKey.lists() });
+    },
+  });
+}
+
+/** The Company screen's save: name, abbreviation, country and default currency of one system. */
+export function useUpdateCompanyMutation({ merchantId }: { merchantId: string }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (values: CompanyValues) => {
+      // merchants_update_own decides who may write this row, as it does for the list above.
+      await supabase.from('merchants').update(values).eq('id', merchantId).throwOnError();
+    },
+
+    // Awaited, so Save stays in its spinner until the list (which the shell reads its name from) has the
+    // new values.
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: merchantsKey.lists() });
     },
   });

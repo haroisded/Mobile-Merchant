@@ -61,6 +61,7 @@
     "typecheck": "tsc --noEmit",
     "build:migrations": "node tools/build-migrations.mjs",
     "check:migrations": "node tools/build-migrations.mjs --check",
+    "check:logic": "node tools/check-logic.mjs",
     "atlas": "node tools/atlas.mjs"
   },
   "private": true

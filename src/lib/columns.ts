@@ -1,5 +1,5 @@
 import { createContext, use, useState } from 'react';
-import { PixelRatio } from 'react-native';
+import { PixelRatio, useWindowDimensions } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
 
 // ponytail: one number, tune it on a real tablet.
@@ -42,6 +42,24 @@ export const useShellWide = () => use(ShellWideContext);
  * large font size.
  */
 export const fontScaled = (width: number) => width * Math.min(PixelRatio.getFontScale(), 1.5);
+
+// ponytail: one number, tune it on a real tablet. Above this OS font scale a wide table's column
+// titles truncate, so the list falls back to its narrow rows (.claude/instruction_mds/frontend.md §3.5).
+const TABLE_FONT_MAX = 1.15;
+
+/**
+ * Whether a list draws its DataTable: wide, and the font scale small enough for the columns to read.
+ * Only the table-vs-rows choice reads this; dialogs vs sheets stay on useShellWide(). fontScale, not
+ * width, so this is not a second breakpoint.
+ *
+ * Both hooks run every render: `wide && useWindowDimensions()` skipped the second while narrow, and a
+ * window widening past WIDE_MIN (rotation, split-screen) then crashed on a changed hook order.
+ */
+export function useTableFits() {
+  const wide = useShellWide();
+  const { fontScale } = useWindowDimensions();
+  return wide && fontScale <= TABLE_FONT_MAX;
+}
 
 /**
  * Column count derived from the container's measured width.

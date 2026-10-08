@@ -31,20 +31,27 @@ Which directories exist under `src/`, and what goes in each. What goes *inside* 
 ```
 src/
   app/                    routes and layouts only
-  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts  …
-  Store/                  zustand — client state only
+  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts  …
+  Store/                  zustand — client state only (StoreUser.ts, picker.ts)
   features/
-    merchants/            queries.ts  schema.ts
+    merchants/            queries.ts  schema.ts — merchants is the Company
+    countries/            queries.ts — read-only reference data
+    currency-presets/     queries.ts — read-only reference data
+    fiscal-years/         queries.ts  schema.ts
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
+    setup/                index.tsx — the Setup destination's index
+    company/              index.tsx
+    fiscal-years/         index.tsx  fiscal-year-form.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  remove-system-dialog.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  …
 ```
 
-That is the whole tree as of 2026-10-08. A new resource of the rebuild (an ERPNext doctype such as
-`items/`) is a sibling of `merchants/`; its screens are siblings of `home/`.
+That is the whole tree as of Step 1 of the POS foundation (2026-10-08). A new resource of the rebuild
+(an ERPNext doctype such as `items/`) is a sibling of `fiscal-years/`; its screens are siblings of
+`company/`.
 
 A directory earns its existence by naming a thing the app has, not a shape code takes. `products` is
 a thing; `modals` is a shape.
@@ -54,7 +61,10 @@ a thing; `modals` is a shape.
 For every new file ask: **is this data or UI?**
 
 - Data → the resource folder it reads.
-- UI → the screen that renders it, or `src/components/` once a **second** screen needs it.
+- UI → the screen that renders it, or `src/components/` once a **second** screen needs it. One
+  exception: a file [`frontend.md`](./frontend.md) marks † is restored at its own path in
+  `src/components/` when the first screen needs it (frontend.md's teardown note), not rewritten in the
+  screen.
 
 Data stays keyed by resource so two screens on one resource share one feature folder, and a screen
 reading three resources imports three. UI is keyed by screen because a screen body is route-shaped.
@@ -63,7 +73,9 @@ Never create a feature folder named after a page.
 
 | Example | Goes in |
 | --- | --- |
-| Merchants read/write, create-system schema | `src/features/merchants/` |
+| Merchants read/write, the Company schema | `src/features/merchants/` |
+| Fiscal years read/write and schema; their list and form | `src/features/fiscal-years/`; `src/screens/fiscal-years/` |
+| Country + Default Currency pair, used by Create System and Company | `src/components/country-currency-fields.tsx` — two screens |
 | Home's SystemCard, CreateSystem form | `src/screens/home/` |
 | Profile read | `src/features/profiles/`; screen in `src/screens/profile/` |
 | A dialog that also opens as a sheet route (RemoveSystemDialog, DeleteAccountDialog) | `src/components/` — the route is its second host |
@@ -90,13 +102,16 @@ Anything with no table, schema or query key behind it.
 
 ```
 src/app/(app)/systems/[id]/_layout.tsx   the shell — expo-router Drawer, permanent when wide
-src/app/(app)/systems/[id]/index.tsx     Home, the one destination since the 2026-10-08 teardown
+src/app/(app)/systems/[id]/index.tsx     Home
+src/app/(app)/systems/[id]/setup/        Setup — its own Stack: index.tsx, then one route per record (company.tsx, fiscal-years.tsx)
 ```
 
 A new destination is a route file beside `index.tsx` and a row in the shell's `DESTINATIONS`. It
-becomes a directory when it grows more than one screen (list, detail, create, edit).
+becomes a directory when it grows more than one screen (list, detail, create, edit), with a `Stack`
+`_layout.tsx` and `stack: true` on its row, so a tap on it lands on its index.
 
-Sheet routes (confirms) live in `src/app/(app)/sheets/`, as leaf screens of the `(app)` Stack.
+Sheet routes (confirms, pickers) live in `src/app/(app)/sheets/`, and small-form routes (a page narrow,
+a Dialog wide) in `src/app/(app)/forms/` — both leaf screens of the `(app)` Stack.
 
 ## 6. Build order for a new feature
 

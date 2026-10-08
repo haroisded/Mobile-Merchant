@@ -22,7 +22,12 @@ How rows are scoped to a business, and the shape every RLS policy on a business 
 6. `public.profiles` stays as it is — the person, not the membership. Do not add `merchant_id`.
 7. Do not build a permission system, a roles table, or a policy matrix now.
 8. Who creates the merchant row: an explicit onboarding step, never a trigger. The create-system
-   form (`src/screens/home/create-system.tsx`) inserts it, from its name alone.
+   form (`src/screens/home/create-system.tsx`) inserts it: name, abbreviation, country, currency.
+9. A merchant is its **Company** (ERPNext's), so a Company field is a `merchants` column, never a
+   `companies` table (rule 5). The records a new company starts with (its first fiscal year, and each
+   later foundation step's defaults) are made by one `after insert on merchants` trigger per step,
+   `merchants_seed_NN_<area>` — Postgres fires same-event triggers in name order, so a later step's
+   seed can read an earlier one's rows. Each step's migration also backfills the merchants that exist.
 
 ---
 
@@ -71,7 +76,11 @@ create table public.merchants (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users on delete cascade,
   name text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- The Company (20261008101635_company_and_fiscal_year.sql):
+  abbr text not null,              -- 1..10, no spaces; shown after account / warehouse names
+  country_code text not null,      -- → public.countries
+  default_currency text not null   -- → public.currency_presets
 );
 
 alter table public.merchants enable row level security;

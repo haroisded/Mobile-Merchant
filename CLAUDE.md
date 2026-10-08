@@ -283,15 +283,19 @@ removes.
 
 ## 6. The database
 
-`supabase/migrations/` holds `public.profiles` (the person) and `public.merchants` (the tenant:
-`id`, `owner_id`, `name`, `created_at`) — with their policies, the signup trigger,
-`public.delete_current_user()`, `private.current_merchant_ids()`, and `private.rls_auto_enable()`,
-the function behind an event trigger that hosted Supabase will not let this project install (§6.1).
+`supabase/migrations/` holds `public.profiles` (the person) and `public.merchants` (the tenant, and
+its Company: `id`, `owner_id`, `name`, `abbr`, `country_code`, `default_currency`, `created_at`) —
+with their policies, the signup trigger, `public.delete_current_user()`,
+`private.current_merchant_ids()`, and `private.rls_auto_enable()`, the function behind an event
+trigger that hosted Supabase will not let this project install (§6.1).
 The business schema the app was built on until 2026-10-08 — the product catalogue, suppliers, the
 stock ledger, the Register's sales — is still in the migration history, and
 `20261008050254_revamp_drop_business_schema.sql` drops all of it, rows included, ahead of a rebuild on
-ERPNext's model. `authenticated` keeps `usage` on `private` and `execute` on `current_merchant_ids()`
-so the next business table's policies can call it (`.claude/instruction_mds/tenancy.md` §4). Each migration
+ERPNext's model. That rebuild lands one ERPNext step per migration, starting with
+`20261008101635_company_and_fiscal_year.sql`: read-only `countries` and `currency_presets`,
+`fiscal_years`, and `private.seed_company()` behind the `merchants_seed_10_company` trigger.
+`authenticated` keeps `usage` on `private` and `execute` on `current_merchant_ids()` so business
+tables' policies can call it (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).
 `ARCHITECTURE.md` describes what they do; `.claude/instruction_mds/tenancy.md` covers the tenancy model and what is
 still ahead of it. The rules below are what must not be broken when adding to them.

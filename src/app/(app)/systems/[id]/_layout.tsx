@@ -26,12 +26,16 @@ import { radius, spacing } from '../../../../themes';
 // One expo-router Drawer serves both widths — drawerType 'permanent' is the rail, 'front' is the
 // drawer — so the two share one route table and one destination list (.claude/instruction_mds/frontend.md §4.4).
 
-type Destination = { name: string; label: string; icon: IconName };
+type Destination = { name: string; label: string; icon: IconName; stack?: boolean };
 
-// Rail order. `name` is the route file under this directory; icons are the app's own names, drawn as
-// each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Home is the only one
-// since the 2026-10-08 teardown; the next destinations arrive with the rebuild.
-const DESTINATIONS: Destination[] = [{ name: 'index', label: 'Home', icon: 'home' }];
+// Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
+// as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Setup is the
+// company's foundation records (./setup/, a stack of its own); the operational screens arrive with the
+// rebuild.
+const DESTINATIONS: Destination[] = [
+  { name: 'index', label: 'Home', icon: 'home' },
+  { name: 'setup', label: 'Setup', icon: 'settings', stack: true },
+];
 
 /** "Cafe 67" → "C6": the first letter of up to two words, for the system badge. */
 function initials(name: string) {
@@ -226,7 +230,13 @@ function SystemNav({ state, navigation, name, wide, expanded }: NavProps) {
             wide={wide}
             labelled={labelled}
             active={entry.name === active}
-            onPress={() => navigation.navigate(entry.name)}
+            // A destination with a stack of its own opens at its first screen: tapping Setup from deep
+            // inside Setup returns to its index, as a rail item should, rather than to wherever the
+            // stack was left. `pop`: without it, React Navigation 7's NAVIGATE pushes a second index
+            // over the pages above the first (StackRouter.js, 'NAVIGATE').
+            onPress={() =>
+              entry.stack ? navigation.navigate(entry.name, { screen: 'index', pop: true }) : navigation.navigate(entry.name)
+            }
           />
         ))}
       </View>

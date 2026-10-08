@@ -25,6 +25,8 @@ export const ICONS = {
   logout: { ios: 'rectangle.portrait.and.arrow.right', android: 'logout' },
   minus: { ios: 'minus', android: 'remove' },
   search: { ios: 'magnifyingglass', android: 'search' },
+  // The date field's trailing icon (src/components/form-fields.tsx).
+  calendar: { ios: 'calendar', android: 'calendar_today' },
 
   // Direction. chevron-down and chevron-left are also Paper's own (List.Accordion, DataTable).
   'arrow-back': { ios: 'arrow.left', android: 'arrow_back' },
