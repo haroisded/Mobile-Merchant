@@ -353,12 +353,13 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | --- | --- |
 | Wide list | `DataTable`: `src/components/header-title.tsx` per column (label string, `textStyle` = `labelMedium`, start-aligned), `Checkbox.Android` bulk column, `IconButton` row actions |
 | Narrow list | `FlashList` rows: thumbnail, `titleMedium` name, badge, `bodySmall` meta, amount right-aligned |
-| Index of records (Setup) | `src/screens/setup/index.tsx`: a section heading over a 1px `outlineVariant` box of rows — `titleMedium` + `bodySmall` hint + chevron, `surfaceVariant` hairlines. Sections in columns from `useColumns` |
+| Index of records (Setup) | `src/screens/setup/index.tsx`: a section heading over a 1px `outlineVariant` box of rows — `titleMedium` + `bodySmall` hint + chevron, `surfaceVariant` hairlines. Sections in columns from `useColumns`. A row shows only with Read on its doctype; a section left empty goes |
+| A Setup master's list | `src/components/record-list.tsx`: `DataTable` wide when `useTableFits`, rows narrow; `StatusText` for the status words; a pinned `header` row (the owner in Users) |
 | Bulk action bar | `surfaceVariant` strip: clear `IconButton`, count in `labelLarge`, text `Button`s, Delete in `error` |
 | Search | outlined dense `TextInput` + `TextInput.Icon` |
 | Filter + sort | wide: one toolbar row — Search, outlined `Button` "Filters · n", Sort `Button` anchoring `Menu`. Narrow: Search on its own row, the two buttons under it. Active filters: `Chip`s with `x`, then `accent` text `Button` "Clear all" |
 | Filters panel | `src/components/list-filters-dialog.tsx`†. Selects, `SegmentedButtons` (2–4 options), toggles. Applies as changed: Done, no Apply |
-| Folder row + breadcrumb | `src/components/folder-nav.tsx`†. Each folder = push of the list route, Back climbs one |
+| Folder row + breadcrumb | `src/components/folder-nav.tsx` (`TreeBrowser`, `useFolder`): the tree masters, Chart of Accounts and Cost Centers. Each folder = push of the list route with `parent`, Back climbs one; a group is a `folder` row, a ledger a plain row |
 | Status badges (Low, Expiring, Expired …) | `labelMedium` in `error` (`src/components/product-badges.tsx`†) |
 | Type badge | `View`, 1px `outlineVariant` border, `surfaceMuted`, `labelMedium` |
 | Thumbnail placeholder | `View` on `surfaceVariant` + `Icon`. Real image: `expo-image` |
@@ -372,7 +373,8 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Text field | outlined dense `TextInput`, no floating `label`. `left` / `right` affixes for currency + units |
 | Select | `src/components/menu-select.tsx`†: non-editable outlined `TextInput` anchoring `Menu` |
 | Searchable select (a list too long for a `Menu`: countries, currencies) | `src/components/search-select.tsx`: the Select shape + `chevron-down`, opening a picker with a Search box. Narrow: `src/app/(app)/sheets/pick.tsx` — options and callback handed over in `src/Store/picker.ts`, since a route takes neither as a param. Wide: `AdaptiveDialog` |
-| Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` bound to a react-hook-form `control` |
+| Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` / `ControlledChecklist` bound to a react-hook-form `control`; each takes `disabled` for a read-only form. `ControlledSelect` (`search-select.tsx`) binds a searchable select |
+| Checklist (roles) | `ControlledChecklist`: one `Checkbox.Android` row per option, the whole row pressable |
 | Inline-create select | Select + last `Menu.Item` "+ New …" in `accent`. Created row comes back selected |
 | Date / time field | Select shape + `calendar` / `clock` icon → `DateTimePicker` (`@expo/ui/community/datetime-picker`; `ControlledDate`). Android: its own Material dialog. iOS: inline picker in dialog, Done. Held as `YYYY-MM-DD` (`src/lib/dates.ts`) |
 | Segmented field, type selector | `SegmentedButtons`. Wrap two per row narrow |
@@ -382,7 +384,8 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Weekly hours | seven rows, 1px `surfaceVariant` between: `Switch`, `titleMedium` day, time fields. Closed in `onSurfaceFaint` |
 | Variant matrix row | one 1px `outlineVariant` box per combination: `labelLarge` label, SKU, barcode, price difference, quantity |
 | Note callout | `src/components/note-callout.tsx`: 3px left border `accent` or `error`, `surfaceMuted`, `bodySmall` |
-| Footer | `src/components/form-footer.tsx`: the write's notice, then the buttons (Company: Save). Pinned bottom, padded above the gesture bar |
+| Full-page form (Company, the Settings singles, Role Permissions) | `PageForm` (`src/components/form-footer.tsx`): fields scroll at the single-column measure, the footer — the write's notice, then Save — pinned bottom, padded above the gesture bar. Read-only (no write permission): a note callout, disabled fields, no footer |
+| Small form's buttons | `FormActions` (`src/components/adaptive-dialog.tsx`): Delete in `error`, an extra action, Cancel, Save; no Save means read-only and Cancel reads Close. Submit through `saveOnce` |
 | Line under buttons | `mutationNotice(...)` (`src/lib/errors.ts`) |
 
 ### Detail and dialogs
@@ -393,7 +396,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Detail card | `Card mode="outlined"`. Header strip: `View` on `primary`, `labelMedium` in `onPrimary`. Rows: `bodySmall` key, `bodyMedium` value |
 | Confirm or picker | `src/components/adaptive-dialog.tsx`. Wide: `Portal` + `Dialog` with `maxWidth`. Narrow: route in `src/app/(app)/sheets/`, `presentation: 'formSheet'`, `sheetAllowedDetents: 'fitToContents'`, `sheetCornerRadius: radius.xl`. Opener decides |
 | Sheet body | OS owns frame + scrim → content carries theme: 2px `primary` top rule, kicker, title, actions padded above gesture bar |
-| Destructive confirm | `AdaptiveDialog` with `kickerTone="error"`: Cancel, red confirm, notice under body (`src/components/remove-system-dialog.tsx`, `delete-account-dialog.tsx`; the generic `confirm-dialog.tsx` that Setup deletes use) |
+| Destructive confirm | `AdaptiveDialog` with `kickerTone="error"`: Cancel, red confirm, notice under body (`src/components/remove-system-dialog.tsx`, `delete-account-dialog.tsx`; the generic `confirm-dialog.tsx` that Setup deletes use). From a small form, `useConfirm()`: a Dialog over it wide, `sheets/confirm.tsx` narrow (request in `src/Store/confirm.ts`); `closesForm` closes both on success |
 | Unsaved changes | `src/components/discard-dialog.tsx`† + `src/lib/unsaved-guard.ts`†. Stays a Paper bottom sheet narrow |
 | Create / edit form | full-page route (`src/app/(app)/create-system.tsx`). Wide, a small form is a Dialog (`src/app/(app)/forms/` with `AdaptiveDialog asPage`, §4.4); a created row returns through `src/Store/sheet-result.ts`† |
 | Multi-step flow | full-screen pushed route, every width |

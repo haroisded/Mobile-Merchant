@@ -35,8 +35,11 @@ together and explained inline.
 - **A systems list and a merchant shell** — create a system (a company: name, abbreviation, country,
   currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with two
   destinations: Home, and Setup
-- **Setup, the POS foundation on ERPNext's model** — so far Step 1: the Company and its Fiscal Years,
-  each new system seeded with the current year
+- **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Users & Access
+  (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
+  Manager and User Permissions, all enforced by RLS); Global Defaults, System Settings and the Currency
+  (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
+  folders. Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -134,11 +137,15 @@ and `delete_current_user()` — the function behind the **Delete account** butto
 requires in-app account deletion (Guideline 5.1.1(v)) and no client-side key may write to
 `auth.users`. `merchants` is the tenant table — one business per row: its owner, and its Company
 fields (name, abbreviation, country, default currency) — with its own policies and
-`private.current_merchant_ids()`, the function every business table's policies call. `countries` and
-`currency_presets` are read-only reference data seeded from frappe's country list; `fiscal_years`
-holds each company's accounting years, the first made by a trigger when the system is created. An
-earlier business schema is in the history and dropped by a later migration — `ARCHITECTURE.md`
-describes each.
+`private.current_merchant_ids()` — the systems a person owns or is an enabled member of — with
+`private.permitted_merchant_ids(doctype, permission)` built on it, the function every business
+table's policies call. `countries` and `currency_presets` are read-only reference data seeded from
+frappe's country list; `fiscal_years` holds each company's accounting years. Users & Access adds
+`merchant_members`, `roles`, `role_profiles`, `role_permissions`, `user_permissions` and the global
+`doctypes` and `standard_role_permissions`; Defaults & Money adds `system_settings`, `global_defaults`
+and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees. Triggers named
+`merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
+dropped by a later migration — `ARCHITECTURE.md` describes each.
 
 ```bash
 supabase link --project-ref <ref>

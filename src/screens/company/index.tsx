@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Button } from '../../components/button';
 import { CountryCurrencyFields } from '../../components/country-currency-fields';
 import { ControlledText, FieldGrid } from '../../components/form-fields';
-import { FormFooter } from '../../components/form-footer';
+import { saveOnce } from '../../components/adaptive-dialog';
+import { PageForm } from '../../components/form-footer';
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
 import { useCountriesQuery } from '../../features/countries/queries';
@@ -16,8 +16,8 @@ import type { CurrencyPreset } from '../../features/currency-presets/queries';
 import { useUpdateCompanyMutation } from '../../features/merchants/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { companySchema } from '../../features/merchants/schema';
+import { can, usePermissions } from '../../features/role-permissions/queries';
 import type { CompanyValues } from '../../features/merchants/schema';
-import { useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
 
@@ -53,8 +53,8 @@ type FormProps = Props & { countries: Country[]; currencies: CurrencyPreset[] };
 
 function CompanyForm({ merchant, countries, currencies }: FormProps) {
   const update = useUpdateCompanyMutation({ merchantId: merchant.id });
-  const wide = useShellWide();
-  const inFlight = update.isPending && !update.isPaused;
+  // Read-only without Company write (System Manager and Accounts Manager have it; the owner always does).
+  const editable = can(usePermissions({ merchantId: merchant.id }).data, 'Company', 'write');
   const notice = mutationNotice(update, failureMessage("Couldn't save the company. Try again."));
 
   const { control, handleSubmit, reset, formState } = useForm<CompanyValues>({
@@ -67,53 +67,29 @@ function CompanyForm({ merchant, countries, currencies }: FormProps) {
     },
     mode: 'onTouched',
   });
-
-  // Refused while a save is pending, paused included: a second tap offline would queue a second write.
-  const save = handleSubmit((values) => {
-    if (!update.isPending) update.mutate(values, { onSuccess: () => reset(values) });
-  });
+  const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <>
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <FieldGrid>
-          <ControlledText control={control} name="name" label="Company Name" required placeholder="e.g. Corner Cafe" maxLength={80} />
-          <ControlledText
-            control={control}
-            name="abbr"
-            label="Abbreviation"
-            required
-            hint="Shown after account and warehouse names"
-            autoCapitalize="characters"
-            maxLength={10}
-          />
-          <CountryCurrencyFields control={control} countries={countries} currencies={currencies} />
-        </FieldGrid>
-      </ScrollView>
-      <FormFooter notice={notice}>
-        <Button
-          mode="contained"
-          onPress={save}
-          loading={inFlight}
-          // Nothing to save until something changed; a pending save, paused included, holds it too.
-          disabled={update.isPending || !formState.isDirty}
-          style={wide ? styles.hug : undefined}
-          contentStyle={styles.leading}
-        >
-          Save
-        </Button>
-      </FormFooter>
-    </>
+    <PageForm editable={editable} readOnly="Changing it needs Company write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+      <FieldGrid>
+        <ControlledText control={control} name="name" label="Company Name" required placeholder="e.g. Corner Cafe" maxLength={80} disabled={!editable} />
+        <ControlledText
+          control={control}
+          name="abbr"
+          label="Abbreviation"
+          required
+          hint="Shown after account and warehouse names"
+          autoCapitalize="characters"
+          maxLength={10}
+          disabled={!editable}
+        />
+        <CountryCurrencyFields control={control} countries={countries} currencies={currencies} disabled={!editable} />
+      </FieldGrid>
+    </PageForm>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
-  // Held to the single-column measure, left-aligned (.claude/instruction_mds/frontend.md rule 18, §9).
-  body: { padding: spacing.md, width: '100%', maxWidth: 720 },
-  // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
-  leading: { justifyContent: 'flex-start' },
-  // Wide, the button hugs its label: a full-width primary button across a tablet reads as a banner.
-  hug: { alignSelf: 'flex-start' },
 });

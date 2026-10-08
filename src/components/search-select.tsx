@@ -1,5 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useController } from 'react-hook-form';
+import type { Control, FieldPathByValue, FieldValues } from 'react-hook-form';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useShellWide } from '../lib/columns';
@@ -20,6 +22,8 @@ type Props = Omit<FieldProps, 'children'> & {
   value: string;
   options: PickOption[];
   onChange: (value: string) => void;
+  /** Shown but not editable: a read-only form, or a value another field decides. */
+  disabled?: boolean;
 };
 
 /**
@@ -28,7 +32,7 @@ type Props = Omit<FieldProps, 'children'> & {
  * in .claude/instruction_mds/frontend.md §4.4: a native sheet route narrow (src/app/(app)/sheets/pick.tsx),
  * a Dialog wide.
  */
-export function SearchSelect({ title, value, options, onChange, ...field }: Props) {
+export function SearchSelect({ title, value, options, onChange, disabled, ...field }: Props) {
   const { colors } = useAppTheme();
   const wide = useShellWide();
   const [open, setOpen] = useState(false);
@@ -47,6 +51,7 @@ export function SearchSelect({ title, value, options, onChange, ...field }: Prop
     <Field {...field}>
       <Pressable
         onPress={show}
+        disabled={disabled}
         // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
         android_ripple={{ color: colors.ripple }}
         accessibilityRole="button"
@@ -59,6 +64,7 @@ export function SearchSelect({ title, value, options, onChange, ...field }: Prop
             editable={false}
             value={selected?.label ?? ''}
             placeholder="Select"
+            disabled={disabled}
             error={!!field.error}
             right={<TextInput.Icon icon="chevron-down" />}
           />
@@ -85,6 +91,35 @@ export function SearchSelect({ title, value, options, onChange, ...field }: Prop
         </AdaptiveDialog>
       ) : null}
     </Field>
+  );
+}
+
+/** A SearchSelect bound to one string of a react-hook-form. `onPicked` runs after the binding's own write. */
+export function ControlledSelect<T extends FieldValues>({
+  control,
+  name,
+  onPicked,
+  ...select
+}: Omit<Props, 'value' | 'onChange' | 'error'> & {
+  control: Control<T>;
+  name: FieldPathByValue<T, string>;
+  onPicked?: (value: string) => void;
+}) {
+  const { field, fieldState } = useController({ control, name });
+
+  return (
+    <SearchSelect
+      {...select}
+      // SAFETY: `name` is a FieldPathByValue<T, string>, so the value at it is a string; TypeScript cannot
+      // resolve the generic path's value type inside the component.
+      value={field.value as string}
+      onChange={(picked) => {
+        field.onChange(picked);
+        field.onBlur();
+        onPicked?.(picked);
+      }}
+      error={fieldState.error?.message}
+    />
   );
 }
 

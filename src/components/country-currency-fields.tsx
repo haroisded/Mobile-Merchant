@@ -12,13 +12,15 @@ type Props = {
   currencies: CurrencyPreset[];
   /** Runs after a country is picked: Create System uses it to propose that country's currency. */
   onCountryPicked?: (country: Country) => void;
+  /** Shown but not editable: the caller may read the Company, not write it. */
+  disabled?: boolean;
 };
 
 /**
  * A Company's Country and Default Currency — the pair both Company forms carry, Create System and the
  * Company screen, which is what puts it in src/components/ (.claude/instruction_mds/structure.md rule 7).
  */
-export function CountryCurrencyFields({ control, countries, currencies, onCountryPicked }: Props) {
+export function CountryCurrencyFields({ control, countries, currencies, onCountryPicked, disabled }: Props) {
   return (
     <>
       <Controller
@@ -28,6 +30,7 @@ export function CountryCurrencyFields({ control, countries, currencies, onCountr
           <SearchSelect
             label="Country"
             required
+            disabled={disabled}
             title="Country"
             value={field.value}
             onChange={(code) => {
@@ -47,6 +50,7 @@ export function CountryCurrencyFields({ control, countries, currencies, onCountr
           <SearchSelect
             label="Default Currency"
             required
+            disabled={disabled}
             hint="The currency the books are kept in"
             title="Default Currency"
             value={field.value}

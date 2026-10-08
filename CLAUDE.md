@@ -293,9 +293,13 @@ stock ledger, the Register's sales — is still in the migration history, and
 `20261008050254_revamp_drop_business_schema.sql` drops all of it, rows included, ahead of a rebuild on
 ERPNext's model. That rebuild lands one ERPNext step per migration, starting with
 `20261008101635_company_and_fiscal_year.sql`: read-only `countries` and `currency_presets`,
-`fiscal_years`, and `private.seed_company()` behind the `merchants_seed_10_company` trigger.
-`authenticated` keeps `usage` on `private` and `execute` on `current_merchant_ids()` so business
-tables' policies can call it (`.claude/instruction_mds/tenancy.md` §4). Each migration
+`fiscal_years`, and `private.seed_company()` behind the `merchants_seed_10_company` trigger. Then
+`20261008145056_users_and_access.sql` (members, roles, role profiles, the editable permission matrix,
+User Permissions, and `private.permitted_merchant_ids()`), `20261008151723_defaults_and_money.sql`
+(System Settings, Global Defaults, Currency) and `20261008152613_chart_of_accounts.sql` (the
+`accounts` and `cost_centers` trees, `private.validate_tree()`). `authenticated` keeps `usage` on
+`private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
+policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).
 `ARCHITECTURE.md` describes what they do; `.claude/instruction_mds/tenancy.md` covers the tenancy model and what is
 still ahead of it. The rules below are what must not be broken when adding to them.
@@ -371,6 +375,18 @@ line), then run `npm run build:migrations` and `npm run check:migrations`. That 
 `supabase/all-in-one/add.sql` and `revert.sql` — never edit those two by hand, and never put a revert
 inside `migrations/`, where `supabase db push` would apply it. The rules and the reasoning are in
 [`.claude/instruction_mds/migrations.md`](./.claude/instruction_mds/migrations.md).
+
+### 6.7 Every business table is a doctype
+
+A new business table is registered, not hand-policied: in its migration, insert its `public.doctypes`
+row (kind `record`, `single` or `tree`; `restrictable` when a User Permission may hold someone to its
+records), its `standard_role_permissions` rows (ERPNext's matrix for it), then `select
+private.sync_standard_permissions()` and `select private.apply_doctype_policies('<table>', '<Doctype>')`
+(`true` as a third argument for a child table that follows its parent's doctype). That is what makes
+the Role Permissions Manager and User Permissions govern it. Seeding goes in a
+`merchants_seed_NN_<area>` trigger plus a backfill for existing systems. Rejected: policies written by
+hand per table — the shape drifts, and a rule edited in the Manager would not reach them
+(`.claude/instruction_mds/tenancy.md`).
 
 ## graphify
 

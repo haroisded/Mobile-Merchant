@@ -29,24 +29,36 @@ src/lib/columns.ts         useColumns, the pane widths, ShellWideContext — the
 src/lib/errors.ts          failureMessage — the copy a failed action shows, never the provider's;
                            mutationNotice, the line under a form's buttons; postgrestError, its SQLSTATE
 src/lib/dates.ts           stored dates ("YYYY-MM-DD"): display, today, a fiscal year's full-year end
+src/lib/money.ts           ERPNext's money: Banker's / Commercial rounding, cash rounding to the
+                           smallest coin, the number formats, the amount in words
+src/lib/tree.ts            the tree masters' walks: children (a restricted branch shows at the top),
+                           the path to a node, a node's subtree
 src/lib/theme.ts           useAppTheme() for the Merchant colour keys
 src/lib/icons.tsx          the icon name map ({ ios, android } symbols) and Paper's icon renderer
 src/lib/database.types.ts  generated from the schema; regenerate whenever a migration lands
 src/Store/StoreUser.ts     the session handler — one onAuthStateChange subscription
 src/Store/picker.ts        the open searchable picker's options and callback, for the sheets/pick route
+src/Store/confirm.ts       the open confirm's text and action, for the sheets/confirm route
 src/themes.js              MD3 light/dark palettes + Merchant keys, roundness, spacing and radius
                            scales, the type scale
-src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years
-                           and profiles; read-only countries and currency-presets
+src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years,
+                           profiles; members, roles, role-profiles, role-permissions (usePermissions,
+                           can), user-permissions; system-settings, global-defaults, currencies;
+                           accounts, cost-centers; read-only countries, currency-presets, doctypes
 src/screens/<screen>/      UI by screen — home (the systems list and the create-system form), setup
-                           (the Setup index), company, fiscal-years (list + form), profile, sign-in
+                           (the Setup index), company, fiscal-years, users, roles, role-profiles,
+                           role-permissions, user-permissions, global-defaults, system-settings,
+                           currency, chart-of-accounts, cost-centers (each list + form), profile,
+                           sign-in
 src/components/            one re-export per Paper primitive in use (text.tsx is the Text wrapper:
                            per-variant font-scale cap and iOS ramp), plus what more than one screen or a
-                           sheet route draws: adaptive-dialog, remove-system-dialog,
-                           delete-account-dialog, placeholder-screen, page-header, query-state,
-                           form-fields, search-select, country-currency-fields — and the files
-                           frontend.md restores on first use: confirm-dialog, form-footer,
-                           note-callout, header-title
+                           sheet route draws: adaptive-dialog (+ FormActions, saveOnce),
+                           remove-system-dialog, delete-account-dialog, placeholder-screen,
+                           page-header, query-state, form-fields (+ ControlledChecklist),
+                           search-select (+ ControlledSelect), country-currency-fields, record-list
+                           (a Setup master's list), form-footer (PageForm, a full-page form),
+                           confirm-dialog (+ useConfirm), folder-nav (the tree masters' folders) —
+                           and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
 src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the sheets/ routes (native
@@ -54,13 +66,16 @@ src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the s
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
 src/app/(app)/(tabs)/      home, notifications, settings, account + the NativeTabs bar
 src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and setup/, a
-                           Stack of its own: the index, company, fiscal-years
+                           Stack of its own: the index and one route per Setup page; chart-of-accounts
+                           and cost-centers push themselves once per folder (`parent`)
 app.config.ts              derives the Google iOS URL scheme from .env
 supabase/migrations/       profiles, merchants, current_merchant_ids, the signup trigger,
                            delete_current_user and rls_auto_enable — whose event trigger hosted
                            Supabase refuses to install — the history of the business schema that
                            20261008050254_revamp_drop_business_schema.sql dropped, then the POS
-                           foundation: 20261008101635_company_and_fiscal_year.sql
+                           foundation: 20261008101635_company_and_fiscal_year.sql,
+                           20261008145056_users_and_access.sql, 20261008151723_defaults_and_money.sql,
+                           20261008152613_chart_of_accounts.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -76,7 +91,8 @@ patches/                   patch-package diffs, applied by the postinstall hook
 tools/oxlint/anti-slop/    that plugin — TypeScript rules, not shipped in the app bundle
 tools/build-migrations.mjs     npm run build:migrations / check:migrations — writes and checks all-in-one/
 tools/fallow-verdict.mjs       runs fallow's review gate and prints a compact verdict, not the raw JSON
-tools/check-logic.mjs          npm run check:logic — asserts the pure date math against Postgres' own
+tools/check-logic.mjs          npm run check:logic — asserts the pure date math against Postgres' own,
+                               the money module against ERPNext's results, and the tree walks
 ```
 
 ---
@@ -258,7 +274,8 @@ It arrives two different ways, and both are handled.
 `public.profiles`, the person; `public.merchants`, the tenant; plus the event trigger that would
 auto-enable RLS (not installable on the hosted project — see below), and two migrations that only
 drop: leftovers from an unrelated project, and the business schema (below). Then the POS foundation,
-one migration per ERPNext step: so far the Company and its fiscal years (the last section).
+one migration per ERPNext step: the Company and its fiscal years, Users & Access, Defaults & Money,
+and the Chart of Accounts with Cost Centers (the last sections).
 
 `public.profiles` has `id` referencing `auth.users` with `on delete cascade`, `display_name`,
 `avatar_url`, `created_at` — plus its policies, a trigger that fills the row on signup, and the
@@ -277,29 +294,28 @@ email, phone and currency columns. The cascade is what lets `delete_current_user
 statement: deleting the `auth.users` row takes the profile and every merchant with it.
 
 **A merchant is a business, not a person**, and each one is what the UI calls a "system" — the cards
-on the home screen are this table. Today a merchant has exactly one user and `owner_id` *is* the
-membership; `merchant_members` and roles are still ahead, and the shape they take is in
-[.claude/instruction_mds/tenancy.md](./.claude/instruction_mds/tenancy.md).
+on the home screen are this table. `owner_id` is the owner — ERPNext's Administrator, never restricted
+and never removed; everyone else is a row of `merchant_members` (Users & Access, below), and the model
+is in [.claude/instruction_mds/tenancy.md](./.claude/instruction_mds/tenancy.md).
 
-Its four policies key on `owner_id`, not on `current_merchant_ids()` below, and that is deliberate.
-The rule against `auth.uid() = row.user_id` governs *business* tables — the ones carrying a
-`merchant_id`. This is the tenant root itself, and routing its policies through the function that
-reads the tenant root is a self-reference. When `merchant_members` lands, only the select policy
-changes.
+Its policies: select for the owner or a member (`(select auth.uid()) = owner_id or id in (select
+private.current_merchant_ids())` — the owner clause on the row itself, because the function is
+`stable` and its snapshot cannot see a row the same `insert … returning` just wrote); update for
+whoever holds Company write (`permitted_merchant_ids('Company', 'write')`); insert and delete for the
+owner only. `merchants_keep_owner` refuses any change of `owner_id`.
 
 Unlike `profiles`, it has a delete policy: removing one of your own businesses is an ordinary
 action, not account deletion.
 
 ### `private.current_merchant_ids()` — the seam
 
-`security definer`, `stable`, returning the merchant ids the caller owns. `fiscal_years`' policies are
-its callers; `authenticated` keeps `usage` on `private` and `execute` on it so they can call it
+`security definer`, `stable`, returning the merchant ids the caller owns plus those where they are an
+enabled, claimed member. `authenticated` keeps `usage` on `private` and `execute` on it and on the
+permission functions below so policies can call them
 ([.claude/instruction_mds/tenancy.md §4](./.claude/instruction_mds/tenancy.md)).
-It was written before any caller on purpose: every business table gets policies shaped
-`using (merchant_id in (select private.current_merchant_ids()))`, and staff support then arrives by
-rewriting this one function body — no policy rewrites, no table alterations. Writing it now is what
-stops the first business table shipping an `auth.uid() = owner_id` policy "just for now" that then
-has to be undone on every table.
+It was written before any caller on purpose, and Users & Access proved the point: staff arrived by
+rewriting this body and adding `permitted_merchant_ids()` beside it — no table alterations. Business
+tables now call `permitted_merchant_ids()`, which builds on it (below).
 
 ### The policies
 
@@ -319,8 +335,11 @@ so `auth.uid()` is null and `profiles_insert_own` would reject the row signup ex
 
 `private.handle_new_user()` creates the profile row on signup, reading `full_name` and `avatar_url`
 out of `raw_user_meta_data` where both providers land them. `public.delete_current_user()` deletes
-the caller's own `auth.users` row, which cascades. `private.current_merchant_ids()` is the third,
-described above, and `private.seed_company()` the fourth (last section).
+the caller's own `auth.users` row, which cascades. `private.current_merchant_ids()` is described
+above; the permission engine, the claim triggers, the tree and user-permission validators and each
+step's `seed_*` trigger function are in the step sections below. `public.my_permissions()` is the one
+definer function besides `delete_current_user()` that PostgREST serves, and it answers only for a
+system the caller belongs to.
 
 `security definer` means the body runs with the *owner's* privileges, not the caller's — a
 deliberate privilege escalation, which is why all three of these are mandatory every time:
@@ -340,9 +359,10 @@ is *created*, not each time it fires.
 
 ### RLS is per-table, and still written by hand
 
-`alter table … enable row level security` is set explicitly for `profiles`, `merchants`,
-`currency_presets`, `countries` and `fiscal_years`, and every migration added later must carry that
-line for its own tables. A new table in `public` is served over HTTP by
+`alter table … enable row level security` is set explicitly for every table — `profiles`,
+`merchants`, the reference data, and each foundation step's — and every migration added later must
+carry that line for its own tables. The policies themselves are no longer hand-written per business
+table: `private.apply_doctype_policies()` writes them (Step 11, below; CLAUDE.md §6.7). A new table in `public` is served over HTTP by
 PostgREST the moment it exists. The dashboard's Security Advisor reports the ones missing it under
 `rls_disabled_in_public`.
 
@@ -408,6 +428,86 @@ made on New Year's Eve in Manila gets Manila's year. Every later step adds its o
 `merchants_seed_NN_<area>` trigger; Postgres fires them in name order. The migration backfilled a
 year for the systems that existed.
 
+### Step 11, Users & Access — `20261008145056_users_and_access.sql`
+
+ERPNext's permission model, enforced by RLS rather than mirrored in the client
+(docs.frappe.io/erpnext/role-based-permissions, /user-permissions, /role-and-role-profile):
+
+| Table | Holds |
+| --- | --- |
+| `doctypes` | the registry: each document type, its table, its kind (`record`, `single`, `tree`), whether a User Permission may restrict it. Global, read-only, written by migrations |
+| `standard_role_permissions` | ERPNext's standard matrix: role × doctype × select/read/write/create/delete. Global, read-only; copied into each system |
+| `roles` | per system: the ten standard roles (`All` implicit) and custom ones. `guard_roles` refuses renaming or deleting a standard role, and disabling `All` |
+| `role_profiles`, `role_profile_roles` | a named set of roles given together |
+| `merchant_members`, `member_roles` | a person invited by email (lower-cased, one per system); `user_id` is filled when that confirmed address signs in |
+| `role_permissions` | the system's own, editable matrix — what the Role Permissions Manager edits |
+| `user_permissions` | a member held to one record of a restrictable doctype: Apply To All or one Applicable For, Is Default, Hide Descendants (trees) |
+
+**The engine**, all in `private`, `security definer`, `stable`:
+- `effective_role_ids()` — the profile's roles when a profile is set, else the member's own, plus `All`,
+  minus disabled roles.
+- `permitted_merchant_ids(doctype, ptype)` — the owner's systems always; otherwise systems where an
+  effective role's rule grants that permission. **Every business policy calls this**, shaped
+  `merchant_id in (select private.permitted_merchant_ids('Fiscal Year', 'read'))` (an InitPlan, once
+  per statement).
+- `restricted_merchant_ids(doctype)` and `allowed_record_ids(doctype)` — a restrictable table's policies
+  add `and (merchant_id not in restricted or id in allowed)`; for a tree, `allowed` walks the records
+  under each permitted one unless Hide Descendants.
+
+`private.apply_doctype_policies(table, doctype, child)` writes a table's four policies from its
+doctype's kind and restrictability, so every table gets the same shape; `sync_standard_permissions()`
+copies new template rows into every system after a migration adds some.
+
+**Invites need no email.** `claim_membership` (on `merchant_members`) and `claim_memberships_for_user`
+(on `auth.users`) match a member's email to a *confirmed* `auth.users` address in either order.
+Inviting the owner's own address is refused (`member_is_owner`), and an active member's email cannot
+change (`member_email_locked`).
+
+The client reads `public.my_permissions(merchant)` (definer, membership-checked) to hide what RLS would
+refuse anyway; `save_member`, `save_role_profile` and `save_role_permissions` are security *invoker*
+RPCs that write a record and its child rows in one transaction, under the caller's own policies.
+`merchants_seed_20_access` seeds roles and the matrix.
+
+### Step 2, Defaults & Money — `20261008151723_defaults_and_money.sql`
+
+Three singles and a record (docs.frappe.io/erpnext/system-settings, /global-defaults, /currency):
+
+- `system_settings` (one row per system): `time_zone` (checked against `pg_timezone_names` by
+  `validate_time_zone`), `number_format` (ERPNext's list, `private.is_number_format`),
+  `float_precision` and `currency_precision` (0–9), `rounding_method` (Banker's or Commercial).
+- `global_defaults` (one row per system): `disable_rounded_total`, `disable_in_words`. ERPNext's Default
+  Company, Country and Currency are the merchant's own columns.
+- `currencies`: one per currency a system uses, seeded from `currency_presets` — symbol and side,
+  fraction and units, smallest coin, number format. `merchants_company_currency` keeps a row for
+  `default_currency` when it changes. Multi-currency is out of scope: today it is the base currency.
+
+`merchants_seed_30_defaults` seeds them from the country: its first time zone (UTC when Postgres does
+not know it), its number format. The arithmetic itself is the client's: `src/lib/money.ts`.
+
+### Step 3, Chart of Accounts and Cost Centers — `20261008152613_chart_of_accounts.sql`
+
+Two trees (docs.frappe.io/erpnext/chart-of-accounts, /cost-center), each row a group (a folder) or a
+ledger, with a composite `(parent_id, merchant_id)` foreign key so a parent is always of the same
+system:
+
+- `accounts`: `account_name`, `account_number`, `is_group`, `root_type` (Asset, Liability, Equity,
+  Income, Expense), `account_type` (checked against its root type — `accounts_type_fits_root`),
+  `disabled`. Names are stored bare; " - ABBR" is displayed, never stored.
+- `cost_centers`: `cost_center_name`, `cost_center_number`, `is_group`, `disabled`; one root per system
+  (`cost_centers_one_root`), named as the company.
+
+`private.validate_tree()` (definer, so a User Permission hiding children cannot hide them from the
+check) holds the tree rules for both: a parent is a group, nothing sits under itself, a group with
+children stays a group, a root is a group, an account takes its parent's root type and keeps it while
+it has children, and the company's cost center goes only with the system. Deleting a record with
+children fails on the foreign key (`23503`).
+
+Both doctypes are trees and restrictable. `merchants_seed_40_accounting` seeds ERPNext's standard chart,
+cut to what a POS posts to (Cash, Stock In Hand, Sales, Cost of Goods Sold, Duties and Taxes, Write Off,
+Round Off, Stock Received But Not Billed, Temporary Opening …, 32 accounts), and the company's cost
+center with Main under it. Receivable, Payable and fixed-asset accounts are not seeded: Customer,
+Supplier and Fixed Assets are out of scope.
+
 ---
 
 ## Frontend wiring
@@ -443,6 +543,11 @@ out.
 Feature folders are keyed on the **resource**, never on the page or screen that happens to use them
 ([.claude/instruction_mds/structure.md §3](./.claude/instruction_mds/structure.md)). `src/features/merchants/queries.ts` is the only file
 in the app that knows the table is called `merchants`.
+
+What a person may do in a system comes from `usePermissions({ merchantId })`
+(`src/features/role-permissions/queries.ts`, the `my_permissions` RPC) and `can(permissions, doctype,
+ptype)`. Screens use it only to hide what RLS would refuse — a Setup row, a **New** or **Save** button,
+a field left editable; the policies stay the boundary. Saving roles, members or rules invalidates it.
 
 Paper's icons go through `PaperProvider`'s `settings` prop in `src/app/_layout.tsx` to
 `renderIcon` (`src/lib/icons.tsx`), which draws each app icon name as the platform's own symbol with

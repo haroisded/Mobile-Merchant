@@ -41,6 +41,17 @@ against when a screen picks its copy for a case it expects. It also narrows `dat
 
 `src/lib/auth.ts` is exempt — auth-js returns its own error classes and keeps explicit checks.
 
+**A record with child rows saves through one RPC.** A member and its roles, a role profile and its
+roles, a doctype's whole set of rules: `public.save_member`, `save_role_profile`,
+`save_role_permissions` write them in one transaction, so a failure never leaves a half-saved record.
+They are security **invoker** — the caller's own policies decide each row — and take one `payload`
+jsonb. A single row stays a plain `.insert` / `.update`.
+
+**Permissions are read once per system.** `usePermissions({ merchantId })` and `can(permissions,
+doctype, ptype)` (`src/features/role-permissions/queries.ts`) gate what a screen shows; a mutation that
+changes roles, members or rules calls `invalidatePermissions(queryClient)`. RLS still decides
+(tenancy.md rule 11).
+
 **Generated types.** Run after every migration:
 
 ```bash
@@ -130,7 +141,9 @@ It never errors and `isPending` stays true for as long as the device is offline.
   handler refuses while `isPending` (a keyboard's Done submits too). A second tap while paused queues
   a second write, and reconnecting runs both — two systems from one form (found on the device,
   2026-10-08). Worked examples: `src/screens/home/create-system.tsx` (`submit`), the Delete button in
-  `src/components/remove-system-dialog.tsx`.
+  `src/components/remove-system-dialog.tsx`. A form gets both for free from
+  `handleSubmit(saveOnce(mutation, onDone))` (`src/components/adaptive-dialog.tsx`) and `FormActions`
+  or `PageForm`; a confirm from `useConfirm()` (`src/components/confirm-dialog.tsx`).
 - **A paused state gets a line of copy and no retry control.** It resumes on its own.
 
 Worked examples: `src/app/(app)/(tabs)/index.tsx`, `src/components/remove-system-dialog.tsx`

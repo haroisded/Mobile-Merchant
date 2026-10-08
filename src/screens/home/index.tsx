@@ -15,6 +15,7 @@ import { useMerchantsQuery } from '../../features/merchants/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { SYSTEM_CARD, useColumns, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
+import { useSession } from '../../Store/StoreUser';
 import { spacing } from '../../themes';
 import { CreateSystemCard } from './create-system-card';
 import { SystemCard } from './system-card';
@@ -25,6 +26,8 @@ const CREATE = 'create';
 export function HomeScreen() {
   const { columns, onLayout } = useColumns(SYSTEM_CARD);
   const merchants = useMerchantsQuery();
+  // The list holds the systems this person owns and the ones they were invited to; only an owner removes.
+  const userId = useSession()?.user.id;
   // The row awaiting confirmation, held here rather than in the card that opens it — a FlashList
   // cell is recycled, and this state must outlive neither the row nor the scroll position.
   const [removing, setRemoving] = useState<Merchant | null>(null);
@@ -110,6 +113,7 @@ export function HomeScreen() {
                   row={narrow}
                   onPress={() => router.push({ pathname: '/systems/[id]', params: { id: item.id } })}
                   onRemove={() => remove(item)}
+                  canRemove={item.owner_id === userId}
                 />
               )}
             </View>

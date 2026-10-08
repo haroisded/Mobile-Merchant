@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_name: string
+          account_number: string | null
+          account_type: string | null
+          created_at: string
+          disabled: boolean
+          id: string
+          is_group: boolean
+          merchant_id: string
+          parent_id: string | null
+          root_type: string
+        }
+        Insert: {
+          account_name: string
+          account_number?: string | null
+          account_type?: string | null
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_group?: boolean
+          merchant_id: string
+          parent_id?: string | null
+          root_type: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string | null
+          account_type?: string | null
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_group?: boolean
+          merchant_id?: string
+          parent_id?: string | null
+          root_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_parent_fk"
+            columns: ["parent_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      cost_centers: {
+        Row: {
+          cost_center_name: string
+          cost_center_number: string | null
+          created_at: string
+          disabled: boolean
+          id: string
+          is_group: boolean
+          merchant_id: string
+          parent_id: string | null
+        }
+        Insert: {
+          cost_center_name: string
+          cost_center_number?: string | null
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_group?: boolean
+          merchant_id: string
+          parent_id?: string | null
+        }
+        Update: {
+          cost_center_name?: string
+          cost_center_number?: string | null
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_group?: boolean
+          merchant_id?: string
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_centers_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_centers_parent_fk"
+            columns: ["parent_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       countries: {
         Row: {
           code: string
@@ -46,6 +148,60 @@ export type Database = {
           },
         ]
       }
+      currencies: {
+        Row: {
+          code: string
+          enabled: boolean
+          fraction: string | null
+          fraction_units: number | null
+          id: string
+          merchant_id: string
+          number_format: string
+          smallest_currency_fraction_value: number | null
+          symbol: string | null
+          symbol_on_right: boolean
+        }
+        Insert: {
+          code: string
+          enabled?: boolean
+          fraction?: string | null
+          fraction_units?: number | null
+          id?: string
+          merchant_id: string
+          number_format: string
+          smallest_currency_fraction_value?: number | null
+          symbol?: string | null
+          symbol_on_right?: boolean
+        }
+        Update: {
+          code?: string
+          enabled?: boolean
+          fraction?: string | null
+          fraction_units?: number | null
+          id?: string
+          merchant_id?: string
+          number_format?: string
+          smallest_currency_fraction_value?: number | null
+          symbol?: string | null
+          symbol_on_right?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currencies_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "currency_presets"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "currencies_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       currency_presets: {
         Row: {
           code: string
@@ -73,6 +229,27 @@ export type Database = {
           number_format?: string
           smallest_currency_fraction_value?: number | null
           symbol?: string | null
+        }
+        Relationships: []
+      }
+      doctypes: {
+        Row: {
+          kind: string
+          name: string
+          restrictable: boolean
+          table_name: string
+        }
+        Insert: {
+          kind: string
+          name: string
+          restrictable?: boolean
+          table_name: string
+        }
+        Update: {
+          kind?: string
+          name?: string
+          restrictable?: boolean
+          table_name?: string
         }
         Relationships: []
       }
@@ -117,6 +294,113 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "merchants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_defaults: {
+        Row: {
+          disable_in_words: boolean
+          disable_rounded_total: boolean
+          merchant_id: string
+        }
+        Insert: {
+          disable_in_words?: boolean
+          disable_rounded_total?: boolean
+          merchant_id: string
+        }
+        Update: {
+          disable_in_words?: boolean
+          disable_rounded_total?: boolean
+          merchant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_defaults_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: true
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_roles: {
+        Row: {
+          member_id: string
+          merchant_id: string
+          role_id: string
+        }
+        Insert: {
+          member_id: string
+          merchant_id: string
+          role_id: string
+        }
+        Update: {
+          member_id?: string
+          merchant_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_roles_member_fk"
+            columns: ["member_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchant_members"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "member_roles_role_fk"
+            columns: ["role_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      merchant_members: {
+        Row: {
+          created_at: string
+          email: string
+          enabled: boolean
+          full_name: string | null
+          id: string
+          merchant_id: string
+          role_profile_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          enabled?: boolean
+          full_name?: string | null
+          id?: string
+          merchant_id: string
+          role_profile_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          enabled?: boolean
+          full_name?: string | null
+          id?: string
+          merchant_id?: string
+          role_profile_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_members_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_members_role_profile_fk"
+            columns: ["role_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "role_profiles"
+            referencedColumns: ["id", "merchant_id"]
           },
         ]
       }
@@ -186,12 +470,301 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          can_create: boolean
+          can_delete: boolean
+          can_read: boolean
+          can_select: boolean
+          can_write: boolean
+          doctype: string
+          id: string
+          merchant_id: string
+          role_id: string
+        }
+        Insert: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_read?: boolean
+          can_select?: boolean
+          can_write?: boolean
+          doctype: string
+          id?: string
+          merchant_id: string
+          role_id: string
+        }
+        Update: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_read?: boolean
+          can_select?: boolean
+          can_write?: boolean
+          doctype?: string
+          id?: string
+          merchant_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_doctype_fkey"
+            columns: ["doctype"]
+            isOneToOne: false
+            referencedRelation: "doctypes"
+            referencedColumns: ["name"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_fk"
+            columns: ["role_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      role_profile_roles: {
+        Row: {
+          merchant_id: string
+          role_id: string
+          role_profile_id: string
+        }
+        Insert: {
+          merchant_id: string
+          role_id: string
+          role_profile_id: string
+        }
+        Update: {
+          merchant_id?: string
+          role_id?: string
+          role_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_profile_roles_profile_fk"
+            columns: ["role_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "role_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "role_profile_roles_role_fk"
+            columns: ["role_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      role_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          merchant_id: string
+          role_profile_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          merchant_id: string
+          role_profile_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          merchant_id?: string
+          role_profile_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_profiles_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          disabled: boolean
+          id: string
+          is_standard: boolean
+          merchant_id: string
+          role_name: string
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_standard?: boolean
+          merchant_id: string
+          role_name: string
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_standard?: boolean
+          merchant_id?: string
+          role_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      standard_role_permissions: {
+        Row: {
+          can_create: boolean
+          can_delete: boolean
+          can_read: boolean
+          can_select: boolean
+          can_write: boolean
+          doctype: string
+          role_name: string
+        }
+        Insert: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_read?: boolean
+          can_select?: boolean
+          can_write?: boolean
+          doctype: string
+          role_name: string
+        }
+        Update: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_read?: boolean
+          can_select?: boolean
+          can_write?: boolean
+          doctype?: string
+          role_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standard_role_permissions_doctype_fkey"
+            columns: ["doctype"]
+            isOneToOne: false
+            referencedRelation: "doctypes"
+            referencedColumns: ["name"]
+          },
+        ]
+      }
+      system_settings: {
+        Row: {
+          currency_precision: number
+          float_precision: number
+          merchant_id: string
+          number_format: string
+          rounding_method: string
+          time_zone: string
+        }
+        Insert: {
+          currency_precision?: number
+          float_precision?: number
+          merchant_id: string
+          number_format?: string
+          rounding_method?: string
+          time_zone: string
+        }
+        Update: {
+          currency_precision?: number
+          float_precision?: number
+          merchant_id?: string
+          number_format?: string
+          rounding_method?: string
+          time_zone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_settings_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: true
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_permissions: {
+        Row: {
+          allow: string
+          applicable_for: string | null
+          apply_to_all_doctypes: boolean
+          created_at: string
+          for_value: string
+          hide_descendants: boolean
+          id: string
+          is_default: boolean
+          member_id: string
+          merchant_id: string
+        }
+        Insert: {
+          allow: string
+          applicable_for?: string | null
+          apply_to_all_doctypes?: boolean
+          created_at?: string
+          for_value: string
+          hide_descendants?: boolean
+          id?: string
+          is_default?: boolean
+          member_id: string
+          merchant_id: string
+        }
+        Update: {
+          allow?: string
+          applicable_for?: string | null
+          apply_to_all_doctypes?: boolean
+          created_at?: string
+          for_value?: string
+          hide_descendants?: boolean
+          id?: string
+          is_default?: boolean
+          member_id?: string
+          merchant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_allow_fkey"
+            columns: ["allow"]
+            isOneToOne: false
+            referencedRelation: "doctypes"
+            referencedColumns: ["name"]
+          },
+          {
+            foreignKeyName: "user_permissions_applicable_for_fkey"
+            columns: ["applicable_for"]
+            isOneToOne: false
+            referencedRelation: "doctypes"
+            referencedColumns: ["name"]
+          },
+          {
+            foreignKeyName: "user_permissions_member_fk"
+            columns: ["member_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchant_members"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       delete_current_user: { Args: never; Returns: undefined }
+      my_permissions: { Args: { p_merchant: string }; Returns: Json }
+      save_member: { Args: { payload: Json }; Returns: string }
+      save_role_permissions: {
+        Args: { p_doctype: string; p_merchant: string; p_rows: Json }
+        Returns: undefined
+      }
+      save_role_profile: { Args: { payload: Json }; Returns: string }
     }
     Enums: {
       [_ in never]: never

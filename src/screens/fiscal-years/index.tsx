@@ -10,6 +10,7 @@ import { QueryState } from '../../components/query-state';
 import { Text } from '../../components/text';
 import { useFiscalYearsQuery } from '../../features/fiscal-years/queries';
 import type { FiscalYear } from '../../features/fiscal-years/queries';
+import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useTableFits } from '../../lib/columns';
 import { displayDate, todayDate } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
@@ -29,6 +30,7 @@ export function FiscalYears({ merchantId }: Props) {
   const { colors } = useAppTheme();
   const table = useTableFits();
   const years = useFiscalYearsQuery({ merchantId });
+  const permissions = usePermissions({ merchantId }).data;
   const rows = years.data ?? [];
   const today = todayDate();
   // A sale can only be posted on a day an enabled year holds.
@@ -61,9 +63,11 @@ export function FiscalYears({ merchantId }: Props) {
         meta={years.data ? `${rows.length} ${rows.length === 1 ? 'year' : 'years'}` : undefined}
         onBack={() => router.back()}
         actions={
-          <Button mode="contained" icon="add" onPress={() => openForm(merchantId)} contentStyle={styles.leading}>
-            New Fiscal Year
-          </Button>
+          can(permissions, 'Fiscal Year', 'create') ? (
+            <Button mode="contained" icon="add" onPress={() => openForm(merchantId)} contentStyle={styles.leading}>
+              New Fiscal Year
+            </Button>
+          ) : null
         }
       />
       {uncovered ? (

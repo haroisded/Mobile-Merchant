@@ -5,9 +5,12 @@ import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useShellWide } from '../lib/columns';
+import type { Notice } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
+import { Button } from './button';
 import { Dialog } from './dialog';
+import { HelperText } from './helper-text';
 import { Portal } from './portal';
 import { Text } from './text';
 
@@ -31,6 +34,8 @@ type Props = {
   kickerTone?: 'accent' | 'error';
   title: string;
   children?: ReactNode;
+  /** The write's line under the body: an offline wait, or what went wrong (mutationNotice). */
+  notice?: Notice | null;
   /** Buttons. Laid out in a row in the Dialog and stacked full width in a sheet or page. */
   actions: ReactNode;
 };
@@ -54,12 +59,14 @@ export function AdaptiveDialog({
   kicker,
   kickerTone = 'accent',
   title,
-  children,
+  children: body,
+  notice,
   actions,
 }: Props) {
   const { colors } = useAppTheme();
   const wide = useShellWide();
   const kickerColor = kickerTone === 'error' ? colors.error : colors.accent;
+  const children = <WithNotice notice={notice}>{body}</WithNotice>;
 
   if (inSheet || (asPage && !wide)) {
     return (
@@ -195,7 +202,80 @@ function SheetBody({ page, dismissable, kicker, kickerColor, title, children, ac
   );
 }
 
+/** The body, then the write's notice line — reserved only when the caller passes a notice slot. */
+function WithNotice({ notice, children }: { notice: Notice | null | undefined; children: ReactNode }) {
+  if (notice === undefined) return children;
+  return (
+    <>
+      {children}
+      <HelperText type={notice?.type ?? 'error'} visible={notice !== null} padding="none">
+        {notice?.text}
+      </HelperText>
+    </>
+  );
+}
+
+/**
+ * A form's submit handler: write once, then `onDone` with what was saved — close a small form, or reset a
+ * page form to its new values. Refused while the write is pending, paused included: a keyboard's Done
+ * submits too, and a second write would queue behind the first (.claude/instruction_mds/data-layer.md §5).
+ * Pass it to react-hook-form's handleSubmit.
+ */
+export function saveOnce<V>(
+  mutation: { isPending: boolean; mutate: (values: V, options: { onSuccess: () => void }) => void },
+  onDone: (values: V) => void
+) {
+  return (values: V) => {
+    if (!mutation.isPending) mutation.mutate(values, { onSuccess: () => onDone(values) });
+  };
+}
+
+type ActionsProps = {
+  /** The form's write: Cancel locks while it is genuinely out, Save while it is pending at all. */
+  mutation: { isPending: boolean; isPaused: boolean };
+  onCancel: () => void;
+  /** Absent: the caller may only read this record, so there is no Save and Cancel reads Close. */
+  onSave?: () => void;
+  saveLabel?: string;
+  /** Absent for a new record, or without the delete permission. */
+  onDelete?: () => void;
+  deleteLabel?: string;
+  /** Another action between Delete and Cancel ("Set User Permissions"). */
+  extra?: ReactNode;
+};
+
+/**
+ * A small form's buttons: Delete in `error`, then Cancel and Save. A paused (offline) save is not in flight,
+ * but Save stays disabled while it waits, so a second tap cannot queue a second write
+ * (.claude/instruction_mds/data-layer.md §5).
+ */
+export function FormActions({ mutation, onCancel, onSave, saveLabel = 'Save', onDelete, deleteLabel = 'Delete', extra }: ActionsProps) {
+  const { colors } = useAppTheme();
+  const inFlight = mutation.isPending && !mutation.isPaused;
+
+  return (
+    <>
+      {onDelete ? (
+        <Button mode="text" textColor={colors.error} onPress={onDelete} disabled={inFlight} contentStyle={styles.action}>
+          {deleteLabel}
+        </Button>
+      ) : null}
+      {extra}
+      <Button mode="outlined" onPress={onCancel} disabled={inFlight} contentStyle={styles.action}>
+        {onSave ? 'Cancel' : 'Close'}
+      </Button>
+      {onSave ? (
+        <Button mode="contained" onPress={onSave} loading={inFlight} disabled={mutation.isPending} contentStyle={styles.action}>
+          {saveLabel}
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
+  action: { justifyContent: 'flex-start' },
   // maxHeight: over a form route the rising keyboard shrinks the space the Dialog is centred in.
   dialog: { maxWidth: 560, width: '100%', maxHeight: '90%', alignSelf: 'center' },
   dialogKicker: { paddingHorizontal: spacing.lg, paddingTop: spacing.ml },

@@ -115,6 +115,13 @@ dead and correct to delete.
   ([`migrations.md` §5](./migrations.md)).
 - **`supabase db lint` is not an RLS check.** It type-checks plpgsql. The dashboard's Security
   Advisor (`rls_disabled_in_public`) answers whether a table is protected.
+- **`pg_graphql_anon_table_exposed` / `pg_graphql_authenticated_table_exposed` on every `public`
+  table.** The GraphQL schema lists a table's name and columns, not its rows; RLS still decides every
+  read, and `anon` reaches no row of a business table. Expected for each new table — not a fix.
+- **`authenticated_security_definer_function_executable` on `public.my_permissions` and
+  `public.delete_current_user`.** Both are meant to be called by signed-in users, and both check
+  `(select auth.uid())` inside (CLAUDE.md §6.2). Any *other* `public` definer function in that list is
+  a real finding.
 
 ## 6. Documented exceptions a reviewer may flag
 

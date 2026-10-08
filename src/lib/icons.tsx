@@ -55,6 +55,9 @@ export const ICONS = {
   // SF Symbols has no handshake; a document reads as "terms" on its own.
   terms: { ios: 'doc.text', android: 'description' },
 
+  // A group in the Chart of Accounts or Cost Centers (src/components/folder-nav.tsx).
+  folder: { ios: 'folder', android: 'folder' },
+
   // A system, on its card in the systems list.
   storefront: { ios: 'storefront', android: 'storefront' },
 } satisfies Record<string, { ios: SFSymbol; android: AndroidSymbol }>;

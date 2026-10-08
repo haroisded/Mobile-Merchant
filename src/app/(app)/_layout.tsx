@@ -19,13 +19,13 @@ export const unstable_settings = { anchor: '(tabs)' };
 // with no file is ignored, and a file with no name here still routes — as an ordinary full-screen
 // push with no sheet presentation and no contentStyle, which is how delete-product shipped as a
 // top-aligned white screen (a tester's report, 2026-09-19 — commit 5076055).
-const SHEETS = ['sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/pick', 'sheets/remove-system'];
+const SHEETS = ['sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/pick', 'sheets/remove-system'];
 
 // The small Setup forms: full pages on a phone, a Dialog over the list they were opened from on a tablet
 // (.claude/instruction_mds/frontend.md §4.4). Wide they are transparentModals, so that list stays mounted
 // and shows under the backdrop; the Dialog itself is drawn by AdaptiveDialog `asPage`. The route files
 // are in ./forms/, and the same both-halves rule as SHEETS holds.
-const DIALOG_ROUTES = ['forms/fiscal-year'];
+const DIALOG_ROUTES = ['forms/fiscal-year', 'forms/role', 'forms/role-profile', 'forms/user', 'forms/user-permission', 'forms/account', 'forms/cost-center'];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to
 // render into. This is the seam where further signed-in routes get added without touching the guard.

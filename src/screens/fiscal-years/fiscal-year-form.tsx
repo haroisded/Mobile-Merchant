@@ -2,22 +2,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { StyleSheet } from 'react-native';
 
-import { AdaptiveDialog } from '../../components/adaptive-dialog';
-import { Button } from '../../components/button';
+import { AdaptiveDialog, FormActions, saveOnce } from '../../components/adaptive-dialog';
 import { ConfirmDialog } from '../../components/confirm-dialog';
 import { ControlledDate, ControlledSwitch, ControlledText, FieldGrid } from '../../components/form-fields';
-import { HelperText } from '../../components/helper-text';
 import { Text } from '../../components/text';
 import { useDeleteFiscalYearMutation, useFiscalYearsQuery, useSaveFiscalYearMutation } from '../../features/fiscal-years/queries';
 import type { FiscalYear } from '../../features/fiscal-years/queries';
 import { fiscalYearSchema } from '../../features/fiscal-years/schema';
 import type { FiscalYearValues } from '../../features/fiscal-years/schema';
+import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useShellWide } from '../../lib/columns';
 import { fullYearEnd, todayDate, yearName } from '../../lib/dates';
 import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
-import { useAppTheme } from '../../lib/theme';
 
 type Props = {
   merchantId: string;
@@ -74,13 +71,24 @@ type FormProps = {
   onDismiss: () => void;
 };
 
+/** The copy for a failed save: a duplicate name (23505) and an overlap (23P01) get their own. */
+function saveFailure(error: Error | null) {
+  const code = postgrestError(error)?.code;
+  if (code === '23505') return 'There is already a fiscal year with this name.';
+  if (code === '23P01') return 'These dates overlap another fiscal year. Change them, or edit that year first.';
+  return failureMessage("Couldn't save this fiscal year. Try again.");
+}
+
 function YearForm({ merchantId, existing: opened, initial, onDismiss }: FormProps) {
-  const { colors } = useAppTheme();
   const wide = useShellWide();
   // Held from the open: a delete refetches the list before this form closes, and the year must not turn
   // into "New fiscal year" under the confirm in that moment.
   const [existing] = useState(opened);
   const save = useSaveFiscalYearMutation({ merchantId, fiscalYearId: existing?.id });
+  const permissions = usePermissions({ merchantId }).data;
+  // Without the permission the form is read-only, and the buttons it would need are not there.
+  const editable = can(permissions, 'Fiscal Year', existing ? 'write' : 'create');
+  const deletable = can(permissions, 'Fiscal Year', 'delete');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const inFlight = save.isPending && !save.isPaused;
 
@@ -90,15 +98,7 @@ function YearForm({ merchantId, existing: opened, initial, onDismiss }: FormProp
       ? setConfirmDelete(true)
       : router.push({ pathname: '/sheets/delete-fiscal-year', params: { merchantId, fiscalYearId: year.id } });
 
-  const code = postgrestError(save.error)?.code;
-  const notice = mutationNotice(
-    save,
-    code === '23505'
-      ? 'There is already a fiscal year with this name.'
-      : code === '23P01'
-        ? 'These dates overlap another fiscal year. Change them, or edit that year first.'
-        : failureMessage("Couldn't save this fiscal year. Try again.")
-  );
+  const notice = mutationNotice(save, saveFailure(save.error));
 
   const { control, handleSubmit, setValue, getValues, getFieldState, formState } = useForm<FiscalYearValues>({
     resolver: zodResolver(fiscalYearSchema),
@@ -113,9 +113,7 @@ function YearForm({ merchantId, existing: opened, initial, onDismiss }: FormProp
     if (!getFieldState('year', formState).isDirty) setValue('year', yearName(start, getValues('year_end_date')));
   };
 
-  const submit = handleSubmit((values) => {
-    if (!save.isPending) save.mutate(values, { onSuccess: onDismiss });
-  });
+  const submit = handleSubmit(saveOnce(save, onDismiss));
 
   return (
     <>
@@ -125,31 +123,26 @@ function YearForm({ merchantId, existing: opened, initial, onDismiss }: FormProp
         dismissable={!inFlight}
         kicker="Fiscal year"
         title={existing ? existing.year : 'New fiscal year'}
+        notice={notice}
         actions={
-          <>
-            {existing ? (
-              <Button mode="text" textColor={colors.error} onPress={() => askDelete(existing)} disabled={inFlight} contentStyle={styles.action}>
-                Delete
-              </Button>
-            ) : null}
-            <Button mode="outlined" onPress={onDismiss} disabled={inFlight} contentStyle={styles.action}>
-              Cancel
-            </Button>
-            <Button mode="contained" onPress={submit} loading={inFlight} disabled={save.isPending} contentStyle={styles.action}>
-              Save
-            </Button>
-          </>
+          <FormActions
+            mutation={save}
+            onCancel={onDismiss}
+            onSave={editable ? submit : undefined}
+            onDelete={existing && deletable ? () => askDelete(existing) : undefined}
+          />
         }
       >
         <FieldGrid>
-          <ControlledText control={control} name="year" label="Year Name" required span="full" placeholder="e.g. 2026" maxLength={20} />
-          <ControlledDate control={control} name="year_start_date" label="Year Start Date" required onPicked={startPicked} />
-          <ControlledDate control={control} name="year_end_date" label="Year End Date" required />
+          <ControlledText control={control} name="year" label="Year Name" required span="full" placeholder="e.g. 2026" maxLength={20} disabled={!editable} />
+          <ControlledDate control={control} name="year_start_date" label="Year Start Date" required onPicked={startPicked} disabled={!editable} />
+          <ControlledDate control={control} name="year_end_date" label="Year End Date" required disabled={!editable} />
           <ControlledSwitch
             control={control}
             name="is_short_year"
             label="Short Year"
             span="full"
+            disabled={!editable}
             on="A transition period shorter than twelve months"
             off="A full twelve months"
           />
@@ -158,14 +151,12 @@ function YearForm({ merchantId, existing: opened, initial, onDismiss }: FormProp
             name="is_default"
             label="Default"
             span="full"
+            disabled={!editable}
             on="The only default: new transactions and reports start in it"
             off="Not the default year"
           />
-          <ControlledSwitch control={control} name="disabled" label="Disabled" span="full" on="Not used for new transactions" off="In use" />
+          <ControlledSwitch control={control} name="disabled" label="Disabled" span="full" on="Not used for new transactions" off="In use" disabled={!editable} />
         </FieldGrid>
-        <HelperText type={notice?.type ?? 'error'} visible={notice !== null} padding="none">
-          {notice?.text}
-        </HelperText>
       </AdaptiveDialog>
       {confirmDelete && existing ? <DeleteFiscalYear year={existing} onDismiss={() => setConfirmDelete(false)} onDeleted={onDismiss} /> : null}
     </>
@@ -203,8 +194,3 @@ export function DeleteFiscalYear({ year, inSheet, onDismiss, onDeleted }: Delete
     </ConfirmDialog>
   );
 }
-
-const styles = StyleSheet.create({
-  // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
-  action: { justifyContent: 'flex-start' },
-});

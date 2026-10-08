@@ -23,9 +23,11 @@ type Props = {
    * recycles cells, so "which merchant is being deleted" held here could survive into another row.
    */
   onRemove: () => void;
+  /** Only the owner removes a system; a member's card has no Remove. */
+  canRemove: boolean;
 };
 
-export function SystemCard({ merchant, row, onPress, onRemove }: Props) {
+export function SystemCard({ merchant, row, onPress, onRemove, canRemove }: Props) {
   const { colors } = useAppTheme();
 
   // Remove is wired; Edit is still unticked in the Priority filter, so it renders and does nothing.
@@ -37,15 +39,11 @@ export function SystemCard({ merchant, row, onPress, onRemove }: Props) {
       <Button mode="contained" icon="edit">
         Edit
       </Button>
-      <Button
-        mode="contained"
-        icon="delete"
-        buttonColor={colors.error}
-        textColor={colors.onError}
-        onPress={onRemove}
-      >
-        Remove
-      </Button>
+      {canRemove ? (
+        <Button mode="contained" icon="delete" buttonColor={colors.error} textColor={colors.onError} onPress={onRemove}>
+          Remove
+        </Button>
+      ) : null}
     </Card.Actions>
   );
 

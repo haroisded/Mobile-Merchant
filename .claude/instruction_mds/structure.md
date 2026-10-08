@@ -31,27 +31,38 @@ Which directories exist under `src/`, and what goes in each. What goes *inside* 
 ```
 src/
   app/                    routes and layouts only
-  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts  …
-  Store/                  zustand — client state only (StoreUser.ts, picker.ts)
+  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts  …
+  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts)
   features/
     merchants/            queries.ts  schema.ts — merchants is the Company
     countries/            queries.ts — read-only reference data
     currency-presets/     queries.ts — read-only reference data
+    doctypes/             queries.ts — read-only registry
     fiscal-years/         queries.ts  schema.ts
+    members/  roles/  role-profiles/  user-permissions/   queries.ts  schema.ts
+    role-permissions/     queries.ts — the matrix, and usePermissions / can for every screen
+    system-settings/  currencies/                         queries.ts  schema.ts
+    global-defaults/      queries.ts
+    accounts/  cost-centers/                              queries.ts  schema.ts
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
     setup/                index.tsx — the Setup destination's index
     company/              index.tsx
     fiscal-years/         index.tsx  fiscal-year-form.tsx
+    users/  roles/  role-profiles/  user-permissions/     index.tsx  <name>-form.tsx (+ records.ts)
+    role-permissions/     index.tsx
+    global-defaults/  system-settings/  currency/         index.tsx
+    chart-of-accounts/    index.tsx  account-form.tsx
+    cost-centers/         index.tsx  cost-center-form.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  …
 ```
 
-That is the whole tree as of Step 1 of the POS foundation (2026-10-08). A new resource of the rebuild
-(an ERPNext doctype such as `items/`) is a sibling of `fiscal-years/`; its screens are siblings of
-`company/`.
+That is the whole tree as of Steps 1, 11, 2 and 3 of the POS foundation (2026-10-08). A new resource of
+the rebuild (an ERPNext doctype such as `items/`) is a sibling of `fiscal-years/`; its screens are
+siblings of `company/`.
 
 A directory earns its existence by naming a thing the app has, not a shape code takes. `products` is
 a thing; `modals` is a shape.

@@ -9,9 +9,10 @@ import type { TextInputProps } from 'react-native';
 import { useShellWide } from '../lib/columns';
 import { displayDate, storedDate, toLocalDate } from '../lib/dates';
 import { useAppTheme } from '../lib/theme';
-import { spacing } from '../themes';
+import { radius, spacing } from '../themes';
 import { AdaptiveDialog } from './adaptive-dialog';
 import { Button } from './button';
+import { Checkbox } from './checkbox';
 import { HelperText } from './helper-text';
 import { Switch } from './switch';
 import { Text } from './text';
@@ -148,10 +149,11 @@ type DateInputProps = {
   placeholder: string;
   accessibilityLabel: string;
   error?: boolean;
+  disabled?: boolean;
 };
 
 /** A read-only outlined input that opens the date picker. */
-function DateInput({ value, onChange, placeholder, accessibilityLabel, error }: DateInputProps) {
+function DateInput({ value, onChange, placeholder, accessibilityLabel, error, disabled }: DateInputProps) {
   const { colors } = useAppTheme();
   const [open, setOpen] = useState(false);
 
@@ -159,6 +161,7 @@ function DateInput({ value, onChange, placeholder, accessibilityLabel, error }: 
     <>
       <Pressable
         onPress={() => setOpen(true)}
+        disabled={disabled}
         // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
         android_ripple={{ color: colors.ripple }}
         accessibilityRole="button"
@@ -171,6 +174,7 @@ function DateInput({ value, onChange, placeholder, accessibilityLabel, error }: 
             editable={false}
             value={displayDate(value)}
             placeholder={placeholder}
+            disabled={disabled}
             error={error}
             right={<TextInput.Icon icon="calendar" />}
           />
@@ -184,6 +188,8 @@ function DateInput({ value, onChange, placeholder, accessibilityLabel, error }: 
 type ControlledProps<T extends FieldValues, V> = Omit<FieldProps, 'children' | 'error'> & {
   control: Control<T>;
   name: FieldPathByValue<T, V>;
+  /** Shown but not editable: a form the caller's roles may read but not write. */
+  disabled?: boolean;
 };
 
 /** An outlined TextInput in a Field, bound to one string of a react-hook-form. */
@@ -193,6 +199,7 @@ export function ControlledText<T extends FieldValues>({
   placeholder,
   maxLength,
   autoCapitalize,
+  disabled,
   ...field
 }: ControlledProps<T, string> & {
   placeholder?: string;
@@ -214,6 +221,7 @@ export function ControlledText<T extends FieldValues>({
         placeholder={placeholder}
         maxLength={maxLength}
         autoCapitalize={autoCapitalize}
+        disabled={disabled}
         error={!!fieldState.error}
         accessibilityLabel={field.label}
       />
@@ -227,6 +235,7 @@ export function ControlledSwitch<T extends FieldValues>({
   name,
   on,
   off,
+  disabled,
   ...field
 }: ControlledProps<T, boolean> & { on: string; off: string }) {
   const { colors } = useAppTheme();
@@ -241,6 +250,7 @@ export function ControlledSwitch<T extends FieldValues>({
           // cannot resolve the generic path's value type inside the component.
           value={input.value as boolean}
           onValueChange={input.onChange}
+          disabled={disabled}
           color={colors.accent}
           accessibilityLabel={field.label}
         />
@@ -257,6 +267,7 @@ export function ControlledDate<T extends FieldValues>({
   control,
   name,
   onPicked,
+  disabled,
   ...field
 }: ControlledProps<T, string> & {
   /** Runs after the binding's own write, for a date that fills another field (a fiscal year's end). */
@@ -277,14 +288,82 @@ export function ControlledDate<T extends FieldValues>({
         }}
         placeholder="Select a date"
         accessibilityLabel={field.label}
+        disabled={disabled}
         error={!!fieldState.error}
       />
     </Field>
   );
 }
 
+/** One choice in a checklist. `hint` is a second line under the label. */
+export type CheckOption = { value: string; label: string; hint?: string };
+
+/**
+ * A list of checkboxes, bound to one string[] of a react-hook-form: the roles of a user or a role profile.
+ * Rows are Pressable + Checkbox.Android + Text rather than Checkbox.Item, whose label reads no variant
+ * (.claude/instruction_mds/frontend.md §3.3).
+ */
+export function ControlledChecklist<T extends FieldValues>({
+  control,
+  name,
+  options,
+  disabled,
+  ...field
+}: ControlledProps<T, string[]> & { options: CheckOption[] }) {
+  const { colors } = useAppTheme();
+  const { field: input, fieldState } = useController({ control, name });
+  // SAFETY: `name` is a FieldPathByValue<T, string[]>, so the value at it is a string[]; TypeScript cannot
+  // resolve the generic path's value type inside the component.
+  const checked = input.value as string[];
+
+  const toggle = (value: string) => {
+    input.onChange(checked.includes(value) ? checked.filter((item) => item !== value) : [...checked, value]);
+    input.onBlur();
+  };
+
+  return (
+    <Field {...field} error={fieldState.error?.message}>
+      <View style={[styles.checklist, { borderColor: colors.outlineVariant }]}>
+        {options.map((option, index) => (
+          <Pressable
+            key={option.value}
+            onPress={() => toggle(option.value)}
+            disabled={disabled}
+            // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
+            android_ripple={{ color: colors.ripple }}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: checked.includes(option.value), disabled }}
+            accessibilityLabel={option.label}
+            style={[styles.check, index > 0 ? { borderTopWidth: 1, borderTopColor: colors.surfaceVariant } : null]}
+          >
+            <Checkbox.Android
+              status={checked.includes(option.value) ? 'checked' : 'unchecked'}
+              disabled={disabled}
+              color={colors.accent}
+              onPress={() => toggle(option.value)}
+            />
+            <View style={styles.fill}>
+              <Text variant="bodyMedium" style={disabled ? { color: colors.onSurfaceMuted } : null}>
+                {option.label}
+              </Text>
+              {option.hint ? (
+                <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
+                  {option.hint}
+                </Text>
+              ) : null}
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    </Field>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  checklist: { borderWidth: 1, borderRadius: radius.md, borderCurve: 'continuous', overflow: 'hidden' },
+  // 48: the Android touch target floor (.claude/instruction_mds/frontend.md rule 19).
+  check: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 48, paddingHorizontal: spacing.xs },
   grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: spacing.md },
   // 45% plus flexGrow rather than 50%: the column gap would otherwise push the second cell to a row
   // of its own. The gap spaces label row, control and error, so none of them carries a margin.
