@@ -46,7 +46,11 @@ export function useUpdateAccountsSettingsMutation({ merchantId }: { merchantId: 
   });
 }
 
-/** After a role is deleted: the database cleared it from frozen_accounts_modifier (on delete set null). */
+/**
+ * After a role is deleted: the database cleared it from frozen_accounts_modifier (on delete set null).
+ * `refetchType: 'all'` because the page is not mounted then: a stale cache would seed the form's
+ * defaultValues with the dead role on the next open, and a later refetch does not reset them.
+ */
 export function invalidateAccountsSettings(queryClient: ReturnType<typeof useQueryClient>) {
-  return queryClient.invalidateQueries({ queryKey: accountsSettingsKey.all });
+  return queryClient.invalidateQueries({ queryKey: accountsSettingsKey.all, refetchType: 'all' });
 }
