@@ -276,7 +276,8 @@ rail is narrower than the window.
 | Multi-step flow ending in a review | stepper, Review as the last step | stepper left, Review sidebar right |
 | Systems list | Create button + row cards | grid, Create System card first |
 
-Same at both widths: long forms and create-system (full page), multi-step flows (full-screen route).
+Same at both widths: long forms and create-system (full page), a record with child rows (a page of the
+Setup stack), multi-step flows (full-screen route).
 
 Rejected for the small forms on a tablet (2026-10-04, the human's call): a full page — a 560dp
 column on a 1180dp window, and centring it is §9's banned centred column; inline Dialog mounts in each
@@ -373,7 +374,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Text field | outlined dense `TextInput`, no floating `label`. `left` / `right` affixes for currency + units |
 | Select | `src/components/menu-select.tsx`†: non-editable outlined `TextInput` anchoring `Menu` |
 | Searchable select (a list too long for a `Menu`: countries, currencies) | `src/components/search-select.tsx`: the Select shape + `chevron-down`, opening a picker with a Search box. Narrow: `src/app/(app)/sheets/pick.tsx` — options and callback handed over in `src/Store/picker.ts`, since a route takes neither as a param. Wide: `AdaptiveDialog` |
-| Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` / `ControlledChecklist` bound to a react-hook-form `control`; each takes `disabled` for a read-only form. `ControlledSelect` (`search-select.tsx`) binds a searchable select |
+| Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` / `ControlledChecklist` bound to a react-hook-form `control`; each takes `disabled` for a read-only form and shows its field's error under it (a switch too: "A disabled template cannot be the default"). `ControlledText` takes `keyboardType` (`decimal-pad` for a rate or amount). `ControlledSelect` (`search-select.tsx`) binds a searchable select |
 | Checklist (roles) | `ControlledChecklist`: one `Checkbox.Android` row per option, the whole row pressable |
 | Inline-create select | Select + last `Menu.Item` "+ New …" in `accent`. Created row comes back selected |
 | Date / time field | Select shape + `calendar` / `clock` icon → `DateTimePicker` (`@expo/ui/community/datetime-picker`; `ControlledDate`). Android: its own Material dialog. iOS: inline picker in dialog, Done. Held as `YYYY-MM-DD` (`src/lib/dates.ts`). An optional date (Accounts Frozen Till) takes `clearable`: a `close` `IconButton` beside it while it holds one |
@@ -382,7 +383,9 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Segmented field, type selector | `SegmentedButtons`. Wrap two per row narrow |
 | Toggle | Paper `Switch`, on colour `accent`, sentence in `bodyMedium` beside |
 | Tags, date list | `Chip`s with `x` in wrapping row, then text `Button` "+ add …". Remove label on `closeIconAccessibilityLabel` |
-| Repeatable rows | rows + remove `IconButton`, then `accent` text `Button` "+ Add …" |
+| Repeatable rows | `src/components/repeatable-rows.tsx` over react-hook-form `useFieldArray`: a 1px `outlineVariant` box per row, `labelMedium` "Row n" + remove `IconButton` (`close`), the row's own `FieldGrid`; then `AddRowButton`, the `accent` text `Button` "+ Add …". A row shows only the fields its type uses (a tax row's Tax Amount for Actual, Reference Row # for the previous-row types) |
+| Record form with child rows (Sales Taxes and Charges Template) | a page of the Setup stack at every width, not a `forms/` Dialog: `PageHeader` with the red Delete in its actions, then `PageForm` — fields, a form section heading, the repeatable rows, a preview. Save stays live on a record not yet saved, so it names what is missing. Its confirmed delete pops the page through its own `useNavigation()` and, on a phone, the confirm's sheet of the outer stack with `router.back()`. Rejected: `router.dismissTo` the list — from the sheet, React Navigation 7's nested navigate pushed a second list over the deleted page (device run, 2026-10-09) |
+| Calculation preview (the tax template's) | a form section heading, sample inputs held in local state (not the form's), then the Currency page's sample box: `bodyMedium` label left, `amount` value right, a `bodySmall` running total under a row. "Fix the rows above …" while the rows do not parse |
 | Weekly hours | seven rows, 1px `surfaceVariant` between: `Switch`, `titleMedium` day, time fields. Closed in `onSurfaceFaint` |
 | Variant matrix row | one 1px `outlineVariant` box per combination: `labelLarge` label, SKU, barcode, price difference, quantity |
 | Note callout | `src/components/note-callout.tsx`: 3px left border `accent` or `error`, `surfaceMuted`, `bodySmall` |

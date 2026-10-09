@@ -27,6 +27,14 @@ export const ACCOUNT_TYPES = new Map<string, readonly string[]>([
   ],
 ]);
 
+/**
+ * The ledgers a tax row may post to: ERPNext's filter on the Sales Taxes and Charges and Item Tax tables, and
+ * what private.validate_tax_account checks again (supabase/migrations/20261009091028_taxes.sql).
+ */
+const TAX_ACCOUNT_TYPES: readonly string[] = ['Tax', 'Chargeable', 'Income Account', 'Expense Account', 'Expenses Included In Valuation'];
+
+export const fitsTaxAccount = (account: { account_type: string | null }) => TAX_ACCOUNT_TYPES.includes(account.account_type ?? '');
+
 // Form input, so Zod (.claude/instruction_mds/data-layer.md §3). Empty strings are "none" — the mutation
 // sends null. The tree rules (a parent is a group, no cycles) are the database's: private.validate_tree.
 export const accountSchema = z.object({

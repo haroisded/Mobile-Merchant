@@ -25,6 +25,9 @@ type Entry = {
     | '/systems/[id]/setup/cost-centers'
     | '/systems/[id]/setup/accounts-settings'
     | '/systems/[id]/setup/modes-of-payment'
+    | '/systems/[id]/setup/tax-categories'
+    | '/systems/[id]/setup/sales-tax-templates'
+    | '/systems/[id]/setup/item-tax-templates'
     | '/systems/[id]/setup/users'
     | '/systems/[id]/setup/roles'
     | '/systems/[id]/setup/role-profiles'
@@ -73,6 +76,20 @@ const SECTIONS: Section[] = [
     hint: 'The ways a sale can be paid',
     entries: [
       { label: 'Modes of Payment', hint: 'Cash, card, wallets and their accounts', doctype: 'Mode of Payment', pathname: '/systems/[id]/setup/modes-of-payment' },
+    ],
+  },
+  {
+    title: 'Taxes',
+    hint: 'What tax a sale carries, and how it is worked out',
+    entries: [
+      {
+        label: 'Sales Taxes and Charges Templates',
+        hint: 'The tax rows a sale gets, in or on top of the price',
+        doctype: 'Sales Taxes and Charges Template',
+        pathname: '/systems/[id]/setup/sales-tax-templates',
+      },
+      { label: 'Item Tax Templates', hint: 'A different rate for particular items', doctype: 'Item Tax Template', pathname: '/systems/[id]/setup/item-tax-templates' },
+      { label: 'Tax Categories', hint: 'Names for tax treatments: standard, exempt', doctype: 'Tax Category', pathname: '/systems/[id]/setup/tax-categories' },
     ],
   },
   {

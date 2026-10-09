@@ -209,12 +209,15 @@ export function ControlledText<T extends FieldValues>({
   placeholder,
   maxLength,
   autoCapitalize,
+  keyboardType,
   disabled,
   ...field
 }: ControlledProps<T, string> & {
   placeholder?: string;
   maxLength?: number;
   autoCapitalize?: TextInputProps['autoCapitalize'];
+  /** decimal-pad for a rate or an amount. */
+  keyboardType?: TextInputProps['keyboardType'];
 }) {
   const { field: input, fieldState } = useController({ control, name });
 
@@ -231,6 +234,7 @@ export function ControlledText<T extends FieldValues>({
         placeholder={placeholder}
         maxLength={maxLength}
         autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
         disabled={disabled}
         error={!!fieldState.error}
         accessibilityLabel={field.label}
@@ -255,7 +259,7 @@ export function ControlledSwitch<T extends FieldValues>({
   deps?: FieldPath<T>[];
 }) {
   const { colors } = useAppTheme();
-  const { field: input } = useController({ control, name, rules: { deps } });
+  const { field: input, fieldState } = useController({ control, name, rules: { deps } });
   // Touched on the flip, as the checklist is: a switch has no blur, and `deps` run only once it is.
   const flip = (value: boolean) => {
     input.onChange(value);
@@ -263,7 +267,7 @@ export function ControlledSwitch<T extends FieldValues>({
   };
 
   return (
-    <Field {...field}>
+    <Field {...field} error={fieldState.error?.message}>
       <View style={styles.toggleRow}>
         {/* A switch that is on is one of the accent's places (.claude/instruction_mds/frontend.md §2.3). */}
         <Switch

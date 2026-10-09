@@ -4,6 +4,7 @@
 // (.claude/instruction_mds/testing-workflow.md), and this file covers only what arithmetic can settle.
 import assert from 'node:assert/strict';
 
+import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { fullYearEnd, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
@@ -72,5 +73,42 @@ assert.deepEqual(pathTo(TREE, undefined), []);
 // Held to one branch by a User Permission: the branch is the top.
 assert.deepEqual(childrenOf(TREE.slice(2), null).map((row) => row.id), ['cash-group', 'income']);
 assert.deepEqual([...subtree(TREE, 'current')].sort(), ['cash', 'cash-group', 'current']);
+
+// src/features/sales-tax-templates/calculate.ts — ERPNext's taxes_and_totals. Expected values are the worked
+// examples of docs.frappe.io/erpnext/tax-inclusive-accounting, /types-in-tax-template, /item-tax-template.
+const round2 = (value, precision) => roundTo(value, precision, BANKERS);
+const tax = (row) => ({ charge_type: 'On Net Total', account: 'vat', rate: 0, tax_amount: 0, row_id: null, included_in_print_rate: false, ...row });
+const run = (lines, taxes) => calculateTaxes(lines, taxes, 2, round2);
+// $108 includes 8%: $100 net, $8 tax, the customer still pays $108.
+let result = run([{ rate: 108, qty: 1 }], [tax({ rate: 8, included_in_print_rate: true })]);
+assert.deepEqual([result.netTotal, result.rows[0].amount, result.grandTotal], [100, 8, 108]);
+assert.equal(result.items[0].netRate, 100);
+// $100 includes 10%: $90.91 and $9.09.
+result = run([{ rate: 100, qty: 1 }], [tax({ rate: 10, included_in_print_rate: true })]);
+assert.deepEqual([result.netTotal, result.totalTaxes, result.grandTotal], [90.91, 9.09, 100]);
+// Without the inclusive tick, 8% is added on top: $116.64.
+assert.equal(run([{ rate: 108, qty: 1 }], [tax({ rate: 8 })]).grandTotal, 116.64);
+// Tax on another tax amount, and on the running total.
+result = run([{ rate: 1000, qty: 1 }], [tax({ rate: 8 }), tax({ charge_type: 'On Previous Row Amount', rate: 2, row_id: 1 })]);
+assert.deepEqual(result.rows, [{ amount: 80, total: 1080 }, { amount: 1.6, total: 1081.6 }]);
+result = run([{ rate: 1000, qty: 1 }], [tax({ rate: 8 }), tax({ charge_type: 'On Previous Row Total', rate: 2, row_id: 1 })]);
+assert.deepEqual([result.rows[1].amount, result.grandTotal, result.totalTaxes], [21.6, 1101.6, 101.6]);
+// A fixed $25 charge, spread over two items with the remainder on the last.
+assert.equal(run([{ rate: 1000, qty: 1 }], [tax({ charge_type: 'Actual', tax_amount: 25 })]).grandTotal, 1025);
+assert.equal(run([{ rate: 333.33, qty: 1 }, { rate: 666.67, qty: 1 }], [tax({ charge_type: 'Actual', tax_amount: 25 })]).rows[0].amount, 25);
+// On Item Quantity: the rate is per unit — 2 × 5 units = 10.
+assert.equal(run([{ rate: 200, qty: 5 }], [tax({ charge_type: 'On Item Quantity', rate: 2 })]).rows[0].amount, 10);
+// Item Tax Templates override the 8% row by account: $699 at 8%, $149 at 4%, $99 at 0% → $61.88, $1,008.88.
+result = run(
+  [
+    { rate: 699, qty: 1 },
+    { rate: 149, qty: 1, itemTaxRates: new Map([['vat', 4]]) },
+    { rate: 99, qty: 1, itemTaxRates: new Map([['vat', 0]]) },
+  ],
+  [tax({ rate: 8 })]
+);
+assert.deepEqual([result.totalTaxes, result.grandTotal], [61.88, 1008.88]);
+// No rows: the net total is the grand total.
+assert.deepEqual([run([{ rate: 50, qty: 2 }], []).grandTotal, run([{ rate: 50, qty: 2 }], []).totalTaxes], [100, 0]);
 
 console.log('check:logic — all assertions passed.');

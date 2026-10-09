@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounts: {
@@ -366,6 +391,90 @@ export type Database = {
             foreignKeyName: "global_defaults_merchant_id_fkey"
             columns: ["merchant_id"]
             isOneToOne: true
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_tax_template_rows: {
+        Row: {
+          account: string
+          id: string
+          idx: number
+          merchant_id: string
+          not_applicable: boolean
+          tax_rate: number
+          template_id: string
+        }
+        Insert: {
+          account: string
+          id?: string
+          idx: number
+          merchant_id: string
+          not_applicable?: boolean
+          tax_rate?: number
+          template_id: string
+        }
+        Update: {
+          account?: string
+          id?: string
+          idx?: number
+          merchant_id?: string
+          not_applicable?: boolean
+          tax_rate?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_tax_template_rows_account_fk"
+            columns: ["account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_tax_template_rows_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_tax_template_rows_template_fk"
+            columns: ["template_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      item_tax_templates: {
+        Row: {
+          created_at: string
+          disabled: boolean
+          id: string
+          merchant_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          merchant_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          merchant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_tax_templates_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
             referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
@@ -834,6 +943,125 @@ export type Database = {
           },
         ]
       }
+      sales_tax_template_rows: {
+        Row: {
+          account: string
+          charge_type: string
+          cost_center: string | null
+          description: string
+          id: string
+          idx: number
+          included_in_print_rate: boolean
+          merchant_id: string
+          rate: number
+          row_id: number | null
+          tax_amount: number
+          template_id: string
+        }
+        Insert: {
+          account: string
+          charge_type: string
+          cost_center?: string | null
+          description: string
+          id?: string
+          idx: number
+          included_in_print_rate?: boolean
+          merchant_id: string
+          rate?: number
+          row_id?: number | null
+          tax_amount?: number
+          template_id: string
+        }
+        Update: {
+          account?: string
+          charge_type?: string
+          cost_center?: string | null
+          description?: string
+          id?: string
+          idx?: number
+          included_in_print_rate?: boolean
+          merchant_id?: string
+          rate?: number
+          row_id?: number | null
+          tax_amount?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_tax_template_rows_account_fk"
+            columns: ["account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "sales_tax_template_rows_cost_center_fk"
+            columns: ["cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "sales_tax_template_rows_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_tax_template_rows_template_fk"
+            columns: ["template_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "sales_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      sales_tax_templates: {
+        Row: {
+          created_at: string
+          disabled: boolean
+          id: string
+          is_default: boolean
+          merchant_id: string
+          tax_category_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_default?: boolean
+          merchant_id: string
+          tax_category_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_default?: boolean
+          merchant_id?: string
+          tax_category_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_tax_templates_category_fk"
+            columns: ["tax_category_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "tax_categories"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "sales_tax_templates_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       standard_role_permissions: {
         Row: {
           can_create: boolean
@@ -907,6 +1135,70 @@ export type Database = {
           },
         ]
       }
+      tax_categories: {
+        Row: {
+          created_at: string
+          disabled: boolean
+          id: string
+          merchant_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          merchant_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          merchant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_categories_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_presets: {
+        Row: {
+          account_name: string
+          country_code: string
+          is_default: boolean
+          tax_rate: number
+          template: string
+        }
+        Insert: {
+          account_name: string
+          country_code: string
+          is_default?: boolean
+          tax_rate: number
+          template: string
+        }
+        Update: {
+          account_name?: string
+          country_code?: string
+          is_default?: boolean
+          tax_rate?: number
+          template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_presets_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           allow: string
@@ -975,12 +1267,14 @@ export type Database = {
     Functions: {
       delete_current_user: { Args: never; Returns: undefined }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
+      save_item_tax_template: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }
       save_role_permissions: {
         Args: { p_doctype: string; p_merchant: string; p_rows: Json }
         Returns: undefined
       }
       save_role_profile: { Args: { payload: Json }; Returns: string }
+      save_sales_tax_template: { Args: { payload: Json }; Returns: string }
     }
     Enums: {
       [_ in never]: never
@@ -1109,6 +1403,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

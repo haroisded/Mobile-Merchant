@@ -25,7 +25,18 @@ const SHEETS = ['sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal
 // (.claude/instruction_mds/frontend.md §4.4). Wide they are transparentModals, so that list stays mounted
 // and shows under the backdrop; the Dialog itself is drawn by AdaptiveDialog `asPage`. The route files
 // are in ./forms/, and the same both-halves rule as SHEETS holds.
-const DIALOG_ROUTES = ['forms/fiscal-year', 'forms/role', 'forms/role-profile', 'forms/user', 'forms/user-permission', 'forms/account', 'forms/cost-center', 'forms/mode-of-payment'];
+const DIALOG_ROUTES = [
+  'forms/fiscal-year',
+  'forms/role',
+  'forms/role-profile',
+  'forms/user',
+  'forms/user-permission',
+  'forms/account',
+  'forms/cost-center',
+  'forms/mode-of-payment',
+  'forms/tax-category',
+  'forms/item-tax-template',
+];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to
 // render into. This is the seam where further signed-in routes get added without touching the guard.

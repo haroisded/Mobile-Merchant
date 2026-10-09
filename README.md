@@ -39,9 +39,11 @@ together and explained inline.
   (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
   Manager and User Permissions, all enforced by RLS); Global Defaults, System Settings and the Currency
   (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
-  folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment.
+  folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment;
+  Taxes — Tax Categories, Sales Taxes and Charges Templates (rows on the net total, on an earlier row, fixed
+  or per unit, inside or on top of the price, with a live preview) and Item Tax Templates.
   Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main, its default
-  accounts, and Cash and Credit Card
+  accounts, Cash and Credit Card, and its country's tax (Philippines: VAT 12%)
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -146,7 +148,9 @@ frappe's country list; `fiscal_years` holds each company's accounting years. Use
 `merchant_members`, `roles`, `role_profiles`, `role_permissions`, `user_permissions` and the global
 `doctypes` and `standard_role_permissions`; Defaults & Money adds `system_settings`, `global_defaults`
 and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees; Step 4 the Company's default accounts
-and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5 `modes_of_payment`. Triggers named
+and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5 `modes_of_payment`; Step 6
+`tax_categories`, `sales_tax_templates`, `item_tax_templates` with their rows, and the read-only
+`tax_presets` the country's tax is seeded from. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

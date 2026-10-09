@@ -299,7 +299,9 @@ User Permissions, and `private.permitted_merchant_ids()`), `20261008151723_defau
 (System Settings, Global Defaults, Currency), `20261008152613_chart_of_accounts.sql` (the
 `accounts` and `cost_centers` trees, `private.validate_tree()`), `20261009004357_accounting_defaults.sql`
 (the Company's default accounts and Perpetual Inventory as `merchants` columns,
-`private.validate_company_accounts()`, `accounts_settings`) and `20261009004450_modes_of_payment.sql`. `authenticated` keeps `usage` on
+`private.validate_company_accounts()`, `accounts_settings`), `20261009004450_modes_of_payment.sql` and
+`20261009091028_taxes.sql` (Tax Categories, Sales Taxes and Charges and Item Tax Templates with their rows,
+the deferred `private.validate_tax_row_references()`, `tax_presets` and the country's tax seed). `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).
