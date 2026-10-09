@@ -14,6 +14,7 @@ import { AdaptiveDialog } from './adaptive-dialog';
 import { Button } from './button';
 import { Checkbox } from './checkbox';
 import { HelperText } from './helper-text';
+import { IconButton } from './icon-button';
 import { Switch } from './switch';
 import { Text } from './text';
 import { TextInput } from './text-input';
@@ -150,36 +151,45 @@ type DateInputProps = {
   accessibilityLabel: string;
   error?: boolean;
   disabled?: boolean;
+  /** A date that may be left empty: a clear button beside it while it holds one. */
+  clearable?: boolean;
 };
 
 /** A read-only outlined input that opens the date picker. */
-function DateInput({ value, onChange, placeholder, accessibilityLabel, error, disabled }: DateInputProps) {
+function DateInput({ value, onChange, placeholder, accessibilityLabel, error, disabled, clearable }: DateInputProps) {
   const { colors } = useAppTheme();
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Pressable
-        onPress={() => setOpen(true)}
-        disabled={disabled}
-        // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
-        android_ripple={{ color: colors.ripple }}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-      >
-        <View pointerEvents="none">
-          <TextInput
-            mode="outlined"
-            dense
-            editable={false}
-            value={displayDate(value)}
-            placeholder={placeholder}
-            disabled={disabled}
-            error={error}
-            right={<TextInput.Icon icon="calendar" />}
-          />
-        </View>
-      </Pressable>
+      <View style={styles.toggleRow}>
+        <Pressable
+          onPress={() => setOpen(true)}
+          disabled={disabled}
+          // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
+          android_ripple={{ color: colors.ripple }}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          style={styles.fill}
+        >
+          <View pointerEvents="none">
+            <TextInput
+              mode="outlined"
+              dense
+              editable={false}
+              value={displayDate(value)}
+              placeholder={placeholder}
+              disabled={disabled}
+              error={error}
+              right={<TextInput.Icon icon="calendar" />}
+            />
+          </View>
+        </Pressable>
+        {/* Beside the input, not its affix: the input sits under pointerEvents="none" so the whole field opens the picker. */}
+        {clearable && value !== '' && !disabled ? (
+          <IconButton icon="close" onPress={() => onChange('')} accessibilityLabel={`Clear ${accessibilityLabel}`} />
+        ) : null}
+      </View>
       {open ? <DatePicker value={value} onPick={onChange} onClose={() => setOpen(false)} /> : null}
     </>
   );
@@ -279,10 +289,13 @@ export function ControlledDate<T extends FieldValues>({
   name,
   onPicked,
   disabled,
+  clearable,
   ...field
 }: ControlledProps<T, string> & {
   /** Runs after the binding's own write, for a date that fills another field (a fiscal year's end). */
   onPicked?: (value: string) => void;
+  /** An optional date (Accounts Frozen Till Date): it can be emptied again. */
+  clearable?: boolean;
 }) {
   const { field: input, fieldState } = useController({ control, name });
 
@@ -300,6 +313,7 @@ export function ControlledDate<T extends FieldValues>({
         placeholder="Select a date"
         accessibilityLabel={field.label}
         disabled={disabled}
+        clearable={clearable}
         error={!!fieldState.error}
       />
     </Field>

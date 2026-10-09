@@ -44,6 +44,7 @@ src/
     system-settings/  currencies/                         queries.ts  schema.ts
     global-defaults/      queries.ts
     accounts/  cost-centers/                              queries.ts  schema.ts
+    accounts-settings/  modes-of-payment/                 queries.ts  schema.ts
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
@@ -55,12 +56,14 @@ src/
     global-defaults/  system-settings/  currency/         index.tsx
     chart-of-accounts/    index.tsx  account-form.tsx
     cost-centers/         index.tsx  cost-center-form.tsx
+    accounts-settings/    index.tsx
+    modes-of-payment/     index.tsx  mode-of-payment-form.tsx
     profile/
     sign-in/
   components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  …
 ```
 
-That is the whole tree as of Steps 1, 11, 2 and 3 of the POS foundation (2026-10-08). A new resource of
+That is the whole tree as of Steps 1, 11, 2, 3, 4 and 5 of the POS foundation (2026-10-09). A new resource of
 the rebuild (an ERPNext doctype such as `items/`) is a sibling of `fiscal-years/`; its screens are
 siblings of `company/`.
 

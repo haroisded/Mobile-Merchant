@@ -16,6 +16,14 @@ export const costCenterLabel = (costCenter: CostCenter, abbr: string) =>
     ? costCenter.cost_center_name
     : `${costCenter.cost_center_number ? `${costCenter.cost_center_number} - ` : ''}${costCenter.cost_center_name} - ${abbr}`;
 
+/** Enabled ledger cost centers as picker options, None first; `keep` as in accounts' ledgerOptions. */
+export const costCenterOptions = (costCenters: CostCenter[], abbr: string, keep?: string | null) => [
+  { value: '', label: 'None' },
+  ...costCenters
+    .filter((costCenter) => costCenter.id === keep || (!costCenter.is_group && !costCenter.disabled))
+    .map((costCenter) => ({ value: costCenter.id, label: costCenterLabel(costCenter, abbr) })),
+];
+
 // The only file that knows the table is called `cost_centers` (.claude/instruction_mds/data-layer.md
 // rules 2-3).
 const costCentersKey = {

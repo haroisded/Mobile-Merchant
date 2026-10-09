@@ -39,7 +39,9 @@ together and explained inline.
   (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
   Manager and User Permissions, all enforced by RLS); Global Defaults, System Settings and the Currency
   (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
-  folders. Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main
+  folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment.
+  Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main, its default
+  accounts, and Cash and Credit Card
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -143,7 +145,8 @@ table's policies call. `countries` and `currency_presets` are read-only referenc
 frappe's country list; `fiscal_years` holds each company's accounting years. Users & Access adds
 `merchant_members`, `roles`, `role_profiles`, `role_permissions`, `user_permissions` and the global
 `doctypes` and `standard_role_permissions`; Defaults & Money adds `system_settings`, `global_defaults`
-and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees. Triggers named
+and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees; Step 4 the Company's default accounts
+and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5 `modes_of_payment`. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

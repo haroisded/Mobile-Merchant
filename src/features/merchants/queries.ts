@@ -4,7 +4,7 @@ import type { Tables } from '../../lib/database.types';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../Store/StoreUser';
-import type { CompanyValues } from './schema';
+import type { CompanyFormValues, CompanyValues } from './schema';
 
 // The row type comes from the generated types, not from a hand-written interface. One less thing to
 // keep in step with the migration.
@@ -84,14 +84,35 @@ export function useCreateSystemMutation() {
   });
 }
 
-/** The Company screen's save: name, abbreviation, country and default currency of one system. */
+/** The Company form's account fields hold '' for none; the row holds null. */
+const companyRow = (values: CompanyFormValues) => ({
+  ...values,
+  default_cash_account: values.default_cash_account || null,
+  default_bank_account: values.default_bank_account || null,
+  default_income_account: values.default_income_account || null,
+  default_expense_account: values.default_expense_account || null,
+  cost_center: values.cost_center || null,
+  write_off_account: values.write_off_account || null,
+  round_off_account: values.round_off_account || null,
+  round_off_cost_center: values.round_off_cost_center || null,
+  default_inventory_account: values.default_inventory_account || null,
+  stock_adjustment_account: values.stock_adjustment_account || null,
+  stock_received_but_not_billed: values.stock_received_but_not_billed || null,
+  expenses_included_in_valuation: values.expenses_included_in_valuation || null,
+});
+
+/**
+ * The Company screen's save: name, abbreviation, country and default currency of one system, its accounting
+ * defaults and Perpetual Inventory.
+ */
 export function useUpdateCompanyMutation({ merchantId }: { merchantId: string }) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (values: CompanyValues) => {
-      // merchants_update_own decides who may write this row, as it does for the list above.
-      await supabase.from('merchants').update(values).eq('id', merchantId).throwOnError();
+    mutationFn: async (values: CompanyFormValues) => {
+      // merchants_update_own decides who may write this row, as it does for the list above;
+      // private.validate_company_accounts, which record each default may name.
+      await supabase.from('merchants').update(companyRow(values)).eq('id', merchantId).throwOnError();
     },
 
     // Awaited, so Save stays in its spinner until the list (which the shell reads its name from) has the

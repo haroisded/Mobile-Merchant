@@ -23,6 +23,8 @@ type Entry = {
     | '/systems/[id]/setup/currency'
     | '/systems/[id]/setup/chart-of-accounts'
     | '/systems/[id]/setup/cost-centers'
+    | '/systems/[id]/setup/accounts-settings'
+    | '/systems/[id]/setup/modes-of-payment'
     | '/systems/[id]/setup/users'
     | '/systems/[id]/setup/roles'
     | '/systems/[id]/setup/role-profiles'
@@ -39,7 +41,7 @@ const SECTIONS: Section[] = [
     title: 'Company & Calendar',
     hint: 'Who the books belong to, and the years they are kept in',
     entries: [
-      { label: 'Company', hint: 'Name, abbreviation, country and currency', doctype: 'Company', pathname: '/systems/[id]/setup/company' },
+      { label: 'Company', hint: 'Name, currency, default accounts, stock', doctype: 'Company', pathname: '/systems/[id]/setup/company' },
       { label: 'Fiscal Years', hint: 'The accounting years every sale is dated in', doctype: 'Fiscal Year', pathname: '/systems/[id]/setup/fiscal-years' },
     ],
   },
@@ -58,6 +60,19 @@ const SECTIONS: Section[] = [
     entries: [
       { label: 'Chart of Accounts', hint: 'Cash, stock, sales and the groups they sit in', doctype: 'Account', pathname: '/systems/[id]/setup/chart-of-accounts' },
       { label: 'Cost Centers', hint: 'Branches or counters to tag income and expenses by', doctype: 'Cost Center', pathname: '/systems/[id]/setup/cost-centers' },
+      {
+        label: 'Accounts Settings',
+        hint: 'Cancellation, discounts, frozen dates',
+        doctype: 'Accounts Settings',
+        pathname: '/systems/[id]/setup/accounts-settings',
+      },
+    ],
+  },
+  {
+    title: 'Payments',
+    hint: 'The ways a sale can be paid',
+    entries: [
+      { label: 'Modes of Payment', hint: 'Cash, card, wallets and their accounts', doctype: 'Mode of Payment', pathname: '/systems/[id]/setup/modes-of-payment' },
     ],
   },
   {

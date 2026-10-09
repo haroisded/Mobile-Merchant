@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Tables } from '../../lib/database.types';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
+import { invalidateAccountsSettings } from '../accounts-settings/queries';
 import { invalidatePermissions } from '../role-permissions/queries';
 import type { RoleValues } from './schema';
 
@@ -62,7 +63,11 @@ export function useDeleteRoleMutation() {
       await supabase.from('roles').delete().eq('id', id).throwOnError();
     },
     onSuccess: async () => {
-      await Promise.all([queryClient.invalidateQueries({ queryKey: rolesKey.lists() }), invalidatePermissions(queryClient)]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: rolesKey.lists() }),
+        invalidatePermissions(queryClient),
+        invalidateAccountsSettings(queryClient),
+      ]);
     },
   });
 }

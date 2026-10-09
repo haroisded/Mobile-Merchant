@@ -25,6 +25,28 @@ export const companySchema = z.object({
 
 export type CompanyValues = z.infer<typeof companySchema>;
 
+// The Company screen's accounting defaults and Perpetual Inventory (docs.frappe.io/erpnext/company-accounting-defaults,
+// /perpetual-inventory). Each holds an account or cost center id, '' for none; the mutation sends null. Which
+// record each may name is the picker's filter and private.validate_company_accounts's check, not Zod's. Only
+// the Company screen writes them; Create System leaves them to the merchants_seed_50 trigger.
+export const companyFormSchema = companySchema.extend({
+  default_cash_account: z.string(),
+  default_bank_account: z.string(),
+  default_income_account: z.string(),
+  default_expense_account: z.string(),
+  cost_center: z.string(),
+  write_off_account: z.string(),
+  round_off_account: z.string(),
+  round_off_cost_center: z.string(),
+  enable_perpetual_inventory: z.boolean(),
+  default_inventory_account: z.string(),
+  stock_adjustment_account: z.string(),
+  stock_received_but_not_billed: z.string(),
+  expenses_included_in_valuation: z.string(),
+});
+
+export type CompanyFormValues = z.infer<typeof companyFormSchema>;
+
 /**
  * "Corner Cafe" → "CC": the first letter of up to three words, upper case — the abbreviation ERPNext's
  * setup wizard suggests, and the one the migration gave the systems that already existed.

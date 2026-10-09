@@ -172,6 +172,10 @@ const TREE_FAILURES = new Map([
 export function treeFailure(error: Error | null, fallback: string) {
   const cause = postgrestError(error);
   if (cause?.message.includes('accounts_type_fits_root')) return "That account type doesn't belong under the parent's root type.";
+  // A 23503 from anything but the tree's own parent key: a Company default or a mode of payment still names it.
+  if (cause?.code === '23503' && !/accounts_parent_fk|cost_centers_parent_fk/.test(cause.message)) {
+    return "It's in use — as a company default or a mode of payment's account. Disable it instead.";
+  }
   return TREE_FAILURES.get(cause?.message ?? '') ?? TREE_FAILURES.get(cause?.code ?? '') ?? failureMessage(fallback);
 }
 

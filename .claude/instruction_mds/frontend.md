@@ -376,7 +376,9 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` / `ControlledChecklist` bound to a react-hook-form `control`; each takes `disabled` for a read-only form. `ControlledSelect` (`search-select.tsx`) binds a searchable select |
 | Checklist (roles) | `ControlledChecklist`: one `Checkbox.Android` row per option, the whole row pressable |
 | Inline-create select | Select + last `Menu.Item` "+ New …" in `accent`. Created row comes back selected |
-| Date / time field | Select shape + `calendar` / `clock` icon → `DateTimePicker` (`@expo/ui/community/datetime-picker`; `ControlledDate`). Android: its own Material dialog. iOS: inline picker in dialog, Done. Held as `YYYY-MM-DD` (`src/lib/dates.ts`) |
+| Date / time field | Select shape + `calendar` / `clock` icon → `DateTimePicker` (`@expo/ui/community/datetime-picker`; `ControlledDate`). Android: its own Material dialog. iOS: inline picker in dialog, Done. Held as `YYYY-MM-DD` (`src/lib/dates.ts`). An optional date (Accounts Frozen Till) takes `clearable`: a `close` `IconButton` beside it while it holds one |
+| Default-account select (Company, Mode of Payment) | `ControlledSelect` over `ledgerOptions` (`src/features/accounts/queries.ts`): None first, then the enabled ledgers the field takes; the saved one stays listed. Cost centers: `costCenterOptions` |
+| Form section heading (the Company's Accounts and Stock) | `headlineSmall` + `bodySmall` hint between two `FieldGrid`s in one `PageForm` |
 | Segmented field, type selector | `SegmentedButtons`. Wrap two per row narrow |
 | Toggle | Paper `Switch`, on colour `accent`, sentence in `bodyMedium` beside |
 | Tags, date list | `Chip`s with `x` in wrapping row, then text `Button` "+ add …". Remove label on `closeIconAccessibilityLabel` |

@@ -68,6 +68,54 @@ export type Database = {
           },
         ]
       }
+      accounts_settings: {
+        Row: {
+          accounts_frozen_till_date: string | null
+          add_taxes_from_item_tax_template: boolean
+          delete_linked_ledger_entries: boolean
+          enable_discount_accounting: boolean
+          enable_immutable_ledger: boolean
+          frozen_accounts_modifier: string | null
+          merchant_id: string
+          unlink_payment_on_cancellation: boolean
+        }
+        Insert: {
+          accounts_frozen_till_date?: string | null
+          add_taxes_from_item_tax_template?: boolean
+          delete_linked_ledger_entries?: boolean
+          enable_discount_accounting?: boolean
+          enable_immutable_ledger?: boolean
+          frozen_accounts_modifier?: string | null
+          merchant_id: string
+          unlink_payment_on_cancellation?: boolean
+        }
+        Update: {
+          accounts_frozen_till_date?: string | null
+          add_taxes_from_item_tax_template?: boolean
+          delete_linked_ledger_entries?: boolean
+          enable_discount_accounting?: boolean
+          enable_immutable_ledger?: boolean
+          frozen_accounts_modifier?: string | null
+          merchant_id?: string
+          unlink_payment_on_cancellation?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_settings_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: true
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_settings_modifier_fk"
+            columns: ["frozen_accounts_modifier", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       cost_centers: {
         Row: {
           cost_center_name: string
@@ -407,32 +455,78 @@ export type Database = {
       merchants: {
         Row: {
           abbr: string
+          cost_center: string | null
           country_code: string
           created_at: string
+          default_bank_account: string | null
+          default_cash_account: string | null
           default_currency: string
+          default_expense_account: string | null
+          default_income_account: string | null
+          default_inventory_account: string | null
+          enable_perpetual_inventory: boolean
+          expenses_included_in_valuation: string | null
           id: string
           name: string
           owner_id: string
+          round_off_account: string | null
+          round_off_cost_center: string | null
+          stock_adjustment_account: string | null
+          stock_received_but_not_billed: string | null
+          write_off_account: string | null
         }
         Insert: {
           abbr: string
+          cost_center?: string | null
           country_code: string
           created_at?: string
+          default_bank_account?: string | null
+          default_cash_account?: string | null
           default_currency: string
+          default_expense_account?: string | null
+          default_income_account?: string | null
+          default_inventory_account?: string | null
+          enable_perpetual_inventory?: boolean
+          expenses_included_in_valuation?: string | null
           id?: string
           name: string
           owner_id: string
+          round_off_account?: string | null
+          round_off_cost_center?: string | null
+          stock_adjustment_account?: string | null
+          stock_received_but_not_billed?: string | null
+          write_off_account?: string | null
         }
         Update: {
           abbr?: string
+          cost_center?: string | null
           country_code?: string
           created_at?: string
+          default_bank_account?: string | null
+          default_cash_account?: string | null
           default_currency?: string
+          default_expense_account?: string | null
+          default_income_account?: string | null
+          default_inventory_account?: string | null
+          enable_perpetual_inventory?: boolean
+          expenses_included_in_valuation?: string | null
           id?: string
           name?: string
           owner_id?: string
+          round_off_account?: string | null
+          round_off_cost_center?: string | null
+          stock_adjustment_account?: string | null
+          stock_received_but_not_billed?: string | null
+          write_off_account?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "merchants_cost_center_fk"
+            columns: ["cost_center", "id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
           {
             foreignKeyName: "merchants_country_fk"
             columns: ["country_code"]
@@ -441,11 +535,133 @@ export type Database = {
             referencedColumns: ["code"]
           },
           {
+            foreignKeyName: "merchants_default_bank_account_fk"
+            columns: ["default_bank_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_default_cash_account_fk"
+            columns: ["default_cash_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
             foreignKeyName: "merchants_default_currency_fk"
             columns: ["default_currency"]
             isOneToOne: false
             referencedRelation: "currency_presets"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "merchants_default_expense_account_fk"
+            columns: ["default_expense_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_default_income_account_fk"
+            columns: ["default_income_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_default_inventory_account_fk"
+            columns: ["default_inventory_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_expenses_included_in_valuation_fk"
+            columns: ["expenses_included_in_valuation", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_round_off_account_fk"
+            columns: ["round_off_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_round_off_cost_center_fk"
+            columns: ["round_off_cost_center", "id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_stock_adjustment_account_fk"
+            columns: ["stock_adjustment_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_stock_received_but_not_billed_fk"
+            columns: ["stock_received_but_not_billed", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "merchants_write_off_account_fk"
+            columns: ["write_off_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      modes_of_payment: {
+        Row: {
+          created_at: string
+          default_account: string | null
+          enabled: boolean
+          id: string
+          merchant_id: string
+          mode_of_payment: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          default_account?: string | null
+          enabled?: boolean
+          id?: string
+          merchant_id: string
+          mode_of_payment: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          default_account?: string | null
+          enabled?: boolean
+          id?: string
+          merchant_id?: string
+          mode_of_payment?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modes_of_payment_account_fk"
+            columns: ["default_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "modes_of_payment_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
           },
         ]
       }

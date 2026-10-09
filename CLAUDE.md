@@ -296,8 +296,10 @@ ERPNext's model. That rebuild lands one ERPNext step per migration, starting wit
 `fiscal_years`, and `private.seed_company()` behind the `merchants_seed_10_company` trigger. Then
 `20261008145056_users_and_access.sql` (members, roles, role profiles, the editable permission matrix,
 User Permissions, and `private.permitted_merchant_ids()`), `20261008151723_defaults_and_money.sql`
-(System Settings, Global Defaults, Currency) and `20261008152613_chart_of_accounts.sql` (the
-`accounts` and `cost_centers` trees, `private.validate_tree()`). `authenticated` keeps `usage` on
+(System Settings, Global Defaults, Currency), `20261008152613_chart_of_accounts.sql` (the
+`accounts` and `cost_centers` trees, `private.validate_tree()`), `20261009004357_accounting_defaults.sql`
+(the Company's default accounts and Perpetual Inventory as `merchants` columns,
+`private.validate_company_accounts()`, `accounts_settings`) and `20261009004450_modes_of_payment.sql`. `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).
