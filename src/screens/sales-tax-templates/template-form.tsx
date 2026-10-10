@@ -29,7 +29,7 @@ import type { SalesTaxTemplateValues } from '../../features/sales-tax-templates/
 import { useTaxCategoriesQuery } from '../../features/tax-categories/queries';
 import type { TaxCategory } from '../../features/tax-categories/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
 import { TaxPreview } from './tax-preview';
@@ -113,7 +113,8 @@ function TemplateHeader({ merchant, existing }: { merchant: Merchant; existing: 
       body: 'Its rows go with it. Disable it instead to keep it for later.',
       confirmLabel: 'Delete',
       run: () => remove.mutateAsync(template.id),
-      failure: () => failureMessage("Couldn't delete this template. Try again."),
+      // A tax rule may name it.
+      failure: (cause) => usedElsewhere(cause) ?? failureMessage("Couldn't delete this template. Try again."),
       // A page of the Setup stack, not a forms/ route, so not closesForm: this page pops through its own
       // navigator, and on a phone the confirm's sheet of the outer stack pops too (a tablet's is a Dialog on
       // this page). Rejected: router.dismissTo the list — from the sheet the paths part at the outer stack, and

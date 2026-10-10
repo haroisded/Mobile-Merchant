@@ -41,6 +41,8 @@ const DIALOG_ROUTES = [
   'forms/uom-conversion-factor',
   'forms/price-list',
   'forms/brand',
+  'forms/tax-rule',
+  'forms/tax-rule-check',
 ];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to

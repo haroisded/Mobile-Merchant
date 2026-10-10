@@ -9,6 +9,7 @@ import { saveOnce } from '../../components/adaptive-dialog';
 import { PageForm } from '../../components/form-footer';
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
+import { SampleBox, SampleLine } from '../../components/sample-box';
 import { ControlledSelect } from '../../components/search-select';
 import { Text } from '../../components/text';
 import { useCurrencyQuery, useUpdateCurrencyMutation } from '../../features/currencies/queries';
@@ -23,7 +24,7 @@ import { failureMessage, mutationNotice } from '../../lib/errors';
 import { asRoundingMethod, cashRound, formatMoney, moneyInWords, NUMBER_FORMAT_OPTIONS, roundTo } from '../../lib/money';
 import type { CurrencyFormat } from '../../lib/money';
 import { useAppTheme } from '../../lib/theme';
-import { radius, spacing } from '../../themes';
+import { spacing } from '../../themes';
 
 // A sample total with a half in its last place, so the rounding method shows.
 const SAMPLE = 1234.565;
@@ -125,15 +126,15 @@ function Sample({ merchantId, code, control }: { merchantId: string; code: strin
 
   return (
     <Field label="Sample receipt total" hint={`${settings.currency_precision} decimals, ${method}`} span="full">
-      <View style={[styles.sample, { borderColor: colors.outlineVariant }]}>
-        <Line label="Grand Total" value={formatMoney(total, currency, settings.currency_precision, method)} />
-        {globals.disable_rounded_total ? null : <Line label="Rounded Total" value={formatMoney(rounded, currency, settings.currency_precision, method)} />}
+      <SampleBox>
+        <SampleLine label="Grand Total" value={formatMoney(total, currency, settings.currency_precision, method)} />
+        {globals.disable_rounded_total ? null : <SampleLine label="Rounded Total" value={formatMoney(rounded, currency, settings.currency_precision, method)} />}
         {globals.disable_in_words ? null : (
           <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
             {moneyInWords(globals.disable_rounded_total ? total : rounded, currency)}
           </Text>
         )}
-      </View>
+      </SampleBox>
     </Field>
   );
 }
@@ -149,20 +150,7 @@ function sampleCurrency(code: string, values: Partial<CurrencyValues>): Currency
   };
 }
 
-function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.line}>
-      <Text variant="bodyMedium" style={styles.fill}>
-        {label}
-      </Text>
-      <Text variant="amount">{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
-  sample: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', padding: spacing.ms, gap: spacing.xs },
-  line: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
 });

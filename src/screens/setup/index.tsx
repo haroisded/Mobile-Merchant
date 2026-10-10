@@ -15,29 +15,37 @@ type Entry = {
   hint: string;
   /** The doctype whose Read permission shows this row (private.permitted_merchant_ids). */
   doctype: string;
-  pathname:
-    | '/systems/[id]/setup/company'
-    | '/systems/[id]/setup/fiscal-years'
-    | '/systems/[id]/setup/global-defaults'
-    | '/systems/[id]/setup/system-settings'
-    | '/systems/[id]/setup/currency'
-    | '/systems/[id]/setup/chart-of-accounts'
-    | '/systems/[id]/setup/cost-centers'
-    | '/systems/[id]/setup/accounts-settings'
-    | '/systems/[id]/setup/modes-of-payment'
-    | '/systems/[id]/setup/tax-categories'
-    | '/systems/[id]/setup/sales-tax-templates'
-    | '/systems/[id]/setup/item-tax-templates'
-    | '/systems/[id]/setup/warehouses'
-    | '/systems/[id]/setup/uoms'
-    | '/systems/[id]/setup/uom-conversion-factors'
-    | '/systems/[id]/setup/price-lists'
-    | '/systems/[id]/setup/brands'
-    | '/systems/[id]/setup/users'
-    | '/systems/[id]/setup/roles'
-    | '/systems/[id]/setup/role-profiles'
-    | '/systems/[id]/setup/role-permissions'
-    | '/systems/[id]/setup/user-permissions';
+  /**
+   * The page under src/app/(app)/systems/[id]/setup/, pushed as a string href. Rejected: `{ pathname, params }`
+   * — past 22 routes the union is more than TypeScript will check against expo-router's per-route types.
+   */
+  route:
+    | 'company'
+    | 'fiscal-years'
+    | 'global-defaults'
+    | 'system-settings'
+    | 'currency'
+    | 'chart-of-accounts'
+    | 'cost-centers'
+    | 'accounts-settings'
+    | 'modes-of-payment'
+    | 'tax-categories'
+    | 'sales-tax-templates'
+    | 'item-tax-templates'
+    | 'tax-rules'
+    | 'warehouses'
+    | 'uoms'
+    | 'uom-conversion-factors'
+    | 'price-lists'
+    | 'brands'
+    | 'item-groups'
+    | 'stock-settings'
+    | 'selling-settings'
+    | 'users'
+    | 'roles'
+    | 'role-profiles'
+    | 'role-permissions'
+    | 'user-permissions';
 };
 
 type Section = { title: string; hint: string; entries: Entry[] };
@@ -49,30 +57,30 @@ const SECTIONS: Section[] = [
     title: 'Company & Calendar',
     hint: 'Who the books belong to, and the years they are kept in',
     entries: [
-      { label: 'Company', hint: 'Name, currency, default accounts, stock', doctype: 'Company', pathname: '/systems/[id]/setup/company' },
-      { label: 'Fiscal Years', hint: 'The accounting years every sale is dated in', doctype: 'Fiscal Year', pathname: '/systems/[id]/setup/fiscal-years' },
+      { label: 'Company', hint: 'Name, currency, default accounts, stock', doctype: 'Company', route: 'company' },
+      { label: 'Fiscal Years', hint: 'The accounting years every sale is dated in', doctype: 'Fiscal Year', route: 'fiscal-years' },
     ],
   },
   {
     title: 'Defaults & Money',
     hint: 'How numbers, amounts and times read on every screen and receipt',
     entries: [
-      { label: 'Global Defaults', hint: 'Rounded total and amount in words on receipts', doctype: 'Global Defaults', pathname: '/systems/[id]/setup/global-defaults' },
-      { label: 'System Settings', hint: 'Time zone, number format, precision, rounding', doctype: 'System Settings', pathname: '/systems/[id]/setup/system-settings' },
-      { label: 'Currency', hint: 'Symbol, smallest coin, amount in words', doctype: 'Currency', pathname: '/systems/[id]/setup/currency' },
+      { label: 'Global Defaults', hint: 'Rounded total and amount in words on receipts', doctype: 'Global Defaults', route: 'global-defaults' },
+      { label: 'System Settings', hint: 'Time zone, number format, precision, rounding', doctype: 'System Settings', route: 'system-settings' },
+      { label: 'Currency', hint: 'Symbol, smallest coin, amount in words', doctype: 'Currency', route: 'currency' },
     ],
   },
   {
     title: 'Accounting',
     hint: 'Where every sale, purchase and payment is recorded',
     entries: [
-      { label: 'Chart of Accounts', hint: 'Cash, stock, sales and the groups they sit in', doctype: 'Account', pathname: '/systems/[id]/setup/chart-of-accounts' },
-      { label: 'Cost Centers', hint: 'Branches or counters to tag income and expenses by', doctype: 'Cost Center', pathname: '/systems/[id]/setup/cost-centers' },
+      { label: 'Chart of Accounts', hint: 'Cash, stock, sales and the groups they sit in', doctype: 'Account', route: 'chart-of-accounts' },
+      { label: 'Cost Centers', hint: 'Branches or counters to tag income and expenses by', doctype: 'Cost Center', route: 'cost-centers' },
       {
         label: 'Accounts Settings',
         hint: 'Cancellation, discounts, frozen dates',
         doctype: 'Accounts Settings',
-        pathname: '/systems/[id]/setup/accounts-settings',
+        route: 'accounts-settings',
       },
     ],
   },
@@ -80,7 +88,7 @@ const SECTIONS: Section[] = [
     title: 'Payments',
     hint: 'The ways a sale can be paid',
     entries: [
-      { label: 'Modes of Payment', hint: 'Cash, card, wallets and their accounts', doctype: 'Mode of Payment', pathname: '/systems/[id]/setup/modes-of-payment' },
+      { label: 'Modes of Payment', hint: 'Cash, card, wallets and their accounts', doctype: 'Mode of Payment', route: 'modes-of-payment' },
     ],
   },
   {
@@ -91,42 +99,62 @@ const SECTIONS: Section[] = [
         label: 'Sales Taxes and Charges Templates',
         hint: 'The tax rows a sale gets, in or on top of the price',
         doctype: 'Sales Taxes and Charges Template',
-        pathname: '/systems/[id]/setup/sales-tax-templates',
+        route: 'sales-tax-templates',
       },
-      { label: 'Item Tax Templates', hint: 'A different rate for particular items', doctype: 'Item Tax Template', pathname: '/systems/[id]/setup/item-tax-templates' },
-      { label: 'Tax Categories', hint: 'Names for tax treatments: standard, exempt', doctype: 'Tax Category', pathname: '/systems/[id]/setup/tax-categories' },
+      { label: 'Item Tax Templates', hint: 'A different rate for particular items', doctype: 'Item Tax Template', route: 'item-tax-templates' },
+      { label: 'Tax Categories', hint: 'Names for tax treatments: standard, exempt', doctype: 'Tax Category', route: 'tax-categories' },
+      { label: 'Tax Rules', hint: 'Which template a sale takes, by category, group and date', doctype: 'Tax Rule', route: 'tax-rules' },
     ],
   },
   {
     title: 'Stock',
     hint: 'Where stock is kept, what it is counted in, and what it sells for',
     entries: [
-      { label: 'Warehouses', hint: 'Stores, rooms and shelves, and their stock account', doctype: 'Warehouse', pathname: '/systems/[id]/setup/warehouses' },
-      { label: 'UOMs', hint: 'Units items are counted in: Nos, Kg, Box', doctype: 'UOM', pathname: '/systems/[id]/setup/uoms' },
+      { label: 'Warehouses', hint: 'Stores, rooms and shelves, and their stock account', doctype: 'Warehouse', route: 'warehouses' },
+      { label: 'UOMs', hint: 'Units items are counted in: Nos, Kg, Box', doctype: 'UOM', route: 'uoms' },
       {
         label: 'UOM Conversion Factors',
         hint: 'How many of one unit make another',
         doctype: 'UOM Conversion Factor',
-        pathname: '/systems/[id]/setup/uom-conversion-factors',
+        route: 'uom-conversion-factors',
       },
-      { label: 'Price Lists', hint: 'The books selling prices are kept in', doctype: 'Price List', pathname: '/systems/[id]/setup/price-lists' },
-      { label: 'Brands', hint: 'Brand names, and the sales defaults their items take', doctype: 'Brand', pathname: '/systems/[id]/setup/brands' },
+      { label: 'Price Lists', hint: 'The books selling prices are kept in', doctype: 'Price List', route: 'price-lists' },
+      { label: 'Brands', hint: 'Brand names, and the sales defaults their items take', doctype: 'Brand', route: 'brands' },
+      { label: 'Item Groups', hint: 'How items are classified, and the defaults they take', doctype: 'Item Group', route: 'item-groups' },
+      {
+        label: 'Stock Settings',
+        hint: 'What new items start with; FIFO or Moving Average',
+        doctype: 'Stock Settings',
+        route: 'stock-settings',
+      },
+    ],
+  },
+  {
+    title: 'Selling',
+    hint: 'Where a sale takes its prices from',
+    entries: [
+      {
+        label: 'Selling Settings',
+        hint: 'Default price list, fallback, editing prices',
+        doctype: 'Selling Settings',
+        route: 'selling-settings',
+      },
     ],
   },
   {
     title: 'Users & Access',
     hint: 'Who may work in this system, and what each of them may do',
     entries: [
-      { label: 'Users', hint: 'Invite people by email; give them roles', doctype: 'User', pathname: '/systems/[id]/setup/users' },
-      { label: 'Roles', hint: 'The standard roles, and your own', doctype: 'Role', pathname: '/systems/[id]/setup/roles' },
-      { label: 'Role Profiles', hint: 'A set of roles given together', doctype: 'Role Profile', pathname: '/systems/[id]/setup/role-profiles' },
+      { label: 'Users', hint: 'Invite people by email; give them roles', doctype: 'User', route: 'users' },
+      { label: 'Roles', hint: 'The standard roles, and your own', doctype: 'Role', route: 'roles' },
+      { label: 'Role Profiles', hint: 'A set of roles given together', doctype: 'Role Profile', route: 'role-profiles' },
       {
         label: 'Role Permissions Manager',
         hint: 'What each role may read, write, create and delete',
         doctype: 'Role Permission',
-        pathname: '/systems/[id]/setup/role-permissions',
+        route: 'role-permissions',
       },
-      { label: 'User Permissions', hint: 'Restrict a user to particular records', doctype: 'User Permission', pathname: '/systems/[id]/setup/user-permissions' },
+      { label: 'User Permissions', hint: 'Restrict a user to particular records', doctype: 'User Permission', route: 'user-permissions' },
     ],
   },
 ];
@@ -195,7 +223,7 @@ function SectionCard({ section, merchantId }: { section: Section; merchantId: st
         {section.entries.map((entry, index) => (
           <Pressable
             key={entry.label}
-            onPress={() => router.push({ pathname: entry.pathname, params: { id: merchantId } })}
+            onPress={() => router.push(`/systems/${merchantId}/setup/${entry.route}`)}
             // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
             android_ripple={{ color: colors.ripple }}
             accessibilityRole="button"

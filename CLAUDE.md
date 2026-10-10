@@ -301,9 +301,13 @@ User Permissions, and `private.permitted_merchant_ids()`), `20261008151723_defau
 (the Company's default accounts and Perpetual Inventory as `merchants` columns,
 `private.validate_company_accounts()`, `accounts_settings`), `20261009004450_modes_of_payment.sql` and
 `20261009091028_taxes.sql` (Tax Categories, Sales Taxes and Charges and Item Tax Templates with their rows,
-the deferred `private.validate_tax_row_references()`, `tax_presets` and the country's tax seed), and
+the deferred `private.validate_tax_row_references()`, `tax_presets` and the country's tax seed),
 `20261009171705_stock_building_blocks.sql` (the `warehouses` tree, `uoms` and `uom_conversion_factors`,
-`price_lists`, `brands`; `private.validate_tree()` serving any tree). `authenticated` keeps `usage` on
+`price_lists`, `brands`; `private.validate_tree()` serving any tree),
+`20261010011003_item_groups_and_selling_settings.sql` (the `item_groups` tree and its `item_group_taxes`,
+`save_item_group`, `selling_settings`; `private.validate_defaults()`, one check for every record's
+defaults), `20261010011005_tax_rules.sql` (`tax_rules`, conflicts as an exclusion constraint) and
+`20261010011013_stock_settings.sql` (`stock_settings`). `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).

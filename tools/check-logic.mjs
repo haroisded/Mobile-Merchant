@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
+import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
 import { fullYearEnd, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
@@ -110,5 +111,34 @@ result = run(
 assert.deepEqual([result.totalTaxes, result.grandTotal], [61.88, 1008.88]);
 // No rows: the net total is the grand total.
 assert.deepEqual([run([{ rate: 50, qty: 2 }], []).grandTotal, run([{ rate: 50, qty: 2 }], []).totalTaxes], [100, 0]);
+
+// src/features/tax-rules/resolve.ts — the Tax Rule a sale takes (docs.frappe.io/erpnext/tax-rule): blank
+// conditions match anything, the most conditions filled in win, then priority 1 over 2.
+const rule = (id, conditions) => ({ id, sales_tax_template_id: `t-${id}`, tax_category_id: null, item_group_id: null, from_date: null, to_date: null, priority: 1, ...conditions });
+const sale = (context) => ({ taxCategoryId: null, itemGroupIds: [], date: '2026-10-10', ...context });
+const pick = (rules, context, disabled) => resolveTaxRule(rules, sale(context), disabled)?.id ?? null;
+const RULES = [
+  rule('every'),
+  rule('exempt', { tax_category_id: 'exempt' }),
+  rule('services', { item_group_id: 'services' }),
+  rule('exempt-services', { tax_category_id: 'exempt', item_group_id: 'services' }),
+];
+assert.equal(pick([], {}), null);
+assert.equal(pick(RULES, {}), 'every');
+assert.equal(pick(RULES, { taxCategoryId: 'exempt' }), 'exempt');
+assert.equal(pick(RULES, { taxCategoryId: 'standard' }), 'every');
+// An item group matches the items of every group under it.
+assert.equal(pick(RULES, { itemGroupIds: ['all', 'services', 'repairs'] }), 'services');
+assert.equal(pick(RULES, { itemGroupIds: ['all', 'products'] }), 'every');
+assert.equal(pick(RULES, { taxCategoryId: 'exempt', itemGroupIds: ['all', 'services'] }), 'exempt-services');
+// Dates bound a rule, both ends included; outside them the next match wins.
+const DATED = [rule('every'), rule('promo', { tax_category_id: 'exempt', from_date: '2026-10-01', to_date: '2026-10-31' })];
+assert.equal(pick(DATED, { taxCategoryId: 'exempt', date: '2026-10-31' }), 'promo');
+assert.equal(pick(DATED, { taxCategoryId: 'exempt', date: '2026-11-01' }), 'every');
+// Equal conditions: priority 1 beats 2, whichever comes first; equal priority keeps the earlier rule.
+assert.equal(pick([rule('second', { priority: 2 }), rule('first')], {}), 'first');
+assert.equal(pick([rule('older', { tax_category_id: 'a' }), rule('newer', { item_group_id: 'g' })], { taxCategoryId: 'a', itemGroupIds: ['g'] }), 'older');
+// A winning rule whose template is disabled picks nothing — ERPNext's get_tax_template.
+assert.equal(pick(RULES, {}, new Set(['t-every'])), null);
 
 console.log('check:logic — all assertions passed.');

@@ -4,6 +4,7 @@ import type { Control } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { Field, FieldGrid } from '../../components/form-fields';
+import { SampleBox, SampleLine } from '../../components/sample-box';
 import { SearchSelect } from '../../components/search-select';
 import { Text } from '../../components/text';
 import { TextInput } from '../../components/text-input';
@@ -22,7 +23,7 @@ import { useSystemSettingsQuery } from '../../features/system-settings/queries';
 import { asRoundingMethod, cashRound, formatMoney, roundTo } from '../../lib/money';
 import type { RoundingMethod } from '../../lib/money';
 import { useAppTheme } from '../../lib/theme';
-import { radius, spacing } from '../../themes';
+import { spacing } from '../../themes';
 
 /**
  * The template's unsaved rows applied to one sample item line — price, quantity, and an Item Tax Template —
@@ -107,56 +108,34 @@ type TotalsProps = {
 
 /** Net total, each row's Amount and the running Total after it (ERPNext's two columns), the grand and rounded totals. */
 function Totals({ rows, sample, currency, precision, method, rounded }: TotalsProps) {
-  const { colors } = useAppTheme();
   const parsed = taxRowsSchema.safeParse(rows);
   const amount = (value: number) => formatMoney(value, currency, precision, method);
 
   if (!parsed.success) {
     return (
-      <View style={[styles.sample, { borderColor: colors.outlineVariant }]}>
+      <SampleBox>
         <Text variant="bodyMedium">Fix the rows above to see the preview.</Text>
-      </View>
+      </SampleBox>
     );
   }
 
   const result = calculateTaxes([sample], parsed.data.map(taxRow), precision, (value, places) => roundTo(value, places, method));
 
   return (
-    <View style={[styles.sample, { borderColor: colors.outlineVariant }]}>
-      {parsed.data.some((row) => row.included_in_print_rate) ? <Line label="Net Rate" value={amount(result.items[0].netRate)} /> : null}
-      <Line label="Net Total" value={amount(result.netTotal)} />
+    <SampleBox>
+      {parsed.data.some((row) => row.included_in_print_rate) ? <SampleLine label="Net Rate" value={amount(result.items[0].netRate)} /> : null}
+      <SampleLine label="Net Total" value={amount(result.netTotal)} />
       {parsed.data.map((row, i) => (
-        <Line key={`${i}:${row.description}`} label={`${i + 1}. ${row.description}`} value={amount(result.rows[i].amount)} sub={`Total ${amount(result.rows[i].total)}`} />
+        <SampleLine key={`${i}:${row.description}`} label={`${i + 1}. ${row.description}`} value={amount(result.rows[i].amount)} sub={`Total ${amount(result.rows[i].total)}`} />
       ))}
-      <Line label="Total Taxes and Charges" value={amount(result.totalTaxes)} />
-      <Line label="Grand Total" value={amount(result.grandTotal)} />
-      {rounded ? <Line label="Rounded Total" value={amount(cashRound(result.grandTotal, currency.smallest_currency_fraction_value, precision, method))} /> : null}
-    </View>
-  );
-}
-
-function Line({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  const { colors } = useAppTheme();
-
-  return (
-    <View style={styles.line}>
-      <View style={styles.fill}>
-        <Text variant="bodyMedium">{label}</Text>
-        {sub ? (
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-            {sub}
-          </Text>
-        ) : null}
-      </View>
-      <Text variant="amount">{value}</Text>
-    </View>
+      <SampleLine label="Total Taxes and Charges" value={amount(result.totalTaxes)} />
+      <SampleLine label="Grand Total" value={amount(result.grandTotal)} />
+      {rounded ? <SampleLine label="Rounded Total" value={amount(cashRound(result.grandTotal, currency.smallest_currency_fraction_value, precision, method))} /> : null}
+    </SampleBox>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
   section: { gap: spacing.ms, paddingTop: spacing.sm },
   heading: { gap: spacing.xs },
-  sample: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', padding: spacing.ms, gap: spacing.xs },
-  line: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
 });

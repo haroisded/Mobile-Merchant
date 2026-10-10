@@ -59,7 +59,7 @@ const defaults = (existing: Brand | undefined): BrandValues => ({
 const saveFailure = (error: Error | null) => {
   const cause = postgrestError(error);
   if (cause?.code === '23505') return 'There is already a brand with this name.';
-  if (cause?.message === 'brand_default_invalid') return "One of the defaults can't be used any more — pick it again.";
+  if (cause?.message === 'default_invalid') return "One of the defaults can't be used any more — pick it again.";
   return failureMessage("Couldn't save this brand. Try again.");
 };
 

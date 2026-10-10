@@ -36,6 +36,26 @@ export function postgrestError(cause: Error | null): PostgrestError | null {
   return cause instanceof PostgrestError ? cause : null;
 }
 
+// A delete refused because a record of these still names the one deleted. Keyed by the referencing table,
+// which Postgres names last in a 23503: `… violates foreign key constraint "…" on table "stock_settings"`.
+const USED_BY = new Map([
+  ['item_groups', "It's an item group's default. Clear it on the item group first."],
+  ['item_group_taxes', "It's in an item group's Item Tax rows. Remove that row first."],
+  ['tax_rules', 'A tax rule uses it. Change or delete that rule first.'],
+  ['selling_settings', "It's the Default Price List in Selling Settings. Pick another there first."],
+  ['stock_settings', "It's a default in Stock Settings. Pick another there first."],
+]);
+
+/**
+ * The words for a delete refused by one of the settings, item groups or tax rules naming the record — null
+ * for any other refusal, so each screen keeps its own copy for the references it already had.
+ */
+export function usedElsewhere(cause: Error | null): string | null {
+  const error = postgrestError(cause);
+  if (error?.code !== '23503') return null;
+  return USED_BY.get(/on table "(\w+)"$/.exec(error.message)?.[1] ?? '') ?? null;
+}
+
 /** The line under a form or confirm: an offline wait, or what went wrong. */
 export type Notice = { type: 'error' | 'info'; text: string };
 

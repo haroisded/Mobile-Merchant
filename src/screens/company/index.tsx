@@ -11,7 +11,7 @@ import { NoteCallout } from '../../components/note-callout';
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
 import { ControlledSelect } from '../../components/search-select';
-import { Text } from '../../components/text';
+import { SectionHeading } from '../../components/section-heading';
 import { ledgerOptions, useAccountsQuery } from '../../features/accounts/queries';
 import type { Account } from '../../features/accounts/queries';
 import { costCenterOptions, useCostCentersQuery } from '../../features/cost-centers/queries';
@@ -26,7 +26,6 @@ import { companyFormSchema } from '../../features/merchants/schema';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import type { CompanyFormValues } from '../../features/merchants/schema';
 import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
-import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
 
 type Props = { merchant: Merchant };
@@ -224,22 +223,7 @@ function CompanyForm({ merchant, countries, currencies, accounts, costCenters }:
   );
 }
 
-/** A section heading inside the form: headlineSmall and its bodySmall hint (.claude/instruction_mds/frontend.md §5). */
-function SectionHeading({ title, hint }: { title: string; hint: string }) {
-  const { colors } = useAppTheme();
-
-  return (
-    <View style={styles.heading}>
-      <Text variant="headlineSmall">{title}</Text>
-      <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-        {hint}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
-  heading: { gap: spacing.xs, paddingTop: spacing.md },
 });

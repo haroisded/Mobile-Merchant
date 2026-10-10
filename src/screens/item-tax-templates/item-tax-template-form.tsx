@@ -17,7 +17,7 @@ import type { ItemTaxTemplateValues } from '../../features/item-tax-templates/sc
 import { useMerchantsQuery } from '../../features/merchants/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Props = { merchantId: string; templateId?: string; onDismiss: () => void };
 
@@ -77,7 +77,8 @@ function Form({ merchantId, abbr, accounts, existing, onDismiss }: FormProps) {
       body: 'Items and item groups that use it go back to the sale template’s own rates. Disable it instead to keep it for later.',
       confirmLabel: 'Delete',
       run: () => remove.mutateAsync(template.id),
-      failure: () => failureMessage("Couldn't delete this item tax template. Try again."),
+      // An item group's Item Tax row may name it.
+      failure: (cause) => usedElsewhere(cause) ?? failureMessage("Couldn't delete this item tax template. Try again."),
       onDone: closesForm(wide, onDismiss),
     });
 

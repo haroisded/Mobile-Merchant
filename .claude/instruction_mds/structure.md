@@ -48,6 +48,8 @@ src/
     tax-categories/  item-tax-templates/                  queries.ts  schema.ts
     sales-tax-templates/  queries.ts  schema.ts  calculate.ts — ERPNext's taxes_and_totals, import-free
     warehouses/  uoms/  uom-conversion-factors/  price-lists/  brands/    queries.ts  schema.ts
+    item-groups/  selling-settings/  stock-settings/      queries.ts  schema.ts
+    tax-rules/            queries.ts  schema.ts  resolve.ts — the rule a sale takes, import-free
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
@@ -64,12 +66,15 @@ src/
     tax-categories/  item-tax-templates/                  index.tsx  <name>-form.tsx
     sales-tax-templates/  index.tsx  template-form.tsx (a Setup-stack page)  tax-preview.tsx
     warehouses/  uoms/  uom-conversion-factors/  price-lists/  brands/    index.tsx  <name>-form.tsx
+    item-groups/          index.tsx  item-group-form.tsx (a Setup-stack page)
+    tax-rules/            index.tsx  tax-rule-form.tsx  tax-rule-check.tsx  records.ts
+    selling-settings/  stock-settings/                    index.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  …
 ```
 
-That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6 and 8 of the POS foundation (2026-10-10). A new resource of
+That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7 and 10 of the POS foundation (2026-10-10). A new resource of
 the rebuild (an ERPNext doctype such as `items/`) is a sibling of `fiscal-years/`; its screens are
 siblings of `company/`.
 

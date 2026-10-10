@@ -14,7 +14,7 @@ import { priceListSchema } from '../../features/price-lists/schema';
 import type { PriceListValues } from '../../features/price-lists/schema';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Props = { merchantId: string; priceListId?: string; onDismiss: () => void };
 
@@ -40,10 +40,12 @@ const defaults = (existing: PriceList | undefined, baseCurrency: string): PriceL
 const saveFailure = (error: Error | null) =>
   postgrestError(error)?.code === '23505' ? 'There is already a price list with this name.' : failureMessage("Couldn't save this price list. Try again.");
 
+// Selling Settings' or an item group's default, else a brand's (brands_price_list_fk).
 const deleteFailure = (error: Error | null) =>
-  postgrestError(error)?.code === '23503'
+  usedElsewhere(error) ??
+  (postgrestError(error)?.code === '23503'
     ? "It's a brand's default price list. Clear it on the brand first, or disable this one."
-    : failureMessage("Couldn't delete this price list. Try again.");
+    : failureMessage("Couldn't delete this price list. Try again."));
 
 type FormProps = { merchantId: string; baseCurrency: string; currencies: Currency[]; existing: PriceList | undefined; onDismiss: () => void };
 

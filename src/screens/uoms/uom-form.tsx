@@ -10,7 +10,7 @@ import type { Uom } from '../../features/uoms/queries';
 import { uomSchema } from '../../features/uoms/schema';
 import type { UomValues } from '../../features/uoms/schema';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Props = { merchantId: string; uomId?: string; onDismiss: () => void };
 
@@ -33,10 +33,12 @@ const defaults = (existing: Uom | undefined): UomValues => ({
 const saveFailure = (error: Error | null) =>
   postgrestError(error)?.code === '23505' ? 'There is already a unit with this name.' : failureMessage("Couldn't save this unit. Try again.");
 
+// Stock Settings' default unit, else a conversion (uom_conversion_factors_from_fk / _to_fk).
 const deleteFailure = (error: Error | null) =>
-  postgrestError(error)?.code === '23503'
+  usedElsewhere(error) ??
+  (postgrestError(error)?.code === '23503'
     ? 'A conversion uses this unit. Delete that conversion first, or disable the unit.'
-    : failureMessage("Couldn't delete this unit. Try again.");
+    : failureMessage("Couldn't delete this unit. Try again."));
 
 function Form({ merchantId, existing, onDismiss }: { merchantId: string; existing: Uom | undefined; onDismiss: () => void }) {
   const wide = useShellWide();

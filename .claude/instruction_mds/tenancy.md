@@ -34,8 +34,9 @@ them; do not rebuild them.
     `companies` table (rule 5). The records a new company starts with are made by one `after insert
     on merchants` trigger per step, `merchants_seed_NN_<area>` — Postgres fires same-event triggers in
     name order, so a later step's seed can read an earlier one's rows (10 company, 20 access,
-    30 defaults, 40 accounting, 50 accounting defaults, 60 payments, 70 taxes, 80 stock). Each step's migration
-    also backfills the merchants that exist.
+    30 defaults, 40 accounting, 50 accounting defaults, 60 payments, 70 taxes, 80 stock, 90 selling,
+    92 stock settings — two digits always: "100" would sort before "20"). Each step's migration also
+    backfills the merchants that exist.
 11. The UI hides what a person may not do — `usePermissions` + `can()` — but never decides it. The
     policies are the boundary; a hidden button is a courtesy.
 

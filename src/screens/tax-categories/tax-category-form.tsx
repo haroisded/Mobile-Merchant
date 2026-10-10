@@ -10,7 +10,7 @@ import type { TaxCategory } from '../../features/tax-categories/queries';
 import { taxCategorySchema } from '../../features/tax-categories/schema';
 import type { TaxCategoryValues } from '../../features/tax-categories/schema';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Props = { merchantId: string; categoryId?: string; onDismiss: () => void };
 
@@ -27,11 +27,12 @@ export function TaxCategoryForm({ merchantId, categoryId, onDismiss }: Props) {
 const saveFailure = (error: Error | null) =>
   postgrestError(error)?.code === '23505' ? 'There is already a tax category with this title.' : failureMessage("Couldn't save this tax category. Try again.");
 
-// A template still naming it (sales_tax_templates_category_fk).
+// A tax rule or an item group's Item Tax row still naming it, else a template (sales_tax_templates_category_fk).
 const deleteFailure = (error: Error | null) =>
-  postgrestError(error)?.code === '23503'
+  usedElsewhere(error) ??
+  (postgrestError(error)?.code === '23503'
     ? "It's in use by a Sales Taxes and Charges Template. Disable it instead."
-    : failureMessage("Couldn't delete this tax category. Try again.");
+    : failureMessage("Couldn't delete this tax category. Try again."));
 
 function Form({ merchantId, existing, onDismiss }: { merchantId: string; existing: TaxCategory | undefined; onDismiss: () => void }) {
   const wide = useShellWide();

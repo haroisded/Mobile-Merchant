@@ -2,7 +2,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
-import { failureMessage, postgrestError } from '../lib/errors';
+import { failureMessage, postgrestError, usedElsewhere } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { childrenOf, pathTo, subtree } from '../lib/tree';
 import type { PickOption } from '../Store/picker';
@@ -12,16 +12,21 @@ import { Icon } from './icon';
 import { QueryState } from './query-state';
 import { Text } from './text';
 
-// The tree masters as folders — Chart of Accounts, Cost Centers and Warehouses
+// The tree masters as folders — Chart of Accounts, Cost Centers, Warehouses and Item Groups
 // (docs.frappe.io/erpnext/chart-of-accounts). A group is a folder, a ledger a row.
 //
 // The open folder is the list route's `parent` param, and opening one pushes the same route a level deeper,
 // so Android's back button climbs one folder. Rejected: the path in useState — Back from three folders deep
 // would leave the screen.
 
-type TreeRoute = '/systems/[id]/setup/chart-of-accounts' | '/systems/[id]/setup/cost-centers' | '/systems/[id]/setup/warehouses';
+type TreeRoute =
+  | '/systems/[id]/setup/chart-of-accounts'
+  | '/systems/[id]/setup/cost-centers'
+  | '/systems/[id]/setup/warehouses'
+  | '/systems/[id]/setup/item-groups';
 
-type TreeNode = { id: string; parent_id: string | null; is_group: boolean; disabled: boolean };
+// `disabled` is optional: an Item Group has no such flag in ERPNext.
+type TreeNode = { id: string; parent_id: string | null; is_group: boolean; disabled?: boolean };
 
 /** The open folder's id — undefined at the top — and a push into one of its folders. */
 export function useFolder(pathname: TreeRoute, merchantId: string) {
@@ -168,14 +173,18 @@ const TREE_FAILURES = new Map([
   ['root_type_locked', 'This group has accounts under it, so it cannot move under another root type.'],
   ['root_locked', "The company's cost center stays as long as the company."],
   ['warehouse_account_invalid', 'That account is no longer an enabled Stock ledger — pick it again.'],
+  ['default_invalid', "One of the defaults can't be used any more — pick it again."],
 ]);
 
 export function treeFailure(error: Error | null, fallback: string) {
   const cause = postgrestError(error);
   if (cause?.message.includes('accounts_type_fits_root')) return "That account type doesn't belong under the parent's root type.";
   // A 23503 from anything but the tree's own parent key: something else still names it — said by the
-  // constraint that refused, a warehouse's or a brand's when it is theirs.
-  if (cause?.code === '23503' && !/accounts_parent_fk|cost_centers_parent_fk|warehouses_parent_fk/.test(cause.message)) {
+  // constraint that refused, a warehouse's or a brand's when it is theirs. (Not usedElsewhere first: an item
+  // group's parent key is on item_groups too.)
+  if (cause?.code === '23503' && !/accounts_parent_fk|cost_centers_parent_fk|warehouses_parent_fk|item_groups_parent_fk/.test(cause.message)) {
+    const elsewhere = usedElsewhere(error);
+    if (elsewhere) return elsewhere;
     if (cause.message.includes('warehouses_account_fk')) return 'A warehouse posts its stock to it. Give that warehouse another account first, or disable this one.';
     if (cause.message.includes('brands_')) return "It's a brand's default. Clear it on the brand first, or disable this one.";
     return "It's in use — as a company default, a mode of payment's account or in a tax template. Disable it instead.";

@@ -1,6 +1,7 @@
 import { accountLabel, useAccountsQuery } from '../../features/accounts/queries';
 import { costCenterLabel, useCostCentersQuery } from '../../features/cost-centers/queries';
 import { useFiscalYearsQuery } from '../../features/fiscal-years/queries';
+import { useItemGroupsQuery } from '../../features/item-groups/queries';
 import { useMerchantsQuery } from '../../features/merchants/queries';
 import { useWarehousesQuery, warehouseLabel } from '../../features/warehouses/queries';
 import type { PickOption } from '../../Store/picker';
@@ -15,6 +16,7 @@ export function useRestrictableRecords({ merchantId }: { merchantId: string }) {
   const accounts = useAccountsQuery({ merchantId });
   const costCenters = useCostCentersQuery({ merchantId });
   const warehouses = useWarehousesQuery({ merchantId });
+  const itemGroups = useItemGroupsQuery({ merchantId });
   const abbr = useMerchantsQuery().data?.find((merchant) => merchant.id === merchantId)?.abbr ?? '';
 
   // Keyed by doctype name, as public.doctypes names them.
@@ -23,6 +25,7 @@ export function useRestrictableRecords({ merchantId }: { merchantId: string }) {
     ['Account', (accounts.data ?? []).map((account) => ({ value: account.id, label: accountLabel(account, abbr), hint: account.root_type }))],
     ['Cost Center', (costCenters.data ?? []).map((costCenter) => ({ value: costCenter.id, label: costCenterLabel(costCenter, abbr) }))],
     ['Warehouse', (warehouses.data ?? []).map((warehouse) => ({ value: warehouse.id, label: warehouseLabel(warehouse, abbr) }))],
+    ['Item Group', (itemGroups.data ?? []).map((group) => ({ value: group.id, label: group.item_group_name }))],
   ]);
 
   const names = new Map([...options.values()].flatMap((list) => list.map((option) => [option.value, option.label] as const)));

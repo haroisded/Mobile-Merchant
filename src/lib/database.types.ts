@@ -468,6 +468,163 @@ export type Database = {
           },
         ]
       }
+      item_group_taxes: {
+        Row: {
+          id: string
+          idx: number
+          item_group_id: string
+          item_tax_template_id: string
+          maximum_net_rate: number
+          merchant_id: string
+          minimum_net_rate: number
+          tax_category_id: string | null
+          valid_from: string | null
+        }
+        Insert: {
+          id?: string
+          idx: number
+          item_group_id: string
+          item_tax_template_id: string
+          maximum_net_rate?: number
+          merchant_id: string
+          minimum_net_rate?: number
+          tax_category_id?: string | null
+          valid_from?: string | null
+        }
+        Update: {
+          id?: string
+          idx?: number
+          item_group_id?: string
+          item_tax_template_id?: string
+          maximum_net_rate?: number
+          merchant_id?: string
+          minimum_net_rate?: number
+          tax_category_id?: string | null
+          valid_from?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_group_taxes_category_fk"
+            columns: ["tax_category_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "tax_categories"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_group_taxes_group_fk"
+            columns: ["item_group_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_group_taxes_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_group_taxes_template_fk"
+            columns: ["item_tax_template_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      item_groups: {
+        Row: {
+          created_at: string
+          default_price_list: string | null
+          default_warehouse: string | null
+          expense_account: string | null
+          id: string
+          income_account: string | null
+          is_group: boolean
+          item_group_name: string
+          merchant_id: string
+          parent_id: string | null
+          selling_cost_center: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_price_list?: string | null
+          default_warehouse?: string | null
+          expense_account?: string | null
+          id?: string
+          income_account?: string | null
+          is_group?: boolean
+          item_group_name: string
+          merchant_id: string
+          parent_id?: string | null
+          selling_cost_center?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_price_list?: string | null
+          default_warehouse?: string | null
+          expense_account?: string | null
+          id?: string
+          income_account?: string | null
+          is_group?: boolean
+          item_group_name?: string
+          merchant_id?: string
+          parent_id?: string | null
+          selling_cost_center?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_groups_cost_center_fk"
+            columns: ["selling_cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_groups_expense_account_fk"
+            columns: ["expense_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_groups_income_account_fk"
+            columns: ["income_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_groups_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_groups_parent_fk"
+            columns: ["parent_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_groups_price_list_fk"
+            columns: ["default_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_groups_warehouse_fk"
+            columns: ["default_warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       item_tax_template_rows: {
         Row: {
           account: string
@@ -1179,6 +1336,45 @@ export type Database = {
           },
         ]
       }
+      selling_settings: {
+        Row: {
+          default_price_list: string | null
+          editable_price_list_rate: boolean
+          fallback_to_default_price_list: boolean
+          merchant_id: string
+          validate_selling_price: boolean
+        }
+        Insert: {
+          default_price_list?: string | null
+          editable_price_list_rate?: boolean
+          fallback_to_default_price_list?: boolean
+          merchant_id: string
+          validate_selling_price?: boolean
+        }
+        Update: {
+          default_price_list?: string | null
+          editable_price_list_rate?: boolean
+          fallback_to_default_price_list?: boolean
+          merchant_id?: string
+          validate_selling_price?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "selling_settings_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: true
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "selling_settings_price_list_fk"
+            columns: ["default_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       standard_role_permissions: {
         Row: {
           can_create: boolean
@@ -1214,6 +1410,68 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "doctypes"
             referencedColumns: ["name"]
+          },
+        ]
+      }
+      stock_settings: {
+        Row: {
+          allow_negative_stock: boolean
+          auto_insert_price_list_rate_if_missing: boolean
+          default_warehouse: string | null
+          item_group: string | null
+          item_naming_by: string
+          merchant_id: string
+          stock_uom: string | null
+          valuation_method: string
+        }
+        Insert: {
+          allow_negative_stock?: boolean
+          auto_insert_price_list_rate_if_missing?: boolean
+          default_warehouse?: string | null
+          item_group?: string | null
+          item_naming_by?: string
+          merchant_id: string
+          stock_uom?: string | null
+          valuation_method?: string
+        }
+        Update: {
+          allow_negative_stock?: boolean
+          auto_insert_price_list_rate_if_missing?: boolean
+          default_warehouse?: string | null
+          item_group?: string | null
+          item_naming_by?: string
+          merchant_id?: string
+          stock_uom?: string | null
+          valuation_method?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_settings_item_group_fk"
+            columns: ["item_group", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_settings_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: true
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_settings_uom_fk"
+            columns: ["stock_uom", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_settings_warehouse_fk"
+            columns: ["default_warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
           },
         ]
       }
@@ -1313,6 +1571,71 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "countries"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      tax_rules: {
+        Row: {
+          created_at: string
+          from_date: string | null
+          id: string
+          item_group_id: string | null
+          merchant_id: string
+          priority: number
+          sales_tax_template_id: string
+          tax_category_id: string | null
+          to_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_date?: string | null
+          id?: string
+          item_group_id?: string | null
+          merchant_id: string
+          priority?: number
+          sales_tax_template_id: string
+          tax_category_id?: string | null
+          to_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_date?: string | null
+          id?: string
+          item_group_id?: string | null
+          merchant_id?: string
+          priority?: number
+          sales_tax_template_id?: string
+          tax_category_id?: string | null
+          to_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rules_category_fk"
+            columns: ["tax_category_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "tax_categories"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "tax_rules_item_group_fk"
+            columns: ["item_group_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "tax_rules_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_rules_template_fk"
+            columns: ["sales_tax_template_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "sales_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
           },
         ]
       }
@@ -1523,6 +1846,7 @@ export type Database = {
     Functions: {
       delete_current_user: { Args: never; Returns: undefined }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
+      save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }
       save_role_permissions: {
