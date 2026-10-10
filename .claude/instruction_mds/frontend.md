@@ -81,7 +81,7 @@ Doc names keys and purposes. Code holds values. Differ → code wins, fix doc sa
 | --- | --- |
 | Colour keys, type scale, `roundness`, `spacing`, `radius` | `src/themes.js` |
 | `useAppTheme()` — typed Merchant colour keys | `src/lib/theme.ts` |
-| `WIDE_MIN`, rail / drawer / pane widths, `useColumns`, `ShellWideContext`, `useShellWide()` | `src/lib/columns.ts` |
+| `WIDE_MIN`, rail / drawer / pane widths, the sample receipt's widths, `useColumns`, `ShellWideContext`, `useShellWide()` | `src/lib/columns.ts` |
 | `ICONS` map, `renderIcon` | `src/lib/icons.tsx` |
 | Paper re-exports, `Text` wrapper, shared compositions | `src/components/` |
 
@@ -276,8 +276,8 @@ rail is narrower than the window.
 | Multi-step flow ending in a review | stepper, Review as the last step | stepper left, Review sidebar right |
 | Systems list | Create button + row cards | grid, Create System card first |
 
-Same at both widths: long forms and create-system (full page), a record with child rows (a page of the
-Setup stack), multi-step flows (full-screen route).
+Same at both widths: long forms and create-system (full page), a record with child rows or a sample under
+its fields (a page of the Setup stack), multi-step flows (full-screen route).
 
 Rejected for the small forms on a tablet (2026-10-04, the human's call): a full page — a 560dp
 column on a 1180dp window, and centring it is §9's banned centred column; inline Dialog mounts in each
@@ -372,6 +372,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Section list (wide) / stepper (narrow) | `src/components/section-stepper.tsx`†, `step-header.tsx`†. Optional step: "· Optional" + text `Button` "Skip tier" |
 | Field label | `labelMedium` above control. Required: label ends ` (required)`. Optional: no marker. Hint `bodySmall` right |
 | Text field | outlined dense `TextInput`, no floating `label`. `left` / `right` affixes for currency + units |
+| Multi-line text field (a letter head, a footer note, the naming series one per line) | `ControlledText` with `multiline`: the same outlined field, growing with its lines. A list typed one per line reports a mistake by its line ("Line 2 repeats …") |
 | Select | `src/components/menu-select.tsx`†: non-editable outlined `TextInput` anchoring `Menu` |
 | Searchable select (a list too long for a `Menu`: countries, currencies) | `src/components/search-select.tsx`: the Select shape + `chevron-down`, opening a picker with a Search box. Narrow: `src/app/(app)/sheets/pick.tsx` — options and callback handed over in `src/Store/picker.ts`, since a route takes neither as a param. Wide: `AdaptiveDialog` |
 | Field grid | `src/components/form-fields.tsx`: `FieldGrid` + `Field`, and `ControlledText` / `ControlledSwitch` / `ControlledDate` / `ControlledChecklist` bound to a react-hook-form `control`; each takes `disabled` for a read-only form and shows its field's error under it (a switch too: "A disabled template cannot be the default"). `ControlledText` takes `keyboardType` (`decimal-pad` for a rate or amount). `ControlledSelect` (`search-select.tsx`) binds a searchable select |
@@ -386,12 +387,13 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Repeatable rows | `src/components/repeatable-rows.tsx` over react-hook-form `useFieldArray`: a 1px `outlineVariant` box per row, `labelMedium` "Row n" + remove `IconButton` (`close`), the row's own `FieldGrid`; then `AddRowButton`, the `accent` text `Button` "+ Add …". A row shows only the fields its type uses (a tax row's Tax Amount for Actual, Reference Row # for the previous-row types) |
 | Record form with child rows (Sales Taxes and Charges Template, Item Group) | a page of the Setup stack at every width, not a `forms/` Dialog: `PageHeader` with the red Delete in its actions, then `PageForm` — fields, a form section heading, the repeatable rows, a preview. Save stays live on a record not yet saved, so it names what is missing. Its confirmed delete pops the page through its own `useNavigation()` and, on a phone, the confirm's sheet of the outer stack with `router.back()`. Rejected: `router.dismissTo` the list — from the sheet, React Navigation 7's nested navigate pushed a second list over the deleted page (device run, 2026-10-09) |
 | Calculation preview (the tax template's) | a form section heading, sample inputs held in local state (not the form's), then `src/components/sample-box.tsx` (`SampleBox`, `SampleLine`), the Currency page's sample box: `bodyMedium` label left, `amount` value right, a `bodySmall` running total under a row. "Fix the rows above …" while the rows do not parse. Stock Settings' FIFO / Moving Average example is the same box, static, the chosen method first |
+| Sample receipt (Print Format) | `src/screens/print-formats/receipt-sample.tsx`, under a form section heading on the format's Setup-stack page: a 1px `outlineVariant` box drawn from the unsaved values, left-aligned — `bodyMedium` lines, `titleMedium` heading, 1px rules, `SampleLine` totals, `bodySmall` words; `maxWidth` from the paper (`RECEIPT_58MM` / `RECEIPT_80MM` through `fontScaled`, A4 the form's measure). A `bodySmall` muted line under the box says why something is missing (no default letter head, no readable tax rows) |
 | Read-only check (Tax Rules' Which Template?) | a `forms/` small form, page narrow and Dialog wide, whose inputs are a local `useForm` that is never saved; the answer in a 1px `outlineVariant` box — `titleMedium` result, `bodySmall` why — and one outlined Close |
 | Settings in conflict (Selling Settings' fallback with Stock Settings' auto insert) | a note callout in `error` at the top of each settings page involved, while both are on: the page's own switch read live, the other page's saved value |
 | Weekly hours | seven rows, 1px `surfaceVariant` between: `Switch`, `titleMedium` day, time fields. Closed in `onSurfaceFaint` |
 | Variant matrix row | one 1px `outlineVariant` box per combination: `labelLarge` label, SKU, barcode, price difference, quantity |
 | Note callout | `src/components/note-callout.tsx`: 3px left border `accent` or `error`, `surfaceMuted`, `bodySmall` |
-| Full-page form (Company, the Settings singles, Role Permissions) | `PageForm` (`src/components/form-footer.tsx`): fields scroll at the single-column measure, the footer — the write's notice, then Save — pinned bottom, padded above the gesture bar. Read-only (no write permission): a note callout, disabled fields, no footer |
+| Full-page form (Company, the Settings singles, Role Permissions) | `PageForm` (`src/components/form-footer.tsx`): fields scroll at the single-column measure, the footer — the write's notice, then Save — pinned bottom, padded above the gesture bar. Its keyboard: `KeyboardAvoidingView` around both, since the edge-to-edge Android window does not resize — the last field and Save stay above it. Read-only (no write permission): a note callout, disabled fields, no footer |
 | Small form's buttons | `FormActions` (`src/components/adaptive-dialog.tsx`): Delete in `error`, an extra action, Cancel, Save; no Save means read-only and Cancel reads Close. Submit through `saveOnce` |
 | Line under buttons | `mutationNotice(...)` (`src/lib/errors.ts`) |
 

@@ -50,6 +50,10 @@ src/
     warehouses/  uoms/  uom-conversion-factors/  price-lists/  brands/    queries.ts  schema.ts
     item-groups/  selling-settings/  stock-settings/      queries.ts  schema.ts
     tax-rules/            queries.ts  schema.ts  resolve.ts — the rule a sale takes, import-free
+    naming-series/        queries.ts  schema.ts — the series and Update Series; the parser is the database's
+    print-formats/        queries.ts  schema.ts  receipt.ts — what a receipt prints, import-free
+    letter-heads/         queries.ts  schema.ts
+    print-settings/       queries.ts
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
@@ -69,12 +73,16 @@ src/
     item-groups/          index.tsx  item-group-form.tsx (a Setup-stack page)
     tax-rules/            index.tsx  tax-rule-form.tsx  tax-rule-check.tsx  records.ts
     selling-settings/  stock-settings/                    index.tsx
+    document-naming-settings/   index.tsx  naming-series-form.tsx  series-counter-form.tsx
+    print-formats/        index.tsx  print-format-form.tsx (a Setup-stack page)  receipt-sample.tsx
+    letter-heads/         index.tsx  letter-head-form.tsx
+    print-settings/       index.tsx
     profile/
     sign-in/
   components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  …
 ```
 
-That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7 and 10 of the POS foundation (2026-10-10). A new resource of
+That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
 the rebuild (an ERPNext doctype such as `items/`) is a sibling of `fiscal-years/`; its screens are
 siblings of `company/`.
 

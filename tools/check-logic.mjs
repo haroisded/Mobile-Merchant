@@ -4,6 +4,7 @@
 // (.claude/instruction_mds/testing-workflow.md), and this file covers only what arithmetic can settle.
 import assert from 'node:assert/strict';
 
+import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
 import { fullYearEnd, yearName } from '../src/lib/dates.ts';
@@ -140,5 +141,18 @@ assert.equal(pick([rule('second', { priority: 2 }), rule('first')], {}), 'first'
 assert.equal(pick([rule('older', { tax_category_id: 'a' }), rule('newer', { item_group_id: 'g' })], { taxCategoryId: 'a', itemGroupIds: ['g'] }), 'older');
 // A winning rule whose template is disabled picks nothing — ERPNext's get_tax_template.
 assert.equal(pick(RULES, {}, new Set(['t-every'])), null);
+
+// src/features/print-formats/receipt.ts — what a receipt prints (docs.frappe.io/erpnext/print-settings §2.2,
+// §2.7): Compact Item Print's four columns, a hidden item code, and taxes of zero.
+const SOLD = { code: 'ITEM-001', name: 'Notebook', uom: 'Nos', qty: '2', rate: '120.00', amount: '240.00' };
+const labels = (options) => itemColumns(SOLD, options).map((column) => column.label);
+assert.deepEqual(labels({ compact: true, showItemCode: true }), ['Description', 'Qty', 'Rate', 'Amount']);
+assert.deepEqual(itemColumns(SOLD, { compact: true, showItemCode: true }).slice(0, 2).map((column) => column.value), ['ITEM-001 Notebook', '2 Nos']);
+assert.equal(itemColumns(SOLD, { compact: true, showItemCode: false })[0].value, 'Notebook');
+assert.deepEqual(labels({ compact: false, showItemCode: true }), ['Item Code', 'Item Name', 'UOM', 'Qty', 'Rate', 'Amount']);
+assert.deepEqual(labels({ compact: false, showItemCode: false }), ['Item Name', 'UOM', 'Qty', 'Rate', 'Amount']);
+const PRINTED = [{ description: 'VAT @ 12', amount: 34.38 }, { description: 'Service Charge', amount: 0 }];
+assert.deepEqual(printedTaxes(PRINTED, false).map((row) => row.description), ['VAT @ 12']);
+assert.deepEqual(printedTaxes(PRINTED, true).map((row) => row.description), ['VAT @ 12', 'Service Charge']);
 
 console.log('check:logic — all assertions passed.');

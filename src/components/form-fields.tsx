@@ -210,6 +210,7 @@ export function ControlledText<T extends FieldValues>({
   maxLength,
   autoCapitalize,
   keyboardType,
+  multiline,
   disabled,
   ...field
 }: ControlledProps<T, string> & {
@@ -218,6 +219,8 @@ export function ControlledText<T extends FieldValues>({
   autoCapitalize?: TextInputProps['autoCapitalize'];
   /** decimal-pad for a rate or an amount. */
   keyboardType?: TextInputProps['keyboardType'];
+  /** Several lines, the box growing with them: a letter head, the series one per line. */
+  multiline?: boolean;
 }) {
   const { field: input, fieldState } = useController({ control, name });
 
@@ -235,6 +238,7 @@ export function ControlledText<T extends FieldValues>({
         maxLength={maxLength}
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
+        multiline={multiline}
         disabled={disabled}
         error={!!fieldState.error}
         accessibilityLabel={field.label}

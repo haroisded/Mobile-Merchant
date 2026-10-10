@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useShellWide } from '../lib/columns';
@@ -48,12 +48,16 @@ type PageFormProps = {
 /**
  * A full-page form — the Company and the Settings singles: its fields scroll above FormFooter's Save. Held
  * to the single-column measure, left-aligned (.claude/instruction_mds/frontend.md rule 18, §9).
+ *
+ * KeyboardAvoidingView: the Android build is edge-to-edge, so the window does not resize for the keyboard
+ * (adaptive-dialog.tsx), and React Native only reports the keyboard (ReactRootView.java) — nothing makes
+ * room for it. Without it the keyboard lies over the end of the fields and over Save.
  */
 export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, children }: PageFormProps) {
   const wide = useShellWide();
 
   return (
-    <>
+    <KeyboardAvoidingView behavior="padding" style={styles.fill}>
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {editable ? null : <NoteCallout>{`You can see this page. ${readOnly}`}</NoteCallout>}
         {children}
@@ -73,11 +77,12 @@ export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, 
           </Button>
         </FormFooter>
       ) : null}
-    </>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   footer: { gap: spacing.sm, padding: spacing.ms, borderTopWidth: 1 },
   body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: 720 },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).

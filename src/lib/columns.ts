@@ -24,6 +24,12 @@ export const DRAWER_WIDTH = 300; // the narrow shell's off-canvas drawer
 // carries two buttons under its name, so it is wider than MIN_CARD.
 export const SYSTEM_CARD = 360;
 
+// The sample receipt's width on each roll: about 32 characters of bodyMedium on 58mm paper and 48 on 80mm.
+// A page (A4) takes the form's own measure. ponytail: tune against a printer's real line length when printing
+// lands with the POS Invoice.
+export const RECEIPT_58MM = 232;
+export const RECEIPT_80MM = 336;
+
 /**
  * The one wide/narrow decision (.claude/instruction_mds/frontend.md §4.1).
  *

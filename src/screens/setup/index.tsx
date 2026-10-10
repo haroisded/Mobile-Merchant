@@ -45,7 +45,11 @@ type Entry = {
     | 'roles'
     | 'role-profiles'
     | 'role-permissions'
-    | 'user-permissions';
+    | 'user-permissions'
+    | 'document-naming-settings'
+    | 'print-formats'
+    | 'letter-heads'
+    | 'print-settings';
 };
 
 type Section = { title: string; hint: string; entries: Entry[] };
@@ -155,6 +159,21 @@ const SECTIONS: Section[] = [
         route: 'role-permissions',
       },
       { label: 'User Permissions', hint: 'Restrict a user to particular records', doctype: 'User Permission', route: 'user-permissions' },
+    ],
+  },
+  {
+    title: 'Naming & Printing',
+    hint: 'How documents are numbered, and what a receipt looks like',
+    entries: [
+      {
+        label: 'Document Naming Settings',
+        hint: 'The series invoices and items are numbered by',
+        doctype: 'Document Naming Settings',
+        route: 'document-naming-settings',
+      },
+      { label: 'Print Formats', hint: 'The receipt: paper, heading, a sample', doctype: 'Print Format', route: 'print-formats' },
+      { label: 'Letter Heads', hint: 'The name and address at the top of a receipt', doctype: 'Letter Head', route: 'letter-heads' },
+      { label: 'Print Settings', hint: 'Letter head, compact items, zero taxes', doctype: 'Print Settings', route: 'print-settings' },
     ],
   },
 ];

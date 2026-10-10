@@ -8,6 +8,9 @@ import { AppState } from 'react-native';
 export const STALE = {
   SECONDS: { THIRTY: 30 * 1000 },
   MINUTES: { ONE: 60 * 1000, FIVE: 5 * 60 * 1000 },
+  // Stale at once, so every visit asks again. Leaving `staleTime` off a query does not do this: it takes
+  // the client's five-minute default below.
+  ALWAYS: 0,
   // Reference data a migration seeds and no client can write (countries, currency presets): it cannot
   // change while the app runs, so it is fetched once and never refetched, invalidation included.
   STATIC: 'static' as const,

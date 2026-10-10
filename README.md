@@ -45,11 +45,14 @@ together and explained inline.
   as folders (each showing the stock account its value posts to), UOMs and their conversions, Price Lists,
   Brands with their sales defaults, Item Groups as folders (their defaults and Item Tax rows) and Stock Settings
   (what a new item starts with, FIFO or Moving Average); Tax Rules choosing a sale's template by tax category,
-  item group and date, with a check of which template a sample sale gets; Selling Settings' pricing rules.
+  item group and date, with a check of which template a sample sale gets; Selling Settings' pricing rules;
+  Document Naming Settings — the series invoices and items are numbered by, and the number each is at; Print
+  Formats with a sample receipt, Letter Heads and Print Settings.
   Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main, its default
   accounts, Cash and Credit Card, its country's tax (Philippines: VAT 12%), All Warehouses → Stores, thirteen
-  units with three conversions, Standard Selling, All Item Groups → Products, Services, and Stock Settings on
-  Products, Nos, Stores and FIFO
+  units with three conversions, Standard Selling, All Item Groups → Products, Services, Stock Settings on
+  Products, Nos, Stores and FIFO, the three naming series ERPNext ships, Print Settings, a POS Receipt print
+  format and a letter head in its own name
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -158,7 +161,8 @@ and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5
 `tax_categories`, `sales_tax_templates`, `item_tax_templates` with their rows, and the read-only
 `tax_presets` the country's tax is seeded from; Step 8 `warehouses`, `uoms`, `uom_conversion_factors`,
 `price_lists` and `brands`; Step 9 `item_groups` with their `item_group_taxes`, and `selling_settings`; Step 7
-`tax_rules`; Step 10 `stock_settings`. Triggers named
+`tax_rules`; Step 10 `stock_settings`; Step 12 `naming_series` with its `naming_series_counters`, and
+`print_formats`, `letter_heads` and `print_settings`. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

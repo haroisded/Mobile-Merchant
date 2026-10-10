@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       accounts: {
@@ -709,6 +684,47 @@ export type Database = {
           },
         ]
       }
+      letter_heads: {
+        Row: {
+          content: string
+          created_at: string
+          disabled: boolean
+          footer: string
+          id: string
+          is_default: boolean
+          letter_head_name: string
+          merchant_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          disabled?: boolean
+          footer?: string
+          id?: string
+          is_default?: boolean
+          letter_head_name: string
+          merchant_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          disabled?: boolean
+          footer?: string
+          id?: string
+          is_default?: boolean
+          letter_head_name?: string
+          merchant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_heads_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_roles: {
         Row: {
           member_id: string
@@ -1003,6 +1019,61 @@ export type Database = {
           },
         ]
       }
+      naming_series: {
+        Row: {
+          document_type: string
+          merchant_id: string
+          options: string[]
+          user_must_select: boolean
+        }
+        Insert: {
+          document_type: string
+          merchant_id: string
+          options: string[]
+          user_must_select?: boolean
+        }
+        Update: {
+          document_type?: string
+          merchant_id?: string
+          options?: string[]
+          user_must_select?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "naming_series_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      naming_series_counters: {
+        Row: {
+          current_value: number
+          merchant_id: string
+          prefix: string
+        }
+        Insert: {
+          current_value?: number
+          merchant_id: string
+          prefix: string
+        }
+        Update: {
+          current_value?: number
+          merchant_id?: string
+          prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "naming_series_counters_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_lists: {
         Row: {
           created_at: string
@@ -1043,6 +1114,82 @@ export type Database = {
             foreignKeyName: "price_lists_merchant_id_fkey"
             columns: ["merchant_id"]
             isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_formats: {
+        Row: {
+          created_at: string
+          disabled: boolean
+          footer_note: string
+          id: string
+          is_default: boolean
+          merchant_id: string
+          paper: string
+          print_format_name: string
+          print_heading: string
+          show_item_code: boolean
+        }
+        Insert: {
+          created_at?: string
+          disabled?: boolean
+          footer_note?: string
+          id?: string
+          is_default?: boolean
+          merchant_id: string
+          paper?: string
+          print_format_name: string
+          print_heading?: string
+          show_item_code?: boolean
+        }
+        Update: {
+          created_at?: string
+          disabled?: boolean
+          footer_note?: string
+          id?: string
+          is_default?: boolean
+          merchant_id?: string
+          paper?: string
+          print_format_name?: string
+          print_heading?: string
+          show_item_code?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_formats_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_settings: {
+        Row: {
+          compact_item_print: boolean
+          merchant_id: string
+          print_taxes_with_zero_amount: boolean
+          with_letterhead: boolean
+        }
+        Insert: {
+          compact_item_print?: boolean
+          merchant_id: string
+          print_taxes_with_zero_amount?: boolean
+          with_letterhead?: boolean
+        }
+        Update: {
+          compact_item_print?: boolean
+          merchant_id?: string
+          print_taxes_with_zero_amount?: boolean
+          with_letterhead?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_settings_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: true
             referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
@@ -1846,6 +1993,16 @@ export type Database = {
     Functions: {
       delete_current_user: { Args: never; Returns: undefined }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
+      naming_series_preview: {
+        Args: { p_merchant: string }
+        Returns: {
+          current_value: number
+          document_type: string
+          next_name: string
+          prefix: string
+          series: string
+        }[]
+      }
       save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }
@@ -1855,6 +2012,10 @@ export type Database = {
       }
       save_role_profile: { Args: { payload: Json }; Returns: string }
       save_sales_tax_template: { Args: { payload: Json }; Returns: string }
+      update_series_counter: {
+        Args: { p_current: number; p_merchant: string; p_series: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -1983,9 +2144,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

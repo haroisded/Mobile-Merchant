@@ -50,6 +50,11 @@ row's Reference Row #) is a deferred constraint trigger, checked once the replac
 They are security **invoker** — the caller's own policies decide each row — and take one `payload`
 jsonb. A single row stays a plain `.insert` / `.update`.
 
+**What only the database can work out is read through an RPC.** A naming series is resolved where the
+numbers are handed out: `public.naming_series_preview` returns each series' prefix, current value and next
+name, and `public.update_series_counter` sets a counter — both invoker, both called from
+`src/features/naming-series/queries.ts`. Rejected: a second parser in TypeScript.
+
 **Permissions are read once per system.** `usePermissions({ merchantId })` and `can(permissions,
 doctype, ptype)` (`src/features/role-permissions/queries.ts`) gate what a screen shows; a mutation that
 changes roles, members or rules calls `invalidatePermissions(queryClient)`. RLS still decides
@@ -107,7 +112,9 @@ createQueryKey('products', { categoryId })   // ['products', { categoryId }, {}]
 
 Stale times come from `STALE` (`STALE.MINUTES.FIVE`), never `5 * 60 * 1000`. Reference data a
 migration seeds and no client can write (countries, currency presets) is `STALE.STATIC` — TanStack's
-`'static'`: fetched once, never refetched, invalidation included.
+`'static'`: fetched once, never refetched, invalidation included. A query that must ask again on every visit
+(the naming series preview: it follows the date and the fiscal years, and neither invalidates it) names
+`STALE.ALWAYS` — leaving `staleTime` off takes the five-minute default above, not zero.
 
 **Wire `onlineManager` and `focusManager`** per the TanStack React Native guide, or queries never
 learn they are offline and never refetch on resume. This is separate from the `AppState` listener in

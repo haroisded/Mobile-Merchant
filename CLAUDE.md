@@ -307,7 +307,11 @@ the deferred `private.validate_tax_row_references()`, `tax_presets` and the coun
 `20261010011003_item_groups_and_selling_settings.sql` (the `item_groups` tree and its `item_group_taxes`,
 `save_item_group`, `selling_settings`; `private.validate_defaults()`, one check for every record's
 defaults), `20261010011005_tax_rules.sql` (`tax_rules`, conflicts as an exclusion constraint) and
-`20261010011013_stock_settings.sql` (`stock_settings`). `authenticated` keeps `usage` on
+`20261010011013_stock_settings.sql` (`stock_settings`), `20261010064803_naming_series.sql` (`naming_series`,
+`naming_series_counters`, `private.series_prefix()` and `private.make_name()`, the invoker RPCs
+`naming_series_preview` and `update_series_counter`) and `20261010065138_printing.sql` (`print_formats`,
+`letter_heads`, `print_settings`; `private.single_default()`, one default per system for any table).
+`authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).
