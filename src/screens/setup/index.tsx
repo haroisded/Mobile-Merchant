@@ -28,6 +28,11 @@ type Entry = {
     | '/systems/[id]/setup/tax-categories'
     | '/systems/[id]/setup/sales-tax-templates'
     | '/systems/[id]/setup/item-tax-templates'
+    | '/systems/[id]/setup/warehouses'
+    | '/systems/[id]/setup/uoms'
+    | '/systems/[id]/setup/uom-conversion-factors'
+    | '/systems/[id]/setup/price-lists'
+    | '/systems/[id]/setup/brands'
     | '/systems/[id]/setup/users'
     | '/systems/[id]/setup/roles'
     | '/systems/[id]/setup/role-profiles'
@@ -90,6 +95,22 @@ const SECTIONS: Section[] = [
       },
       { label: 'Item Tax Templates', hint: 'A different rate for particular items', doctype: 'Item Tax Template', pathname: '/systems/[id]/setup/item-tax-templates' },
       { label: 'Tax Categories', hint: 'Names for tax treatments: standard, exempt', doctype: 'Tax Category', pathname: '/systems/[id]/setup/tax-categories' },
+    ],
+  },
+  {
+    title: 'Stock',
+    hint: 'Where stock is kept, what it is counted in, and what it sells for',
+    entries: [
+      { label: 'Warehouses', hint: 'Stores, rooms and shelves, and their stock account', doctype: 'Warehouse', pathname: '/systems/[id]/setup/warehouses' },
+      { label: 'UOMs', hint: 'Units items are counted in: Nos, Kg, Box', doctype: 'UOM', pathname: '/systems/[id]/setup/uoms' },
+      {
+        label: 'UOM Conversion Factors',
+        hint: 'How many of one unit make another',
+        doctype: 'UOM Conversion Factor',
+        pathname: '/systems/[id]/setup/uom-conversion-factors',
+      },
+      { label: 'Price Lists', hint: 'The books selling prices are kept in', doctype: 'Price List', pathname: '/systems/[id]/setup/price-lists' },
+      { label: 'Brands', hint: 'Brand names, and the sales defaults their items take', doctype: 'Brand', pathname: '/systems/[id]/setup/brands' },
     ],
   },
   {

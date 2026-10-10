@@ -11,9 +11,23 @@ export type Currency = Tables<'currencies'>;
 // rules 2-3).
 const currenciesKey = {
   all: ['currencies'],
+  lists: () => [...currenciesKey.all, 'list'],
+  list: (args: { merchantId: string }) => [...currenciesKey.lists(), args],
   details: () => [...currenciesKey.all, 'detail'],
   detail: (args: { merchantId: string; code: string }) => [...currenciesKey.details(), args],
 };
+
+/** The currencies a system has a row for — a Price List's choices. Today its base currency, plus any it had before. */
+export function useCurrenciesQuery({ merchantId }: { merchantId: string }) {
+  return useQuery({
+    queryKey: currenciesKey.list({ merchantId }),
+    queryFn: async () => {
+      const { data } = await supabase.from('currencies').select('*').eq('merchant_id', merchantId).order('code').throwOnError();
+      return data;
+    },
+    staleTime: STALE.MINUTES.FIVE,
+  });
+}
 
 /**
  * One currency's display rules in one system — the base currency, which the merchants_company_currency

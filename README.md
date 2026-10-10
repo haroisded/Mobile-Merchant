@@ -41,9 +41,12 @@ together and explained inline.
   (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
   folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment;
   Taxes — Tax Categories, Sales Taxes and Charges Templates (rows on the net total, on an earlier row, fixed
-  or per unit, inside or on top of the price, with a live preview) and Item Tax Templates.
+  or per unit, inside or on top of the price, with a live preview) and Item Tax Templates; Stock — Warehouses
+  as folders (each showing the stock account its value posts to), UOMs and their conversions, Price Lists and
+  Brands with their sales defaults.
   Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main, its default
-  accounts, Cash and Credit Card, and its country's tax (Philippines: VAT 12%)
+  accounts, Cash and Credit Card, its country's tax (Philippines: VAT 12%), All Warehouses → Stores, thirteen
+  units with three conversions, and Standard Selling
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -150,7 +153,8 @@ frappe's country list; `fiscal_years` holds each company's accounting years. Use
 and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees; Step 4 the Company's default accounts
 and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5 `modes_of_payment`; Step 6
 `tax_categories`, `sales_tax_templates`, `item_tax_templates` with their rows, and the read-only
-`tax_presets` the country's tax is seeded from. Triggers named
+`tax_presets` the country's tax is seeded from; Step 8 `warehouses`, `uoms`, `uom_conversion_factors`,
+`price_lists` and `brands`. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

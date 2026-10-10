@@ -1,4 +1,4 @@
-// The tree masters (Chart of Accounts, Cost Centers) are flat rows with a parent_id; these are the walks their
+// The tree masters (Chart of Accounts, Cost Centers, Warehouses) are flat rows with a parent_id; these are the walks their
 // folder screens and forms need. Import-free, so tools/check-logic.mjs asserts them under Node. The database
 // keeps the trees acyclic (private.validate_tree), so the walks need no cycle guard.
 

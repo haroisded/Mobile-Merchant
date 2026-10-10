@@ -360,7 +360,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Search | outlined dense `TextInput` + `TextInput.Icon` |
 | Filter + sort | wide: one toolbar row — Search, outlined `Button` "Filters · n", Sort `Button` anchoring `Menu`. Narrow: Search on its own row, the two buttons under it. Active filters: `Chip`s with `x`, then `accent` text `Button` "Clear all" |
 | Filters panel | `src/components/list-filters-dialog.tsx`†. Selects, `SegmentedButtons` (2–4 options), toggles. Applies as changed: Done, no Apply |
-| Folder row + breadcrumb | `src/components/folder-nav.tsx` (`TreeBrowser`, `useFolder`): the tree masters, Chart of Accounts and Cost Centers. Each folder = push of the list route with `parent`, Back climbs one; a group is a `folder` row, a ledger a plain row |
+| Folder row + breadcrumb | `src/components/folder-nav.tsx` (`TreeBrowser`, `useFolder`): the tree masters, Chart of Accounts, Cost Centers and Warehouses (a warehouse's row names the stock account it resolves to, and where from). Each folder = push of the list route with `parent`, Back climbs one; a group is a `folder` row, a ledger a plain row |
 | Status badges (Low, Expiring, Expired …) | `labelMedium` in `error` (`src/components/product-badges.tsx`†) |
 | Type badge | `View`, 1px `outlineVariant` border, `surfaceMuted`, `labelMedium` |
 | Thumbnail placeholder | `View` on `surfaceVariant` + `Icon`. Real image: `expo-image` |

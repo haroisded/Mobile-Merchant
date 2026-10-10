@@ -141,6 +141,78 @@ export type Database = {
           },
         ]
       }
+      brands: {
+        Row: {
+          brand: string
+          created_at: string
+          default_price_list: string | null
+          default_warehouse: string | null
+          description: string | null
+          id: string
+          income_account: string | null
+          merchant_id: string
+          selling_cost_center: string | null
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          default_price_list?: string | null
+          default_warehouse?: string | null
+          description?: string | null
+          id?: string
+          income_account?: string | null
+          merchant_id: string
+          selling_cost_center?: string | null
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          default_price_list?: string | null
+          default_warehouse?: string | null
+          description?: string | null
+          id?: string
+          income_account?: string | null
+          merchant_id?: string
+          selling_cost_center?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brands_cost_center_fk"
+            columns: ["selling_cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "brands_income_account_fk"
+            columns: ["income_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "brands_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brands_price_list_fk"
+            columns: ["default_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "brands_warehouse_fk"
+            columns: ["default_warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       cost_centers: {
         Row: {
           cost_center_name: string
@@ -774,6 +846,51 @@ export type Database = {
           },
         ]
       }
+      price_lists: {
+        Row: {
+          created_at: string
+          currency: string
+          enabled: boolean
+          id: string
+          merchant_id: string
+          price_list_name: string
+          price_not_uom_dependent: boolean
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          enabled?: boolean
+          id?: string
+          merchant_id: string
+          price_list_name: string
+          price_not_uom_dependent?: boolean
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          enabled?: boolean
+          id?: string
+          merchant_id?: string
+          price_list_name?: string
+          price_not_uom_dependent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_lists_currency_fk"
+            columns: ["merchant_id", "currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["merchant_id", "code"]
+          },
+          {
+            foreignKeyName: "price_lists_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1199,6 +1316,90 @@ export type Database = {
           },
         ]
       }
+      uom_conversion_factors: {
+        Row: {
+          created_at: string
+          from_uom: string
+          id: string
+          merchant_id: string
+          to_uom: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          from_uom: string
+          id?: string
+          merchant_id: string
+          to_uom: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          from_uom?: string
+          id?: string
+          merchant_id?: string
+          to_uom?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uom_conversion_factors_from_fk"
+            columns: ["from_uom", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "uom_conversion_factors_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uom_conversion_factors_to_fk"
+            columns: ["to_uom", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      uoms: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          merchant_id: string
+          must_be_whole_number: boolean
+          uom_name: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          merchant_id: string
+          must_be_whole_number?: boolean
+          uom_name: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          merchant_id?: string
+          must_be_whole_number?: boolean
+          uom_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uoms_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           allow: string
@@ -1256,6 +1457,61 @@ export type Database = {
             columns: ["member_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "merchant_members"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      warehouses: {
+        Row: {
+          account: string | null
+          created_at: string
+          disabled: boolean
+          id: string
+          is_group: boolean
+          merchant_id: string
+          parent_id: string | null
+          warehouse_name: string
+        }
+        Insert: {
+          account?: string | null
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_group?: boolean
+          merchant_id: string
+          parent_id?: string | null
+          warehouse_name: string
+        }
+        Update: {
+          account?: string | null
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          is_group?: boolean
+          merchant_id?: string
+          parent_id?: string | null
+          warehouse_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_account_fk"
+            columns: ["account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "warehouses_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouses_parent_fk"
+            columns: ["parent_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id", "merchant_id"]
           },
         ]
