@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
+import { invalidateLedgers } from '../documents/queries';
 import { invalidateItemPrices } from '../item-prices/queries';
+import { invalidateStockReconciliations } from '../stock-reconciliations/queries';
 import type { ItemValues } from './schema';
 
 // The only file that knows the tables are called `items`, `item_uoms` and `item_taxes`
@@ -44,16 +46,32 @@ export type Item = NonNullable<ReturnType<typeof useItemsQuery>['data']>[number]
 export const itemLabel = (item: Pick<Item, 'item_code' | 'item_name'>) =>
   item.item_name === item.item_code ? item.item_code : `${item.item_code} · ${item.item_name}`;
 
-/** Save an item and its rows in one transaction (public.save_item, security invoker). */
+/**
+ * The items a stock document may move, as picker options: enabled ones that keep stock (private.lock_bin
+ * refuses the rest). `keep` stays listed once disabled, so a saved row still shows it.
+ */
+export const stockItemOptions = (items: Item[], keep?: string) =>
+  items.filter((item) => item.id === keep || (item.is_stock_item && !item.disabled)).map((item) => ({ value: item.id, label: itemLabel(item) }));
+
+/**
+ * Save an item and its rows in one transaction (public.save_item_with_opening_stock, security invoker: it
+ * calls public.save_item). A new stock item's Opening Stock is posted with it, as a submitted Opening Stock
+ * reconciliation — so the save also changes the ledgers, the stock balance and the reconciliations.
+ */
 export function useSaveItemMutation({ merchantId, itemId }: { merchantId: string; itemId?: string }) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (values: ItemValues) => {
-      await supabase.rpc('save_item', { payload: { id: itemId ?? '', merchant_id: merchantId, ...values } }).throwOnError();
+      await supabase.rpc('save_item_with_opening_stock', { payload: { id: itemId ?? '', merchant_id: merchantId, ...values } }).throwOnError();
     },
     onSuccess: async () => {
-      await Promise.all([queryClient.invalidateQueries({ queryKey: itemsKey.lists() }), invalidateItemPrices(queryClient)]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: itemsKey.lists() }),
+        invalidateItemPrices(queryClient),
+        invalidateLedgers(queryClient),
+        invalidateStockReconciliations(queryClient),
+      ]);
     },
   });
 }

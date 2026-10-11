@@ -33,8 +33,8 @@ together and explained inline.
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
 - **A systems list and a merchant shell** — create a system (a company: name, abbreviation, country,
-  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with three
-  destinations: Home, Stock and Setup
+  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with four
+  destinations: Home, Stock, Accounts and Setup
 - **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Users & Access
   (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
   Manager and User Permissions, all enforced by RLS); Global Defaults, System Settings and the Currency
@@ -57,6 +57,11 @@ together and explained inline.
   conversion factors, valuation method, re-order level, sales defaults, Item Tax rows) and Item Prices (a rate
   per item, price list and unit, with optional dates; a new item's Standard Selling Rate becomes its first
   price), each a searchable list
+- **Stock documents and ledgers** — Stock Entries (Material Receipt, Issue, Transfer) and Stock
+  Reconciliations (Opening Stock, a count against the books): a draft is saved, **Submit** posts it, **Cancel**
+  reverses it. Posting writes the Stock Ledger and the Stock Balance, valued by FIFO or Moving Average, and
+  with Perpetual Inventory the General Ledger — three read-only reports with filters, each row opening its
+  document. A new item can carry its Opening Stock
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -167,7 +172,8 @@ and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5
 `price_lists` and `brands`; Step 9 `item_groups` with their `item_group_taxes`, and `selling_settings`; Step 7
 `tax_rules`; Step 10 `stock_settings`; Step 12 `naming_series` with its `naming_series_counters`, and
 `print_formats`, `letter_heads` and `print_settings`; Step 13 `items` with their `item_uoms` and
-`item_taxes`; Step 14 `item_prices`. Triggers named
+`item_taxes`; Step 14 `item_prices`; Step 15 the ledgers `gl_entries`, `stock_ledger_entries` and `bins`;
+Step 16 `stock_reconciliations` and `stock_entries` with their rows. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

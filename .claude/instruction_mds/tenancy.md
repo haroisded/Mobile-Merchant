@@ -120,7 +120,18 @@ create policy fiscal_years_select on public.fiscal_years
          and (merchant_id not in (select private.restricted_merchant_ids('Fiscal Year'))
               or id in (select private.allowed_record_ids('Fiscal Year'))));
 -- single (one row per merchant): select and update only
+-- document: the record's four, plus the trigger private.guard_docstatus() — a signed-in role writes
+--           drafts only (on a child table: guard_docstatus_child(), which reads its parent's docstatus)
+-- ledger:   select only. Nobody inserts, updates or deletes — the owner included
 ```
+
+**Submit and Cancel are permissions too** (`can_submit`, `can_cancel`; ptypes `submit` and `cancel`), and
+no policy enforces them: `docstatus` cannot be written through a policy at all. `public.submit_document`
+and `public.cancel_document` are the only way to move it — security definer, they find the document's
+merchant, check `permitted_merchant_ids(doctype, 'submit' | 'cancel')` for the caller, lock the row, and
+only then post or reverse. A ledger is written by that engine alone, which is why its doctype's rules are
+Read and nothing else. The Role Permissions Manager offers each kind the columns that mean something for
+it: all seven for a document, Read for a ledger, Read and Write for a single.
 
 Scoped `to authenticated`, each call wrapped in `select` so it runs once as an InitPlan, and every
 `update` policy carrying both `using` and `with check` — without the second, a row can be moved to

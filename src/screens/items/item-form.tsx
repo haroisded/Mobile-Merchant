@@ -15,10 +15,14 @@ import { PageHeader } from '../../components/page-header';
 import { RepeatableList } from '../../components/repeatable-rows';
 import { SalesDefaultsFields, useSalesDefaultsRecords } from '../../components/sales-defaults-fields';
 import type { SalesDefaultsRecords } from '../../components/sales-defaults-fields';
+import { SampleBox, SampleLine } from '../../components/sample-box';
 import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
+import { Text } from '../../components/text';
+import { useBinsQuery } from '../../features/bins/queries';
 import { useBrandsQuery } from '../../features/brands/queries';
 import type { Brand } from '../../features/brands/queries';
+import { useMoney } from '../../features/currencies/queries';
 import { useItemGroupsQuery } from '../../features/item-groups/queries';
 import type { ItemGroup } from '../../features/item-groups/queries';
 import { itemLabel, useDeleteItemMutation, useItemsQuery, useSaveItemMutation } from '../../features/items/queries';
@@ -32,8 +36,9 @@ import { useStockSettingsQuery } from '../../features/stock-settings/queries';
 import type { StockSettings } from '../../features/stock-settings/queries';
 import { uomOptions, useUomsQuery } from '../../features/uoms/queries';
 import type { Uom } from '../../features/uoms/queries';
+import { warehouseLabel } from '../../features/warehouses/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, postingRefusal, usedElsewhere } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 
 type Records = {
@@ -101,6 +106,8 @@ const blank = ({ groups, stockSettings }: Records): ItemValues => ({
   income_account: '',
   expense_account: '',
   standard_rate: '',
+  opening_stock: '',
+  valuation_rate: '',
   uoms: [],
   taxes: [],
 });
@@ -126,12 +133,18 @@ const saved = (item: Item): ItemValues => ({
   income_account: text(item.income_account),
   expense_account: text(item.expense_account),
   standard_rate: '',
+  opening_stock: '',
+  valuation_rate: '',
   uoms: item.item_uoms.map((row) => ({ uom_id: row.uom_id, conversion_factor: String(row.conversion_factor) })),
   taxes: item.item_taxes.map((row) => ({ item_tax_template_id: row.item_tax_template_id, tax_category_id: text(row.tax_category_id), valid_from: text(row.valid_from) })),
 });
 
-// Each refusal the database names (supabase/migrations/20261011134250_items.sql, 20261011134357_item_prices.sql).
+// Each refusal the database names (supabase/migrations/20261011134250_items.sql, 20261011134357_item_prices.sql,
+// and 20261011170112_stock_in_and_adjustments.sql for the Opening Stock). What posting the Opening Stock can
+// meet beyond these is postingRefusal's (src/lib/errors.ts).
 const REFUSALS = new Map([
+  ['valuation_rate_required', 'Opening Stock needs a Valuation Rate, or a Standard Selling Rate to take it from.'],
+  ['no_default_warehouse', 'Opening Stock needs a warehouse: pick a Default Warehouse below, or set one in Stock Settings.'],
   ['item_group_is_group', 'Pick an item group that is not a group: items go in the groups under it.'],
   ['default_invalid', "The unit or one of the defaults can't be used any more — pick it again."],
   ['no_default_price_list', 'Selling Settings has no Default Price List for the Standard Selling Rate. Set one there, or clear the rate.'],
@@ -143,7 +156,7 @@ const REFUSALS = new Map([
 const saveFailure = (error: Error | null) => {
   const cause = postgrestError(error);
   if (cause?.code === '23505') return 'There is already an item with this code.';
-  return REFUSALS.get(cause?.message ?? '') ?? failureMessage("Couldn't save this item. Try again.");
+  return REFUSALS.get(cause?.message ?? '') ?? postingRefusal(error) ?? failureMessage("Couldn't save this item. Try again.");
 };
 
 const deleteFailure = (cause: Error | null) =>
@@ -220,8 +233,16 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         dirty={!existing || formState.isDirty}
         onSave={handleSubmit(saveOnce(save, () => router.back()))}
       >
-        <Details {...section} existing={existing} fromSeries={fromSeries} priced={!existing && can(permissions, 'Item Price', 'create')} />
+        <Details
+          {...section}
+          existing={existing}
+          fromSeries={fromSeries}
+          priced={!existing && can(permissions, 'Item Price', 'create')}
+          // The Opening Stock is a Stock Reconciliation saved and submitted as the creator.
+          stocked={!existing && isStockItem && can(permissions, 'Stock Reconciliation', 'create') && can(permissions, 'Stock Reconciliation', 'submit')}
+        />
         {isStockItem ? <Inventory {...section} /> : null}
+        {existing && isStockItem && can(permissions, 'Bin', 'read') ? <StockLevels merchant={merchant} item={existing} records={records} /> : null}
         <Units {...section} savedUom={existing?.stock_uom} />
         {/* docs.frappe.io/erpnext/item 3.9 */}
         <SectionHeading title="Defaults" hint="What a sale of it starts with; an empty one comes from its item group, its brand, then the company" />
@@ -247,10 +268,12 @@ type DetailsProps = SectionProps & {
   fromSeries: boolean;
   /** A new item whose creator may write its first price. */
   priced: boolean;
+  /** A new stock item whose creator may post its Opening Stock. */
+  stocked: boolean;
 };
 
 /** What the item is (docs.frappe.io/erpnext/item 2.1, 2.2, 3.1). */
-function Details({ control, records, disabled, existing, fromSeries, priced }: DetailsProps) {
+function Details({ control, records, disabled, existing, fromSeries, priced, stocked }: DetailsProps) {
   return (
     <FieldGrid>
       {fromSeries ? (
@@ -312,7 +335,70 @@ function Details({ control, records, disabled, existing, fromSeries, priced }: D
           disabled={disabled}
         />
       ) : null}
+      {/* docs.frappe.io/erpnext/item 2.2, /opening-stock: read on creation only, and posted with the item. */}
+      {stocked ? (
+        <>
+          <ControlledText
+            control={control}
+            name="opening_stock"
+            label="Opening Stock"
+            hint="What is on hand today, in its Default Warehouse"
+            placeholder="0"
+            keyboardType="decimal-pad"
+            maxLength={14}
+            disabled={disabled}
+          />
+          <ControlledText
+            control={control}
+            name="valuation_rate"
+            label="Valuation Rate"
+            hint="What each unit cost; empty: the Standard Selling Rate"
+            placeholder="0"
+            keyboardType="decimal-pad"
+            maxLength={14}
+            disabled={disabled}
+          />
+        </>
+      ) : null}
     </FieldGrid>
+  );
+}
+
+/**
+ * What is on hand of a saved item, warehouse by warehouse (docs.frappe.io/erpnext/stock-level-report;
+ * POS-System-Added-Features 15.4) — the Stock Balance, narrowed to this item. Read-only: stock changes
+ * through a Stock Entry or a Stock Reconciliation.
+ */
+function StockLevels({ merchant, item, records }: { merchant: Merchant; item: Item; records: Records }) {
+  const bins = useBinsQuery({ merchantId: merchant.id, item: item.id, warehouse: '' }).data;
+  const money = useMoney(merchant);
+  const unit = records.uoms.find((uom) => uom.id === item.stock_uom)?.uom_name ?? '';
+  const warehouse = (id: string) => {
+    const found = records.sales.warehouses.find((candidate) => candidate.id === id);
+    return found ? warehouseLabel(found, merchant.abbr) : '…';
+  };
+
+  // The section appears once its balances have loaded: a form is not the place for a second spinner.
+  if (!bins) return null;
+
+  return (
+    <>
+      <SectionHeading title="Stock Levels" hint="What is on hand in each warehouse, and what it is worth" />
+      {bins.length > 0 ? (
+        <SampleBox>
+          {bins.map((bin) => (
+            <SampleLine
+              key={bin.warehouse_id}
+              label={warehouse(bin.warehouse_id)}
+              sub={`${bin.actual_qty} ${unit} at ${money(bin.valuation_rate)}`}
+              value={money(bin.stock_value)}
+            />
+          ))}
+        </SampleBox>
+      ) : (
+        <Text variant="bodyMedium">No stock yet. Receive some with a Stock Entry.</Text>
+      )}
+    </>
   );
 }
 

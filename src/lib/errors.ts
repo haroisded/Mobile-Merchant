@@ -48,16 +48,63 @@ const USED_BY = new Map([
   ['item_uoms', "It's in an item's Units of Measure. Remove that row first."],
   ['item_taxes', "It's in an item's Item Tax rows. Remove that row first."],
   ['item_prices', 'An item price uses it. Change or delete that price first.'],
+  // A ledger or a document names it, and neither is ever edited to let it go.
+  ['gl_entries', 'It has ledger entries, so it stays. Disable it instead.'],
+  ['stock_ledger_entries', 'It has stock movements, so it stays. Disable it instead.'],
+  ['bins', 'It has a stock balance, so it stays. Disable it instead.'],
+  ['stock_entries', 'A stock entry names it, so it stays. Disable it instead.'],
+  ['stock_entry_items', "It's on a stock entry, so it stays. Disable it instead."],
+  ['stock_reconciliations', 'A stock reconciliation names it, so it stays. Disable it instead.'],
+  ['stock_reconciliation_items', "It's on a stock reconciliation, so it stays. Disable it instead."],
 ]);
 
 /**
- * The words for a delete refused by one of the settings, item groups, tax rules, items or prices naming the record — null
- * for any other refusal, so each screen keeps its own copy for the references it already had.
+ * The words for a delete refused by one of the settings, item groups, tax rules, items, prices, ledgers or documents
+ * naming the record — null for any other refusal, so each screen keeps its own copy for the references it already had.
  */
 export function usedElsewhere(cause: Error | null): string | null {
   const error = postgrestError(cause);
   if (error?.code !== '23503') return null;
   return USED_BY.get(/on table "(\w+)"$/.exec(error.message)?.[1] ?? '') ?? null;
+}
+
+// What the database names when it refuses to save, submit or cancel a document
+// (supabase/migrations/20261011165554_ledgers.sql, 20261011170112_stock_in_and_adjustments.sql). Here because
+// every document's page can meet them, and so can a new item's Opening Stock.
+const POSTING_REFUSALS = new Map([
+  ['not_a_draft', 'It has already been submitted or cancelled. Go back and open it again.'],
+  ['not_submitted', "It isn't submitted any more. Go back and open it again."],
+  ['document_locked', "A submitted document can't be changed. Cancel it instead."],
+  ['not_permitted', "Your roles don't allow this."],
+  ['no_document_series', 'Document Naming Settings has no series for this document. Add one there first.'],
+  ['no_fiscal_year', "No fiscal year covers the posting date, so its series can't number the document."],
+  ['posting_date_in_future', 'The posting date is in the future. Pick today or earlier.'],
+  ['posting_outside_fiscal_year', 'No enabled fiscal year covers the posting date. Add or enable one in Fiscal Years.'],
+  ['accounts_frozen', 'Accounts are frozen up to this date (Accounts Settings). Pick a later date, or ask someone who may post into a frozen period.'],
+  ['account_unusable', "An account this posts to is a group or disabled. Check the document's accounts and the warehouse's account."],
+  ['cost_center_unusable', 'The cost center is a group or disabled. Pick another.'],
+  ['gl_unbalanced', "The debits and credits don't balance, so nothing was posted."],
+  ['item_unusable', 'One of the items is disabled or keeps no stock. Remove it, or change the item.'],
+  ['warehouse_unusable', 'One of the warehouses is a group or disabled. Pick another.'],
+  ['stock_backdated', 'One of the items already has a later stock movement in that warehouse. Use that date or a later one.'],
+  ['whole_number_required', "One of the quantities is a fraction, and its unit of measure can't be divided."],
+  ['rate_required', 'One of the items has no rate to value it at. Enter a rate, or receive it first.'],
+  ['insufficient_stock', "There isn't enough stock in the warehouse for this. Receive more first, or allow negative stock."],
+  ['cancel_blocked', "Later stock movements build on this one, so it can't be reversed. Reverse those first."],
+  ['document_link_invalid', "A warehouse, account or cost center on it can't be used any more — pick it again."],
+  ['opening_account_invalid', "An Opening Stock's Difference Account is an asset or liability account, such as Temporary Opening."],
+  ['difference_account_required', 'Pick a Difference Account first: the change in stock value needs somewhere to go.'],
+  ['valuation_rate_required', 'Every row with a quantity needs a Valuation Rate above 0.'],
+  ['no_inventory_account', 'The warehouse has no account, and the company has no Default Inventory Account. Set one first.'],
+  ['nothing_to_reconcile', 'Nothing would change: every row already matches the books.'],
+  ['no_rows', 'Add at least one item first.'],
+  ['stock_entry_not_found', "It no longer exists, or your roles can't change it."],
+  ['stock_reconciliation_not_found', "It no longer exists, or your roles can't change it."],
+]);
+
+/** The words for a document the database refused to save, submit or cancel — null for any other failure. */
+export function postingRefusal(cause: Error | null): string | null {
+  return POSTING_REFUSALS.get(postgrestError(cause)?.message ?? '') ?? null;
 }
 
 /** The line under a form or confirm: an offline wait, or what went wrong. */

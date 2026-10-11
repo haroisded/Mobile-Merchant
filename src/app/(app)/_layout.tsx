@@ -47,6 +47,7 @@ const DIALOG_ROUTES = [
   'forms/series-counter',
   'forms/letter-head',
   'forms/item-price',
+  'forms/ledger-filters',
 ];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to

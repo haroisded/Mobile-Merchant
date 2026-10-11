@@ -313,6 +313,14 @@ defaults), `20261010011005_tax_rules.sql` (`tax_rules`, conflicts as an exclusio
 The second batch (Steps 13–23) starts with `20261011134250_items.sql` (`items`, `item_uoms`, `item_taxes`;
 `private.prepare_item()`, the invoker RPC `save_item`) and `20261011134357_item_prices.sql` (`item_prices`,
 `private.validate_item_price()`; `save_item` re-created so a new item's Standard Selling Rate writes its price).
+Then the posting engine and the first documents that post through it: `20261011165554_ledgers.sql` (`can_submit`
+/ `can_cancel` on both permission tables; the doctype kinds `document` and `ledger`; `gl_entries`,
+`stock_ledger_entries`, `bins`; `private.guard_docstatus()`, `private.name_document()`, `private.assert_postable()`,
+`private.post_gl()` / `cancel_gl()`, `private.post_sle()` / `reconcile_sle()` / `cancel_sle()`; the definer RPCs
+`public.submit_document` and `public.cancel_document`) and `20261011170112_stock_in_and_adjustments.sql`
+(`stock_reconciliations`, `stock_entries` and their rows; the invoker RPCs `save_stock_reconciliation`,
+`save_stock_entry` and `save_item_with_opening_stock`; `private.submit_stock_reconciliations()` /
+`submit_stock_entries()`, which `submit_document` dispatches to by table name).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
@@ -395,14 +403,28 @@ inside `migrations/`, where `supabase db push` would apply it. The rules and the
 ### 6.7 Every business table is a doctype
 
 A new business table is registered, not hand-policied: in its migration, insert its `public.doctypes`
-row (kind `record`, `single` or `tree`; `restrictable` when a User Permission may hold someone to its
-records), its `standard_role_permissions` rows (ERPNext's matrix for it), then `select
+row (kind `record`, `single`, `tree`, `document` or `ledger`; `restrictable` when a User Permission may hold
+someone to its records), its `standard_role_permissions` rows (ERPNext's matrix for it), then `select
 private.sync_standard_permissions()` and `select private.apply_doctype_policies('<table>', '<Doctype>')`
 (`true` as a third argument for a child table that follows its parent's doctype). That is what makes
 the Role Permissions Manager and User Permissions govern it. Seeding goes in a
 `merchants_seed_NN_<area>` trigger plus a backfill for existing systems. Rejected: policies written by
 hand per table — the shape drifts, and a rule edited in the Manager would not reach them
 (`.claude/instruction_mds/tenancy.md`).
+
+Two kinds post, and each has one rule that must hold:
+
+- **A `document`** (Stock Entry, Stock Reconciliation) carries `name` and `docstatus` (0 draft, 1 submitted,
+  2 cancelled). `apply_doctype_policies` adds `private.guard_docstatus()` to it — and
+  `guard_docstatus_child()` to its rows — so a signed-in role writes drafts only. `docstatus` moves through
+  `public.submit_document(doctype, id)` and `public.cancel_document(doctype, id)` and nowhere else; a new
+  document type adds `private.submit_<table_name>(uuid)`, which `submit_document` calls. Rejected: a
+  `submit_*` / `cancel_*` pair per document — the same lock, `auth.uid()` and permission check repeated,
+  each one another definer function PostgREST serves.
+- **A `ledger`** (GL Entry, Stock Ledger Entry, Bin) gets a select policy and no other: nobody writes it,
+  the owner included. Only the engine in `private` does, and a document's poster goes through it —
+  `private.post_gl()` refuses an unbalanced voucher, `private.post_sle()` keeps the bin and its valuation.
+  Never insert into a ledger from a poster directly.
 
 ## graphify
 

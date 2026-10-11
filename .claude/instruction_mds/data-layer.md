@@ -45,11 +45,27 @@ against when a screen picks its copy for a case it expects. It also narrows `dat
 roles, a doctype's whole set of rules, a tax template and its rows, an item group and its Item Tax rows, an
 item and its UOM and Item Tax rows:
 `public.save_member`, `save_role_profile`, `save_role_permissions`, `save_sales_tax_template`,
-`save_item_tax_template`, `save_item_group`, `save_item` write them
+`save_item_tax_template`, `save_item_group`, `save_item`, `save_stock_entry`, `save_stock_reconciliation` write them
 in one transaction, so a failure never leaves a half-saved record. A rule that reads the other rows (a tax
 row's Reference Row #) is a deferred constraint trigger, checked once the replaced rows are all in.
 They are security **invoker** — the caller's own policies decide each row — and take one `payload`
 jsonb. A single row stays a plain `.insert` / `.update`.
+
+A document and its rows save the same way — `public.save_stock_entry`, `save_stock_reconciliation` — and
+answer with the document's id, which the mutation returns: a new document's page goes on with it
+(`save.data`) and becomes the saved one without leaving. `public.save_item_with_opening_stock` wraps
+`save_item`, so an item and its Opening Stock are one transaction too.
+
+**A document is submitted and cancelled through two RPCs, whatever its type.** `useDocumentActionMutation({
+doctype, action, invalidate })` (`src/features/documents/queries.ts`) calls `public.submit_document` or
+`public.cancel_document` — security **definer**, because posting writes ledgers no role may write; they check
+the caller's Submit or Cancel permission themselves. It invalidates the three ledgers
+(`invalidateLedgers`) and the document's own queries. A ledger feature (`gl-entries`, `stock-ledger-entries`,
+`bins`) has queries and no mutation. Rejected: a submit hook per document type.
+
+**A document's page reads its document by id** (`useStockEntryQuery({ id })`), not out of the list: a ledger
+row must open a document however old it is, and the lists stop at `LEDGER_PAGE` rows (`src/lib/query.ts`).
+A ledger report sends its filters to the server — they are part of the query key.
 
 **What only the database can work out is read through an RPC.** A naming series is resolved where the
 numbers are handed out: `public.naming_series_preview` returns each series' prefix, current value and next
@@ -64,10 +80,12 @@ changes roles, members or rules calls `invalidatePermissions(queryClient)`. RLS 
 **Generated types.** Run after every migration:
 
 ```bash
-supabase gen types typescript --linked > src/lib/database.types.ts
+supabase gen types typescript --linked --schema public > src/lib/database.types.ts
 ```
 
-Then `createClient<Database>(...)`. Use `--linked`, not `--local` (no local Docker stack here). If
+Then `createClient<Database>(...)`. Use `--linked`, not `--local` (no local Docker stack here), and
+`--schema public`: without it CLI 2.116 also writes a `graphql_public` block the committed file has never
+had (seen 2026-10-12), and the diff stops being the migration's own. If
 the CLI stalls at `Initialising login role…`, set `SUPABASE_DB_PASSWORD`, or use the Supabase MCP
 server's `generate_typescript_types`.
 

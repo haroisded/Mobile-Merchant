@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { Tables } from '../../lib/database.types';
+import { asRoundingMethod, formatMoney } from '../../lib/money';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
+import type { Merchant } from '../merchants/queries';
+import { useSystemSettingsQuery } from '../system-settings/queries';
 import type { CurrencyValues } from './schema';
 
 export type Currency = Tables<'currencies'>;
@@ -42,6 +45,18 @@ export function useCurrencyQuery({ merchantId, code }: { merchantId: string; cod
     },
     staleTime: STALE.MINUTES.FIVE,
   });
+}
+
+/**
+ * A system's amounts as its Currency page writes them ("₱ 1,234.50"): the base currency's symbol and number
+ * format at System Settings' precision and rounding. The bare number until both have loaded.
+ */
+export function useMoney(merchant: Pick<Merchant, 'id' | 'default_currency'>) {
+  const currency = useCurrencyQuery({ merchantId: merchant.id, code: merchant.default_currency }).data;
+  const settings = useSystemSettingsQuery({ merchantId: merchant.id }).data;
+
+  return (value: number) =>
+    currency && settings ? formatMoney(value, currency, settings.currency_precision, asRoundingMethod(settings.rounding_method)) : String(value);
 }
 
 /** The row a form's strings become: blanks to null, numbers parsed. */

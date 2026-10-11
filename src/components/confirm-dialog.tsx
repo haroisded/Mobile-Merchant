@@ -20,8 +20,12 @@ type Props = {
   inSheet?: boolean;
   onDismiss: () => void;
   kicker: string;
+  /** `error` for a destructive confirm, `accent` for one that loses nothing — a document's Submit. */
+  tone?: 'accent' | 'error';
   title: string;
   confirmLabel: string;
+  /** "Cancel" unless the confirm itself is a cancel, where two Cancels would read as one. */
+  dismissLabel?: string;
   onConfirm: () => void;
   /** The confirm's write: Cancel and dismiss lock while it is in flight (.claude/instruction_mds/data-layer.md §5). */
   mutation: { isPending: boolean; isPaused: boolean };
@@ -30,12 +34,14 @@ type Props = {
 };
 
 /**
- * A destructive confirm: Cancel, a red confirm, and the write's notice under the body. Every Setup
- * master's Delete opens one (.claude/instruction_mds/structure.md rule 7).
+ * A confirm: Cancel, the confirm — red unless `tone` is `accent` — and the write's notice under the body.
+ * Every Setup master's Delete opens one (.claude/instruction_mds/structure.md rule 7), and so do a
+ * document's Submit and Cancel.
  */
-export function ConfirmDialog({ inSheet, onDismiss, kicker, title, confirmLabel, onConfirm, mutation, notice, children }: Props) {
+export function ConfirmDialog({ inSheet, onDismiss, kicker, tone = 'error', title, confirmLabel, dismissLabel = 'Cancel', onConfirm, mutation, notice, children }: Props) {
   const { colors } = useAppTheme();
   const inFlight = mutation.isPending && !mutation.isPaused;
+  const destructive = tone === 'error';
 
   return (
     <AdaptiveDialog
@@ -43,17 +49,18 @@ export function ConfirmDialog({ inSheet, onDismiss, kicker, title, confirmLabel,
       onDismiss={onDismiss}
       dismissable={!inFlight}
       kicker={kicker}
-      kickerTone="error"
+      kickerTone={tone}
       title={title}
       actions={
         <>
           <Button mode="outlined" onPress={onDismiss} disabled={inFlight} contentStyle={styles.action}>
-            Cancel
+            {dismissLabel}
           </Button>
           <Button
             mode="contained"
-            buttonColor={colors.error}
-            textColor={colors.onError}
+            // Left to Paper when not destructive: a contained Button is the theme's primary.
+            buttonColor={destructive ? colors.error : undefined}
+            textColor={destructive ? colors.onError : undefined}
             onPress={onConfirm}
             loading={mutation.isPending}
             disabled={mutation.isPending}
@@ -87,8 +94,10 @@ export function RequestConfirm({ request, inSheet, onDismiss }: { request: Confi
       inSheet={inSheet}
       onDismiss={onDismiss}
       kicker={request.kicker ?? 'Delete'}
+      tone={request.tone}
       title={request.title}
       confirmLabel={request.confirmLabel}
+      dismissLabel={request.dismissLabel}
       onConfirm={() => {
         if (!write.isPending) write.mutate(undefined, { onSuccess: request.onDone });
       }}
@@ -101,7 +110,7 @@ export function RequestConfirm({ request, inSheet, onDismiss }: { request: Confi
 }
 
 /**
- * Ask before a destructive write: a Dialog over the screen wide, the native sheet route narrow
+ * Ask before a write that cannot be taken back: a Dialog over the screen wide, the native sheet route narrow
  * (.claude/instruction_mds/frontend.md §4.4). Render `dialog` in the screen; it is null until `ask`.
  */
 export function useConfirm() {
@@ -110,7 +119,14 @@ export function useConfirm() {
 
   const ask = (next: ConfirmRequest) => {
     if (wide) {
-      setRequest(next);
+      // Done closes the Dialog too: a confirm whose screen stays (a document's Submit) has nothing else to.
+      setRequest({
+        ...next,
+        onDone: () => {
+          setRequest(null);
+          next.onDone();
+        },
+      });
       return;
     }
     openConfirm(next);

@@ -44,6 +44,8 @@ export const ICONS = {
   settings: { ios: 'gearshape', android: 'settings' },
   // The shell's Stock destination: items, prices and stock.
   stock: { ios: 'shippingbox', android: 'inventory_2' },
+  // The shell's Accounts destination: the General Ledger. Checked against both sets on 2026-10-12.
+  accounts: { ios: 'building.columns', android: 'account_balance' },
 
   // Profile
   camera: { ios: 'camera', android: 'photo_camera' },

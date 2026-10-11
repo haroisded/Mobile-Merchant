@@ -38,3 +38,15 @@ export function storedDate(date: Date) {
 
 /** Today in the device's own time zone, as a stored date. */
 export const todayDate = () => storedDate(new Date());
+
+/**
+ * Today in `timeZone` — System Settings', where the business is — as a stored date. It is the day the
+ * database posts by (private.merchant_today), so a new document's Posting Date starts here and not on the
+ * device's own day: a phone still on the evening before would date it yesterday, behind every movement
+ * already posted today (found on the emulator, 2026-10-12).
+ */
+export function todayIn(timeZone: string, now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const part = (type: string) => parts.find((candidate) => candidate.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}

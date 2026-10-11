@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 
-/** A destructive confirm: what it asks, the write it runs, and where to go once it has. */
+/** A confirm before a write that cannot be taken back: what it asks, the write it runs, and where to go once it has. */
 export type ConfirmRequest = {
   kicker?: string;
+  /** `accent` for a confirm that loses nothing — a document's Submit. `error`, a destructive one, when left out. */
+  tone?: 'accent' | 'error';
   title: string;
   body: string;
   confirmLabel: string;
+  /** The way out without confirming; "Cancel" when left out. A document's Cancel names it otherwise ("Keep it"). */
+  dismissLabel?: string;
   /** The write. Usually a feature mutation's mutateAsync, so its own invalidation still runs. */
   run: () => Promise<void>;
   /** The copy for a failed write: SQLSTATE-specific where the screen expects one (src/lib/errors.ts). */

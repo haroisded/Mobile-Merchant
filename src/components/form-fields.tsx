@@ -155,8 +155,8 @@ type DateInputProps = {
   clearable?: boolean;
 };
 
-/** A read-only outlined input that opens the date picker. */
-function DateInput({ value, onChange, placeholder, accessibilityLabel, error, disabled, clearable }: DateInputProps) {
+/** A read-only outlined input that opens the date picker. Exported for a date no form holds: a report's filter. */
+export function DateInput({ value, onChange, placeholder, accessibilityLabel, error, disabled, clearable }: DateInputProps) {
   const { colors } = useAppTheme();
   const [open, setOpen] = useState(false);
 

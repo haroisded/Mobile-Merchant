@@ -16,6 +16,13 @@ export const STALE = {
   STATIC: 'static' as const,
 };
 
+// The most rows a ledger report or a list of documents asks for in one request; the report says so when it
+// has that many (src/components/ledger-filters.tsx).
+//
+// ponytail: one page, newest first. Past it a report needs paging — FlashList over an infinite query
+// (.claude/instruction_mds/frontend.md §4.2) — until then its filters are how an older row is reached.
+export const LEDGER_PAGE = 200;
+
 // Module scope, like the auth subscription in Store/StoreUser.ts and the refresh listener in
 // supabase.ts: one listener for the life of the process, so there is nothing to tear down.
 //

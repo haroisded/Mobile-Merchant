@@ -93,6 +93,13 @@ dead and correct to delete.
   (`the fail is registered findings only`) — that line means nothing to fix.
 - **`workspace_diagnostics`** (`boundaries-not-configured`, `rule-packs-not-configured`) are notes
   that a detector did not run, not findings. The script prints them as `not run:`.
+- **`[warn] duplication` between two features' `queries.ts`** (`node tools/fallow-verdict.mjs`, 2026-10-12:
+  `gl-entries` / `stock-ledger-entries`, `stock-entries` / `stock-reconciliations`). Two resources of one
+  shape read the same way, each in its own file: [`data-layer.md`](./data-layer.md) rules 1–2 put the
+  Supabase call inside each resource's `queryFn` and reject the shared builder that would remove the
+  finding — a repository layer. Confirmed false positive; the verdict stays `WARN`, not `FAIL`. Duplication
+  between two **screens** is not covered by this: move the shared part to `src/components/`
+  (`document-page.tsx`, `stock-document.tsx`).
 
 ## 4. oxlint and npm
 
@@ -118,10 +125,12 @@ dead and correct to delete.
 - **`pg_graphql_anon_table_exposed` / `pg_graphql_authenticated_table_exposed` on every `public`
   table.** The GraphQL schema lists a table's name and columns, not its rows; RLS still decides every
   read, and `anon` reaches no row of a business table. Expected for each new table — not a fix.
-- **`authenticated_security_definer_function_executable` on `public.my_permissions` and
-  `public.delete_current_user`.** Both are meant to be called by signed-in users, and both check
-  `(select auth.uid())` inside (CLAUDE.md §6.2). Any *other* `public` definer function in that list is
-  a real finding.
+- **`authenticated_security_definer_function_executable` on `public.my_permissions`,
+  `public.delete_current_user`, `public.submit_document` and `public.cancel_document`.** All four are meant
+  to be called by signed-in users, and all check `(select auth.uid())` inside (CLAUDE.md §6.2); the last
+  two also check the caller's Submit or Cancel permission on the document's own system before touching it
+  (`get_advisors`, 2026-10-12: exactly these four). Any *other* `public` definer function in that list is a
+  real finding.
 
 ## 6. Documented exceptions a reviewer may flag
 

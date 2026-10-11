@@ -8,7 +8,7 @@ import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
-import { fullYearEnd, yearName } from '../src/lib/dates.ts';
+import { fullYearEnd, todayIn, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
 
@@ -21,6 +21,10 @@ assert.equal(fullYearEnd('2027-03-01'), '2028-02-29');
 assert.equal(fullYearEnd('2028-02-29'), '2029-02-27');
 assert.equal(yearName('2026-01-01', '2026-12-31'), '2026');
 assert.equal(yearName('2026-04-01', '2027-03-31'), '2026-2027');
+// The system's day, not the device's or UTC's — private.merchant_today's (now() at time zone …)::date.
+assert.equal(todayIn('Asia/Manila', new Date('2026-10-11T17:30:00Z')), '2026-10-12');
+assert.equal(todayIn('America/New_York', new Date('2026-10-12T02:00:00Z')), '2026-10-11');
+assert.equal(todayIn('UTC', new Date('2026-03-05T00:00:00Z')), '2026-03-05');
 
 // src/lib/money.ts — frappe's rounded(), round_based_on_smallest_currency_fraction(), format_number(),
 // money_in_words() and in_words() (num2words). Expected values are ERPNext's.

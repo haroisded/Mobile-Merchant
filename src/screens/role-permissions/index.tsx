@@ -23,17 +23,28 @@ import { failureMessage, mutationNotice } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
 
-type Flag = 'can_select' | 'can_read' | 'can_write' | 'can_create' | 'can_delete';
+type Flag = 'can_select' | 'can_read' | 'can_write' | 'can_create' | 'can_delete' | 'can_submit' | 'can_cancel';
 
-// ERPNext's permission columns, in its order. A single doctype (Company, a Settings page) has one row per
-// system, so only Read and Write mean anything there.
-const FLAGS: { flag: Flag; label: string; single: boolean }[] = [
-  { flag: 'can_select', label: 'Select', single: false },
-  { flag: 'can_read', label: 'Read', single: true },
-  { flag: 'can_write', label: 'Write', single: true },
-  { flag: 'can_create', label: 'Create', single: false },
-  { flag: 'can_delete', label: 'Delete', single: false },
+// ERPNext's permission columns, in its order.
+const FLAGS: { flag: Flag; label: string }[] = [
+  { flag: 'can_select', label: 'Select' },
+  { flag: 'can_read', label: 'Read' },
+  { flag: 'can_write', label: 'Write' },
+  { flag: 'can_create', label: 'Create' },
+  { flag: 'can_delete', label: 'Delete' },
+  { flag: 'can_submit', label: 'Submit' },
+  { flag: 'can_cancel', label: 'Cancel' },
 ];
+
+// The columns that mean something for a kind of document type (public.doctypes.kind); a record or a tree
+// takes RECORD_FLAGS. A single (Company, a Settings page) has one row per system: Read and Write. A ledger is
+// written only by a posting: Read. Only a document is submitted and cancelled, so only it has all seven.
+const RECORD_FLAGS: Flag[] = ['can_select', 'can_read', 'can_write', 'can_create', 'can_delete'];
+const KIND_FLAGS = new Map<string, Flag[]>([
+  ['single', ['can_read', 'can_write']],
+  ['ledger', ['can_read']],
+  ['document', [...RECORD_FLAGS, 'can_submit', 'can_cancel']],
+]);
 
 /**
  * The Role Permissions Manager (docs.frappe.io/erpnext/role-based-permissions): pick a document type, then
@@ -105,12 +116,21 @@ function RulesForm({ merchantId, doctype, picker, saved, roles }: FormProps) {
   const save = useSaveRolePermissionsMutation({ merchantId, doctype: doctype.name });
   const notice = mutationNotice(save, failureMessage("Couldn't save these permissions. Try again."));
   const roleName = (id: string) => roles.find((role) => role.id === id)?.role_name ?? '';
-  const single = doctype.kind === 'single';
+  const flags = KIND_FLAGS.get(doctype.kind) ?? RECORD_FLAGS;
 
   const { control, handleSubmit, reset, formState } = useForm<RulesValues>({
     defaultValues: {
       rules: saved
-        .map(({ role_id, can_select, can_read, can_write, can_create, can_delete }) => ({ role_id, can_select, can_read, can_write, can_create, can_delete }))
+        .map(({ role_id, can_select, can_read, can_write, can_create, can_delete, can_submit, can_cancel }) => ({
+          role_id,
+          can_select,
+          can_read,
+          can_write,
+          can_create,
+          can_delete,
+          can_submit,
+          can_cancel,
+        }))
         .sort((a, b) => roleName(a.role_id).localeCompare(roleName(b.role_id))),
     },
   });
@@ -129,7 +149,7 @@ function RulesForm({ merchantId, doctype, picker, saved, roles }: FormProps) {
             control={control}
             index={index}
             roleName={roleName(field.role_id)}
-            single={single}
+            flags={flags}
             editable={editable}
             onRemove={() => remove(index)}
           />
@@ -142,7 +162,7 @@ function RulesForm({ merchantId, doctype, picker, saved, roles }: FormProps) {
             span="full"
             value=""
             onChange={(roleId) =>
-              append({ role_id: roleId, can_select: false, can_read: true, can_write: false, can_create: false, can_delete: false })
+              append({ role_id: roleId, can_select: false, can_read: true, can_write: false, can_create: false, can_delete: false, can_submit: false, can_cancel: false })
             }
             options={unruled.map((role) => ({ value: role.id, label: role.role_name }))}
           />
@@ -151,10 +171,10 @@ function RulesForm({ merchantId, doctype, picker, saved, roles }: FormProps) {
   );
 }
 
-type RowProps = { control: Control<RulesValues>; index: number; roleName: string; single: boolean; editable: boolean; onRemove: () => void };
+type RowProps = { control: Control<RulesValues>; index: number; roleName: string; flags: Flag[]; editable: boolean; onRemove: () => void };
 
-/** One role's rule: its name, a remove action, and a checkbox per permission. */
-function RuleRow({ control, index, roleName, single, editable, onRemove }: RowProps) {
+/** One role's rule: its name, a remove action, and a checkbox per permission its kind of document type has. */
+function RuleRow({ control, index, roleName, flags, editable, onRemove }: RowProps) {
   const { colors } = useAppTheme();
 
   return (
@@ -166,7 +186,7 @@ function RuleRow({ control, index, roleName, single, editable, onRemove }: RowPr
         {editable ? <IconButton icon="close" onPress={onRemove} accessibilityLabel={`Remove the rule for ${roleName}`} style={styles.remove} /> : null}
       </View>
       <View style={styles.flags}>
-        {FLAGS.filter((column) => column.single || !single).map((column) => (
+        {FLAGS.filter((column) => flags.includes(column.flag)).map((column) => (
           <Controller
             key={column.flag}
             control={control}

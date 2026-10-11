@@ -116,6 +116,61 @@ export type Database = {
           },
         ]
       }
+      bins: {
+        Row: {
+          actual_qty: number
+          fifo_queue: Json
+          item_id: string
+          last_posting_date: string | null
+          merchant_id: string
+          stock_value: number
+          valuation_rate: number
+          warehouse_id: string
+        }
+        Insert: {
+          actual_qty?: number
+          fifo_queue?: Json
+          item_id: string
+          last_posting_date?: string | null
+          merchant_id: string
+          stock_value?: number
+          valuation_rate?: number
+          warehouse_id: string
+        }
+        Update: {
+          actual_qty?: number
+          fifo_queue?: Json
+          item_id?: string
+          last_posting_date?: string | null
+          merchant_id?: string
+          stock_value?: number
+          valuation_rate?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bins_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "bins_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bins_warehouse_fk"
+            columns: ["warehouse_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           brand: string
@@ -410,6 +465,76 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fiscal_years_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gl_entries: {
+        Row: {
+          account_id: string
+          cost_center_id: string | null
+          created_at: string
+          credit: number
+          debit: number
+          id: number
+          is_cancelled: boolean
+          merchant_id: string
+          posting_date: string
+          remarks: string | null
+          voucher_id: string
+          voucher_no: string
+          voucher_type: string
+        }
+        Insert: {
+          account_id: string
+          cost_center_id?: string | null
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: never
+          is_cancelled?: boolean
+          merchant_id: string
+          posting_date: string
+          remarks?: string | null
+          voucher_id: string
+          voucher_no: string
+          voucher_type: string
+        }
+        Update: {
+          account_id?: string
+          cost_center_id?: string | null
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: never
+          is_cancelled?: boolean
+          merchant_id?: string
+          posting_date?: string
+          remarks?: string | null
+          voucher_id?: string
+          voucher_no?: string
+          voucher_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gl_entries_account_fk"
+            columns: ["account_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "gl_entries_cost_center_fk"
+            columns: ["cost_center_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "gl_entries_merchant_id_fkey"
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
@@ -1531,10 +1656,12 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          can_cancel: boolean
           can_create: boolean
           can_delete: boolean
           can_read: boolean
           can_select: boolean
+          can_submit: boolean
           can_write: boolean
           doctype: string
           id: string
@@ -1542,10 +1669,12 @@ export type Database = {
           role_id: string
         }
         Insert: {
+          can_cancel?: boolean
           can_create?: boolean
           can_delete?: boolean
           can_read?: boolean
           can_select?: boolean
+          can_submit?: boolean
           can_write?: boolean
           doctype: string
           id?: string
@@ -1553,10 +1682,12 @@ export type Database = {
           role_id: string
         }
         Update: {
+          can_cancel?: boolean
           can_create?: boolean
           can_delete?: boolean
           can_read?: boolean
           can_select?: boolean
+          can_submit?: boolean
           can_write?: boolean
           doctype?: string
           id?: string
@@ -1837,28 +1968,34 @@ export type Database = {
       }
       standard_role_permissions: {
         Row: {
+          can_cancel: boolean
           can_create: boolean
           can_delete: boolean
           can_read: boolean
           can_select: boolean
+          can_submit: boolean
           can_write: boolean
           doctype: string
           role_name: string
         }
         Insert: {
+          can_cancel?: boolean
           can_create?: boolean
           can_delete?: boolean
           can_read?: boolean
           can_select?: boolean
+          can_submit?: boolean
           can_write?: boolean
           doctype: string
           role_name: string
         }
         Update: {
+          can_cancel?: boolean
           can_create?: boolean
           can_delete?: boolean
           can_read?: boolean
           can_select?: boolean
+          can_submit?: boolean
           can_write?: boolean
           doctype?: string
           role_name?: string
@@ -1870,6 +2007,347 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "doctypes"
             referencedColumns: ["name"]
+          },
+        ]
+      }
+      stock_entries: {
+        Row: {
+          cost_center: string | null
+          created_at: string
+          difference_account: string | null
+          docstatus: number
+          from_warehouse: string | null
+          id: string
+          merchant_id: string
+          name: string
+          posting_date: string
+          purpose: string
+          to_warehouse: string | null
+        }
+        Insert: {
+          cost_center?: string | null
+          created_at?: string
+          difference_account?: string | null
+          docstatus?: number
+          from_warehouse?: string | null
+          id?: string
+          merchant_id: string
+          name: string
+          posting_date: string
+          purpose: string
+          to_warehouse?: string | null
+        }
+        Update: {
+          cost_center?: string | null
+          created_at?: string
+          difference_account?: string | null
+          docstatus?: number
+          from_warehouse?: string | null
+          id?: string
+          merchant_id?: string
+          name?: string
+          posting_date?: string
+          purpose?: string
+          to_warehouse?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_entries_account_fk"
+            columns: ["difference_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_entries_cost_center_fk"
+            columns: ["cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_entries_from_warehouse_fk"
+            columns: ["from_warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_entries_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_entries_to_warehouse_fk"
+            columns: ["to_warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      stock_entry_items: {
+        Row: {
+          amount: number | null
+          basic_rate: number | null
+          id: string
+          idx: number
+          item_id: string
+          merchant_id: string
+          qty: number
+          stock_entry_id: string
+        }
+        Insert: {
+          amount?: number | null
+          basic_rate?: number | null
+          id?: string
+          idx: number
+          item_id: string
+          merchant_id: string
+          qty: number
+          stock_entry_id: string
+        }
+        Update: {
+          amount?: number | null
+          basic_rate?: number | null
+          id?: string
+          idx?: number
+          item_id?: string
+          merchant_id?: string
+          qty?: number
+          stock_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_entry_items_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_entry_items_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_entry_items_parent_fk"
+            columns: ["stock_entry_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "stock_entries"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      stock_ledger_entries: {
+        Row: {
+          actual_qty: number
+          created_at: string
+          id: number
+          incoming_rate: number
+          is_cancelled: boolean
+          item_id: string
+          merchant_id: string
+          posting_date: string
+          qty_after_transaction: number
+          stock_value: number
+          stock_value_difference: number
+          valuation_rate: number
+          voucher_id: string
+          voucher_no: string
+          voucher_type: string
+          warehouse_id: string
+        }
+        Insert: {
+          actual_qty: number
+          created_at?: string
+          id?: never
+          incoming_rate?: number
+          is_cancelled?: boolean
+          item_id: string
+          merchant_id: string
+          posting_date: string
+          qty_after_transaction: number
+          stock_value: number
+          stock_value_difference: number
+          valuation_rate?: number
+          voucher_id: string
+          voucher_no: string
+          voucher_type: string
+          warehouse_id: string
+        }
+        Update: {
+          actual_qty?: number
+          created_at?: string
+          id?: never
+          incoming_rate?: number
+          is_cancelled?: boolean
+          item_id?: string
+          merchant_id?: string
+          posting_date?: string
+          qty_after_transaction?: number
+          stock_value?: number
+          stock_value_difference?: number
+          valuation_rate?: number
+          voucher_id?: string
+          voucher_no?: string
+          voucher_type?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_ledger_entries_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_ledger_entries_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_ledger_entries_warehouse_fk"
+            columns: ["warehouse_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      stock_reconciliation_items: {
+        Row: {
+          amount_difference: number | null
+          current_qty: number | null
+          current_valuation_rate: number | null
+          id: string
+          idx: number
+          item_id: string
+          merchant_id: string
+          qty: number
+          stock_reconciliation_id: string
+          valuation_rate: number
+          warehouse_id: string
+        }
+        Insert: {
+          amount_difference?: number | null
+          current_qty?: number | null
+          current_valuation_rate?: number | null
+          id?: string
+          idx: number
+          item_id: string
+          merchant_id: string
+          qty: number
+          stock_reconciliation_id: string
+          valuation_rate: number
+          warehouse_id: string
+        }
+        Update: {
+          amount_difference?: number | null
+          current_qty?: number | null
+          current_valuation_rate?: number | null
+          id?: string
+          idx?: number
+          item_id?: string
+          merchant_id?: string
+          qty?: number
+          stock_reconciliation_id?: string
+          valuation_rate?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliation_items_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_items_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_items_parent_fk"
+            columns: ["stock_reconciliation_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "stock_reconciliations"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_items_warehouse_fk"
+            columns: ["warehouse_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      stock_reconciliations: {
+        Row: {
+          cost_center: string | null
+          created_at: string
+          difference_account: string | null
+          docstatus: number
+          id: string
+          merchant_id: string
+          name: string
+          posting_date: string
+          purpose: string
+        }
+        Insert: {
+          cost_center?: string | null
+          created_at?: string
+          difference_account?: string | null
+          docstatus?: number
+          id?: string
+          merchant_id: string
+          name: string
+          posting_date: string
+          purpose?: string
+        }
+        Update: {
+          cost_center?: string | null
+          created_at?: string
+          difference_account?: string | null
+          docstatus?: number
+          id?: string
+          merchant_id?: string
+          name?: string
+          posting_date?: string
+          purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliations_account_fk"
+            columns: ["difference_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliations_cost_center_fk"
+            columns: ["cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliations_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2304,6 +2782,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_document: {
+        Args: { p_doctype: string; p_id: string }
+        Returns: undefined
+      }
       delete_current_user: { Args: never; Returns: undefined }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
       naming_series_preview: {
@@ -2319,6 +2801,7 @@ export type Database = {
       save_item: { Args: { payload: Json }; Returns: string }
       save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
+      save_item_with_opening_stock: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }
       save_role_permissions: {
         Args: { p_doctype: string; p_merchant: string; p_rows: Json }
@@ -2326,6 +2809,12 @@ export type Database = {
       }
       save_role_profile: { Args: { payload: Json }; Returns: string }
       save_sales_tax_template: { Args: { payload: Json }; Returns: string }
+      save_stock_entry: { Args: { payload: Json }; Returns: string }
+      save_stock_reconciliation: { Args: { payload: Json }; Returns: string }
+      submit_document: {
+        Args: { p_doctype: string; p_id: string }
+        Returns: undefined
+      }
       update_series_counter: {
         Args: { p_current: number; p_merchant: string; p_series: string }
         Returns: undefined

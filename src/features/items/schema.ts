@@ -2,7 +2,8 @@ import * as z from 'zod';
 
 import { numberText } from '../item-tax-templates/schema';
 
-const atLeastZero = numberText.refine((value) => Number(value || 0) >= 0, 'Enter 0 or more.');
+/** A quantity or rate as the TextInput holds it: blank for none, never below zero. */
+export const atLeastZero = numberText.refine((value) => Number(value || 0) >= 0, 'Enter 0 or more.');
 
 /**
  * Form input, so Zod (.claude/instruction_mds/data-layer.md §3); save_item takes the same object. Empty strings
@@ -35,6 +36,10 @@ export const itemSchema = (codeTyped: boolean) =>
       expense_account: z.string(),
       // Read on creation only: it becomes the item's first Item Price.
       standard_rate: atLeastZero,
+      // Read on creation only: together they become an Opening Stock reconciliation, saved and submitted with
+      // the item (public.save_item_with_opening_stock). An empty rate takes the Standard Selling Rate.
+      opening_stock: atLeastZero,
+      valuation_rate: atLeastZero,
       uoms: z.array(
         z.object({
           uom_id: z.string().min(1, 'Pick a unit.'),

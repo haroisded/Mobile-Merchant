@@ -39,6 +39,7 @@ src/lib/database.types.ts  generated from the schema; regenerate whenever a migr
 src/Store/StoreUser.ts     the session handler — one onAuthStateChange subscription
 src/Store/picker.ts        the open searchable picker's options and callback, for the sheets/pick route
 src/Store/confirm.ts       the open confirm's text and action, for the sheets/confirm route
+src/Store/ledger-filters.ts what each ledger report is narrowed to, for the forms/ledger-filters route
 src/themes.js              MD3 light/dark palettes + Merchant keys, roundness, spacing and radius
                            scales, the type scale
 src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years,
@@ -51,12 +52,16 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            item-groups, selling-settings, tax-rules (+ resolve.ts, the rule a sale
                            takes), stock-settings; naming-series, print-formats (+ receipt.ts, what a
                            receipt prints), letter-heads, print-settings; items, item-prices
-                           (+ resolve.ts, the rate a sale line takes); read-only countries,
-                           currency-presets, doctypes
+                           (+ resolve.ts, the rate a sale line takes); documents (submit and cancel
+                           for every document), stock-entries, stock-reconciliations; the ledgers
+                           only a posting writes — gl-entries, stock-ledger-entries, bins; read-only
+                           countries, currency-presets, doctypes
 src/screens/<screen>/      UI by screen — home (the systems list and the create-system form), setup
                            (the Setup index), stock (the Stock index), items (list + search, a
                            full-page item with its UOM and Item Tax rows), item-prices (list +
-                           search, form), company, fiscal-years, users, roles, role-profiles,
+                           search, form), stock-entries and stock-reconciliations (list + a
+                           document's page), stock-balance, stock-ledger, accounts (the Accounts
+                           index), general-ledger, company, fiscal-years, users, roles, role-profiles,
                            role-permissions, user-permissions, global-defaults, system-settings,
                            currency, chart-of-accounts, cost-centers, accounts-settings,
                            modes-of-payment, tax-categories, item-tax-templates, warehouses, uoms,
@@ -80,7 +85,10 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            total, tax preview, valuation), record-index (a destination's index: the
                            rows a person's roles let them read), sales-defaults-fields and
                            item-tax-fields (the sales defaults and the Item Tax row an Item and an
-                           Item Group both have) —
+                           Item Group both have), document-page (a document's header, its Submit /
+                           Cancel / Delete and its form), stock-document (what the two stock
+                           documents share), ledger-filters (a report's filter bar and panel, and
+                           the way between a ledger row and its document), chip —
                            and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
@@ -88,8 +96,10 @@ src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the s
                            formSheet: confirms, the picker) and the forms/ routes (a small form: a
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
 src/app/(app)/(tabs)/      home, notifications, settings, account + the NativeTabs bar
-src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and two Stacks
-                           of their own: stock/ (the index, items, item, item-prices) and setup/ (the
+src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and three Stacks
+                           of their own: stock/ (the index, items, item, item-prices, the stock
+                           documents and reports), accounts/ (the index, general-ledger; each re-exports
+                           the other's document and report pages, so Back returns) and setup/ (the
                            index and one route per Setup page; chart-of-accounts, cost-centers,
                            warehouses and item-groups push themselves once per folder, `parent`)
 app.config.ts              derives the Google iOS URL scheme from .env
@@ -105,7 +115,8 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261010011003_item_groups_and_selling_settings.sql,
                            20261010011005_tax_rules.sql, 20261010011013_stock_settings.sql,
                            20261010064803_naming_series.sql, 20261010065138_printing.sql; then the
-                           second batch: 20261011134250_items.sql, 20261011134357_item_prices.sql
+                           second batch: 20261011134250_items.sql, 20261011134357_item_prices.sql,
+                           20261011165554_ledgers.sql, 20261011170112_stock_in_and_adjustments.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -242,7 +253,8 @@ and `systems/[id]` sits beside it rather than inside it, so opening a system pus
 instead of becoming a fifth tab.
 
 `systems/[id]` is the merchant shell: one expo-router `Drawer`, a permanent rail on a wide window
-and an off-canvas drawer on a narrow one. It holds two destinations: Home, which renders nothing yet,
+and an off-canvas drawer on a narrow one. It holds four destinations: Home, which renders nothing yet;
+Stock and Accounts, each a `Stack` of its own whose index lists what the reader's roles let them open;
 and Setup — a `Stack` of its own (`systems/[id]/setup/`), whose index lists the company's foundation
 records on ERPNext's model and pushes each one; a tap on Setup in the rail always lands on that index.
 A small form opened from Setup (a fiscal year) is a `forms/` route of the `(app)` stack instead: a
@@ -772,6 +784,48 @@ Which price a sale line takes is `src/features/item-prices/resolve.ts`, import-f
 for that unit valid on the date (the later Valid From wins) → on a **Price Not UOM Dependent** list, the
 stock-unit price × the conversion factor → the same two in the fallback list → none. The Register (Step 18)
 will call it; nothing does yet.
+
+### Step 15, Ledgers — `20261011165554_ledgers.sql`
+
+The posting engine every later document uses (docs.frappe.io/erpnext/accounting-entries, /general-ledger,
+/stock-ledger, /stock-level-report, /perpetual-inventory, /immutable-ledger).
+
+| Piece | What it does |
+| --- | --- |
+| `can_submit`, `can_cancel` | two more permission columns on `standard_role_permissions` and `role_permissions`, read by `permitted_merchant_ids`, `my_permissions`, `save_role_permissions` and `sync_standard_permissions` |
+| doctype kinds `document`, `ledger` | `apply_doctype_policies` gives a document the record's four policies plus `private.guard_docstatus()` (its rows: `guard_docstatus_child()`), and a ledger a select policy only |
+| `gl_entries` | one debit or credit of an account for a voucher: posting date, cost center, voucher type / id / number, remarks, `is_cancelled` |
+| `stock_ledger_entries` | one movement of an item in a warehouse: quantity, incoming rate, and the valuation rate, quantity and value it left |
+| `bins` | the Stock Balance: per item and warehouse, the quantity, valuation rate, value and FIFO layers |
+| `private.assert_postable` | refuses a date in the future, outside an enabled Fiscal Year, or on or before Accounts Frozen Till (the owner and the role Accounts Settings names may pass the last) |
+| `private.post_gl` / `cancel_gl` | rounds at the currency's precision, merges rows per account and cost center, refuses an unbalanced voucher, sends a rounding cent to the Round Off Account. Cancel: reversing rows dated the cancellation day when Immutable Ledger is on, else the rows marked cancelled |
+| `private.post_sle` / `reconcile_sle` / `cancel_sle` | locks the bin, values the movement by FIFO or Moving Average (the item's method, else Stock Settings'), refuses negative stock unless the item or Stock Settings allow it, a fraction in a whole-number unit, and a date before the bin's last movement |
+| `public.submit_document`, `public.cancel_document` | the two definer RPCs: `auth.uid()`, the caller's Submit or Cancel permission, the row lock, then `private.submit_<table>` or the two cancels, then `docstatus` |
+
+Two ceilings, each marked `ponytail:` in the SQL. A posting dated before an item's last movement in that
+warehouse is refused (`stock_backdated`) — there is no repost engine. And a cancel puts the original value
+back at today's date, after which the bin's FIFO layers are one layer at the average: `bins.stock_value` is
+the truth the General Ledger follows, so the two always agree.
+
+### Step 16, Stock In & Adjustments — `20261011170112_stock_in_and_adjustments.sql`
+
+`stock_reconciliations` (purpose Opening Stock or Stock Reconciliation) and `stock_entries` (Material
+Receipt, Issue or Transfer), each with its rows, numbered from their own series (`MAT-RECO-.YYYY.-`,
+`MAT-STE-.YYYY.-`) when first saved. Both count in the item's stock unit; a Stock Entry names its
+warehouses once, on the document. `private.validate_stock_document()` fills an empty Difference Account and
+Cost Center on a new one — Temporary Opening for an Opening Stock, else the Company's Stock Adjustment
+Account — and holds each link to an enabled record of the right kind. `save_stock_reconciliation` and
+`save_stock_entry` (invoker) write a draft and its rows in one transaction.
+
+With Perpetual Inventory on, a receipt debits the warehouse's inventory account and credits the Difference
+Account; an issue is the reverse; a transfer moves value between the two warehouses' accounts and posts
+nothing when they share one; a reconciliation posts the change in value. A reconciliation that changes
+nothing is refused. `public.save_item_with_opening_stock` wraps `save_item`: a new stock item's Opening Stock
+is saved and submitted as an Opening Stock reconciliation in its Default Warehouse, else Stock Settings'.
+
+On the client a ledger is read with its filters sent to the server, newest `LEDGER_PAGE` rows; a document's
+page reads its document by id, so a ledger row opens one however old. A new document's Posting Date starts
+on the system's day (`todayIn`, `src/lib/dates.ts`), the day the database posts by.
 
 ---
 

@@ -32,7 +32,7 @@ Which directories exist under `src/`, and what goes in each. What goes *inside* 
 src/
   app/                    routes and layouts only
   lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts  …
-  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts)
+  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts)
   features/
     merchants/            queries.ts  schema.ts — merchants is the Company
     countries/            queries.ts — read-only reference data
@@ -56,6 +56,9 @@ src/
     print-settings/       queries.ts
     items/                queries.ts  schema.ts
     item-prices/          queries.ts  schema.ts  resolve.ts — the rate a sale line takes, import-free
+    gl-entries/  stock-ledger-entries/  bins/             queries.ts — read-only: only a posting writes a ledger
+    documents/            queries.ts — submit / cancel for every document, and what a posting invalidates
+    stock-entries/  stock-reconciliations/                queries.ts  schema.ts — list, one by id, save, delete
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
@@ -63,6 +66,10 @@ src/
     stock/                index.tsx — the Stock destination's index
     items/                index.tsx  item-form.tsx (a Stock-stack page)
     item-prices/          index.tsx  item-price-form.tsx
+    accounts/             index.tsx — the Accounts destination's index
+    general-ledger/  stock-ledger/  stock-balance/        index.tsx — the ledger reports
+    stock-entries/        index.tsx  stock-entry-form.tsx (a document's page)
+    stock-reconciliations/  index.tsx  stock-reconciliation-form.tsx
     company/              index.tsx
     fiscal-years/         index.tsx  fiscal-year-form.tsx
     users/  roles/  role-profiles/  user-permissions/     index.tsx  <name>-form.tsx (+ records.ts)
@@ -84,7 +91,7 @@ src/
     print-settings/       index.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
@@ -141,7 +148,16 @@ Anything with no table, schema or query key behind it.
 ```
 src/app/(app)/systems/[id]/_layout.tsx   the shell — expo-router Drawer, permanent when wide
 src/app/(app)/systems/[id]/index.tsx     Home
-src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, items.tsx, item.tsx, item-prices.tsx
+src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, items.tsx, item.tsx, item-prices.tsx,
+                                         stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
+                                         stock-reconciliation.tsx, stock-balance.tsx, stock-ledger.tsx
+src/app/(app)/systems/[id]/accounts/     Accounts — its own Stack: index.tsx, general-ledger.tsx
+
+A ledger row opens its document, and a document its entries, **inside the stack the reader is in**, so Back
+returns there. So a page reached from another destination is re-exported into it, one line a file:
+`accounts/stock-entry.tsx`, `accounts/stock-reconciliation.tsx`, `accounts/stock-ledger.tsx` and
+`stock/general-ledger.tsx` (`useVoucherRoutes`, `src/components/ledger-filters.tsx`). A document's page takes
+`docId`, whatever its type. Rejected: pushing into the other destination's stack — Back pops that stack.
 src/app/(app)/systems/[id]/setup/        Setup — its own Stack: index.tsx, then one route per record (company.tsx, fiscal-years.tsx)
 ```
 

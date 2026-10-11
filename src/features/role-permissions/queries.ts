@@ -10,10 +10,15 @@ export type RolePermission = Tables<'role_permissions'>;
  * The Role Permissions Manager's form: one doctype's rules, one per role — what save_role_permissions takes.
  * No Zod: every field is a checkbox, so there is nothing to reject (.claude/instruction_mds/data-layer.md §3).
  */
-export type RulesValues = { rules: Pick<RolePermission, 'role_id' | 'can_select' | 'can_read' | 'can_write' | 'can_create' | 'can_delete'>[] };
+export type RulesValues = {
+  rules: Pick<RolePermission, 'role_id' | 'can_select' | 'can_read' | 'can_write' | 'can_create' | 'can_delete' | 'can_submit' | 'can_cancel'>[];
+};
 
-/** ERPNext's permission types this app enforces; submit, cancel and print arrive with POS Invoice. */
-export type Ptype = 'select' | 'read' | 'write' | 'create' | 'delete';
+/**
+ * ERPNext's permission types this app enforces. Submit and cancel mean something on a document only
+ * (public.submit_document, public.cancel_document check them); print arrives with POS Invoice.
+ */
+export type Ptype = 'select' | 'read' | 'write' | 'create' | 'delete' | 'submit' | 'cancel';
 
 export type DoctypePermissions = Record<Ptype, boolean>;
 
