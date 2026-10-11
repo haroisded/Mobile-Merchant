@@ -8,44 +8,27 @@ import { saveOnce } from '../../components/adaptive-dialog';
 import { Button } from '../../components/button';
 import { useConfirm } from '../../components/confirm-dialog';
 import { treeFailure, treePlacement } from '../../components/folder-nav';
-import { ControlledDate, ControlledSwitch, ControlledText, FieldGrid } from '../../components/form-fields';
+import { ControlledSwitch, ControlledText, FieldGrid } from '../../components/form-fields';
 import { PageForm } from '../../components/form-footer';
+import { ItemTaxFields, useItemTaxRecords } from '../../components/item-tax-fields';
+import type { ItemTaxRecords } from '../../components/item-tax-fields';
 import { PageHeader } from '../../components/page-header';
-import { AddRowButton, RepeatableRow } from '../../components/repeatable-rows';
+import { RepeatableList } from '../../components/repeatable-rows';
+import { SalesDefaultsFields, useSalesDefaultsRecords } from '../../components/sales-defaults-fields';
+import type { SalesDefaultsRecords } from '../../components/sales-defaults-fields';
 import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
-import { Text } from '../../components/text';
-import { ledgerOptions, useAccountsQuery } from '../../features/accounts/queries';
-import type { Account } from '../../features/accounts/queries';
-import { costCenterOptions, useCostCentersQuery } from '../../features/cost-centers/queries';
-import type { CostCenter } from '../../features/cost-centers/queries';
 import { useDeleteItemGroupMutation, useItemGroupsQuery, useSaveItemGroupMutation } from '../../features/item-groups/queries';
 import type { ItemGroup } from '../../features/item-groups/queries';
 import { itemGroupSchema } from '../../features/item-groups/schema';
 import type { ItemGroupValues } from '../../features/item-groups/schema';
-import { useItemTaxTemplatesQuery } from '../../features/item-tax-templates/queries';
-import type { ItemTaxTemplate } from '../../features/item-tax-templates/queries';
 import type { Merchant } from '../../features/merchants/queries';
-import { priceListOptions, usePriceListsQuery } from '../../features/price-lists/queries';
-import type { PriceList } from '../../features/price-lists/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
-import { useTaxCategoriesQuery } from '../../features/tax-categories/queries';
-import type { TaxCategory } from '../../features/tax-categories/queries';
-import { useWarehousesQuery, warehouseOptions } from '../../features/warehouses/queries';
-import type { Warehouse } from '../../features/warehouses/queries';
 import { useShellWide } from '../../lib/columns';
 import { mutationNotice } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 
-type Records = {
-  groups: ItemGroup[];
-  priceLists: PriceList[];
-  warehouses: Warehouse[];
-  costCenters: CostCenter[];
-  accounts: Account[];
-  itemTemplates: ItemTaxTemplate[];
-  categories: TaxCategory[];
-};
+type Records = { groups: ItemGroup[]; sales: SalesDefaultsRecords; tax: ItemTaxRecords };
 
 /**
  * One Item Group (docs.frappe.io/erpnext/item-group): its place in the tree, the defaults its items take, and
@@ -53,26 +36,13 @@ type Records = {
  * width, being a long form; new under `parentId` when there is no `groupId`.
  */
 export function ItemGroupPage({ merchant, groupId, parentId }: { merchant: Merchant; groupId?: string; parentId?: string }) {
-  // Every member may select these (All's Select on each), so an Item Group editor can pick from them. The tree
-  // this page was opened from fetched the groups; the rest are cache hits once Setup has been browsed.
+  // The tree this page was opened from fetched the groups; the rest are cache hits once Setup has been browsed.
   const groups = useItemGroupsQuery({ merchantId: merchant.id }).data;
-  const priceLists = usePriceListsQuery({ merchantId: merchant.id }).data;
-  const warehouses = useWarehousesQuery({ merchantId: merchant.id }).data;
-  const costCenters = useCostCentersQuery({ merchantId: merchant.id }).data;
-  const accounts = useAccountsQuery({ merchantId: merchant.id }).data;
-  const itemTemplates = useItemTaxTemplatesQuery({ merchantId: merchant.id }).data;
-  const categories = useTaxCategoriesQuery({ merchantId: merchant.id }).data;
-  if (!groups || !priceLists || !warehouses || !costCenters || !accounts || !itemTemplates || !categories) return null;
-  const existing = groupId ? groups.find((group) => group.id === groupId) : undefined;
+  const sales = useSalesDefaultsRecords(merchant.id);
+  const tax = useItemTaxRecords(merchant.id);
+  if (!groups || !sales || !tax) return null;
 
-  return (
-    <Form
-      merchant={merchant}
-      records={{ groups, priceLists, warehouses, costCenters, accounts, itemTemplates, categories }}
-      existing={existing}
-      parentId={parentId}
-    />
-  );
+  return <Form merchant={merchant} records={{ groups, sales, tax }} existing={groupId ? groups.find((group) => group.id === groupId) : undefined} parentId={parentId} />;
 }
 
 const defaults = (existing: ItemGroup | undefined, parentId: string | undefined): ItemGroupValues => ({
@@ -107,7 +77,7 @@ function GroupHeader({ merchant, existing }: { merchant: Merchant; existing: Ite
   const askDelete = (group: ItemGroup) =>
     confirm.ask({
       title: `Delete ${group.item_group_name}?`,
-      body: 'Its Item Tax rows go with it. One with groups under it, or one a tax rule or Stock Settings uses, cannot be deleted.',
+      body: 'Its Item Tax rows go with it. One with groups or items under it, or one a tax rule or Stock Settings uses, cannot be deleted.',
       confirmLabel: 'Delete',
       run: () => remove.mutateAsync(group.id),
       failure: (cause) => treeFailure(cause, "Couldn't delete this item group. Try again."),
@@ -141,13 +111,11 @@ function GroupHeader({ merchant, existing }: { merchant: Merchant; existing: Ite
 type FormProps = { merchant: Merchant; records: Records; existing: ItemGroup | undefined; parentId: string | undefined };
 
 function Form({ merchant, records, existing, parentId }: FormProps) {
-  const { colors } = useAppTheme();
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const editable = can(permissions, 'Item Group', existing ? 'write' : 'create');
   const save = useSaveItemGroupMutation({ merchantId: merchant.id, groupId: existing?.id });
   const notice = mutationNotice(save, treeFailure(save.error, "Couldn't save this item group. Try again."));
   const { root, hasChildren, parents } = treePlacement(records.groups, existing, (group) => ({ value: group.id, label: group.item_group_name }));
-  const abbr = merchant.abbr;
 
   const { control, handleSubmit, formState } = useForm<ItemGroupValues>({
     resolver: zodResolver(itemGroupSchema),
@@ -190,104 +158,46 @@ function Form({ merchant, records, existing, parentId }: FormProps) {
         </FieldGrid>
         {/* docs.frappe.io/erpnext/item-group 2.2 */}
         <SectionHeading title="Defaults" hint="What its items start with when they are sold" />
-        <FieldGrid>
-          <ControlledSelect
-            control={control}
-            name="default_price_list"
-            label="Default Price List"
-            title="Default Price List"
-            options={priceListOptions(records.priceLists, existing?.default_price_list)}
-            disabled={!editable}
-          />
-          <ControlledSelect
-            control={control}
-            name="default_warehouse"
-            label="Default Warehouse"
-            hint="Where its items are sold from"
-            title="Default Warehouse"
-            options={warehouseOptions(records.warehouses, abbr, existing?.default_warehouse)}
-            disabled={!editable}
-          />
-          <ControlledSelect
-            control={control}
-            name="selling_cost_center"
-            label="Default Selling Cost Center"
-            title="Default Selling Cost Center"
-            options={costCenterOptions(records.costCenters, abbr, existing?.selling_cost_center)}
-            disabled={!editable}
-          />
-          <ControlledSelect
-            control={control}
-            name="income_account"
-            label="Default Income Account"
-            hint="An Income ledger"
-            title="Default Income Account"
-            options={ledgerOptions(records.accounts, abbr, (account) => account.root_type === 'Income', existing?.income_account)}
-            disabled={!editable}
-          />
-          <ControlledSelect
-            control={control}
-            name="expense_account"
-            label="Default Expense Account"
-            hint="An Expense ledger, such as Cost of Goods Sold"
-            title="Default Expense Account"
-            options={ledgerOptions(records.accounts, abbr, (account) => account.root_type === 'Expense', existing?.expense_account)}
-            disabled={!editable}
-          />
-        </FieldGrid>
+        <SalesDefaultsFields
+          control={control}
+          names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', costCenter: 'selling_cost_center', income: 'income_account', expense: 'expense_account' }}
+          saved={existing}
+          records={records.sales}
+          abbr={merchant.abbr}
+          disabled={!editable}
+        />
         <SectionHeading title="Item Tax" hint="The Item Tax Template its items take — for a tax category, from a date, within a net rate" />
-        {taxes.fields.map((field, index) => (
-          <RepeatableRow key={field.id} title={`Row ${index + 1}`} onRemove={editable ? () => taxes.remove(index) : undefined}>
-            <TaxRowFields control={control} index={index} records={records} disabled={!editable} />
-          </RepeatableRow>
-        ))}
-        {taxes.fields.length === 0 ? (
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceMuted }}>
-            No item taxes: its items are taxed as the sale's template says.
-          </Text>
-        ) : null}
-        {editable ? (
-          <AddRowButton onPress={() => taxes.append({ item_tax_template_id: '', tax_category_id: '', valid_from: '', minimum_net_rate: '', maximum_net_rate: '' })}>
-            Add Item Tax
-          </AddRowButton>
-        ) : null}
+        <RepeatableList
+          fields={taxes.fields}
+          editable={editable}
+          empty="No item taxes: its items are taxed as the sale's template says."
+          addLabel="Add Item Tax"
+          onAdd={() => taxes.append({ item_tax_template_id: '', tax_category_id: '', valid_from: '', minimum_net_rate: '', maximum_net_rate: '' })}
+          onRemove={taxes.remove}
+        >
+          {(index) => <TaxRowFields control={control} index={index} records={records.tax} disabled={!editable} />}
+        </RepeatableList>
       </PageForm>
     </View>
   );
 }
 
-type RowProps = { control: Control<ItemGroupValues>; index: number; records: Records; disabled: boolean };
+type RowProps = { control: Control<ItemGroupValues>; index: number; records: ItemTaxRecords; disabled: boolean };
 
 /** One Item Tax row: the template, and the conditions under which it applies. */
 function TaxRowFields({ control, index, records, disabled }: RowProps) {
   const row = useWatch({ control, name: `taxes.${index}` });
   if (!row) return null;
 
-  // Enabled ones, plus the row's own once disabled, so a saved row still shows it.
-  const templates = records.itemTemplates
-    .filter((template) => !template.disabled || template.id === row.item_tax_template_id)
-    .map((template) => ({ value: template.id, label: template.title }));
-  const categories = [
-    { value: '', label: 'Any' },
-    ...records.categories
-      .filter((category) => !category.disabled || category.id === row.tax_category_id)
-      .map((category) => ({ value: category.id, label: category.title })),
-  ];
-
   return (
     <FieldGrid>
-      <ControlledSelect
+      <ItemTaxFields
         control={control}
-        name={`taxes.${index}.item_tax_template_id`}
-        label="Item Tax Template"
-        required
-        span="full"
-        title="Item Tax Template"
-        options={templates}
+        names={{ template: `taxes.${index}.item_tax_template_id`, category: `taxes.${index}.tax_category_id`, validFrom: `taxes.${index}.valid_from` }}
+        row={row}
+        records={records}
         disabled={disabled}
       />
-      <ControlledSelect control={control} name={`taxes.${index}.tax_category_id`} label="Tax Category" title="Tax Category" options={categories} disabled={disabled} />
-      <ControlledDate control={control} name={`taxes.${index}.valid_from`} label="Valid From" hint="Empty: always" clearable disabled={disabled} />
       <ControlledText
         control={control}
         name={`taxes.${index}.minimum_net_rate`}

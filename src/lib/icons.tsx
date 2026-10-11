@@ -42,6 +42,8 @@ export const ICONS = {
   home: { ios: 'house', android: 'home' },
   menu: { ios: 'line.3.horizontal', android: 'menu' },
   settings: { ios: 'gearshape', android: 'settings' },
+  // The shell's Stock destination: items, prices and stock.
+  stock: { ios: 'shippingbox', android: 'inventory_2' },
 
   // Profile
   camera: { ios: 'camera', android: 'photo_camera' },

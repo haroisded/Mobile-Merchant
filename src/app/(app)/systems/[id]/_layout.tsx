@@ -29,11 +29,12 @@ import { radius, spacing } from '../../../../themes';
 type Destination = { name: string; label: string; icon: IconName; stack?: boolean };
 
 // Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
-// as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Setup is the
-// company's foundation records (./setup/, a stack of its own); the operational screens arrive with the
-// rebuild.
+// as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Stock is the items,
+// their prices and their stock (./stock/); Setup is the company's foundation records (./setup/) — each a
+// stack of its own. Dashboard, Sell and Accounts arrive with their steps, between Home and Setup.
 const DESTINATIONS: Destination[] = [
   { name: 'index', label: 'Home', icon: 'home' },
+  { name: 'stock', label: 'Stock', icon: 'stock', stack: true },
   { name: 'setup', label: 'Setup', icon: 'settings', stack: true },
 ];
 

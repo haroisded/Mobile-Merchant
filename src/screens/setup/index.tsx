@@ -1,62 +1,44 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Icon } from '../../components/icon';
-import { PageHeader } from '../../components/page-header';
-import { QueryState } from '../../components/query-state';
-import { Text } from '../../components/text';
-import { can, usePermissions } from '../../features/role-permissions/queries';
-import { useColumns } from '../../lib/columns';
-import { useAppTheme } from '../../lib/theme';
-import { radius, spacing } from '../../themes';
+import { RecordIndex } from '../../components/record-index';
+import type { IndexSection } from '../../components/record-index';
 
-type Entry = {
-  label: string;
-  hint: string;
-  /** The doctype whose Read permission shows this row (private.permitted_merchant_ids). */
-  doctype: string;
-  /**
-   * The page under src/app/(app)/systems/[id]/setup/, pushed as a string href. Rejected: `{ pathname, params }`
-   * — past 22 routes the union is more than TypeScript will check against expo-router's per-route types.
-   */
-  route:
-    | 'company'
-    | 'fiscal-years'
-    | 'global-defaults'
-    | 'system-settings'
-    | 'currency'
-    | 'chart-of-accounts'
-    | 'cost-centers'
-    | 'accounts-settings'
-    | 'modes-of-payment'
-    | 'tax-categories'
-    | 'sales-tax-templates'
-    | 'item-tax-templates'
-    | 'tax-rules'
-    | 'warehouses'
-    | 'uoms'
-    | 'uom-conversion-factors'
-    | 'price-lists'
-    | 'brands'
-    | 'item-groups'
-    | 'stock-settings'
-    | 'selling-settings'
-    | 'users'
-    | 'roles'
-    | 'role-profiles'
-    | 'role-permissions'
-    | 'user-permissions'
-    | 'document-naming-settings'
-    | 'print-formats'
-    | 'letter-heads'
-    | 'print-settings';
-};
-
-type Section = { title: string; hint: string; entries: Entry[] };
+/** The pages under src/app/(app)/systems/[id]/setup/. */
+type SetupRoute =
+  | 'company'
+  | 'fiscal-years'
+  | 'global-defaults'
+  | 'system-settings'
+  | 'currency'
+  | 'chart-of-accounts'
+  | 'cost-centers'
+  | 'accounts-settings'
+  | 'modes-of-payment'
+  | 'tax-categories'
+  | 'sales-tax-templates'
+  | 'item-tax-templates'
+  | 'tax-rules'
+  | 'warehouses'
+  | 'uoms'
+  | 'uom-conversion-factors'
+  | 'price-lists'
+  | 'brands'
+  | 'item-groups'
+  | 'stock-settings'
+  | 'selling-settings'
+  | 'users'
+  | 'roles'
+  | 'role-profiles'
+  | 'role-permissions'
+  | 'user-permissions'
+  | 'document-naming-settings'
+  | 'print-formats'
+  | 'letter-heads'
+  | 'print-settings';
 
 // The foundation a POS needs before its first item, grouped as .claude/erpnext-docs/POS-System-Only-Features.md
 // groups it. A section appears once its first screen exists; the rest arrive step by step.
-const SECTIONS: Section[] = [
+const SECTIONS: IndexSection<SetupRoute>[] = [
   {
     title: 'Company & Calendar',
     hint: 'Who the books belong to, and the years they are kept in',
@@ -178,101 +160,20 @@ const SECTIONS: Section[] = [
   },
 ];
 
-// ponytail: tune on a real tablet. A section card's narrowest width; the column count falls out of it.
-const SECTION_CARD = 320;
-
-/** Setup: the index of a system's foundation records, the rail's second destination. */
+/** Setup: the index of a system's foundation records, the rail's last destination. */
 export function SetupIndex({ merchantId, merchantName, isOwner }: { merchantId: string; merchantName: string; isOwner: boolean }) {
-  const { columns, onLayout } = useColumns(SECTION_CARD);
-  const permissions = usePermissions({ merchantId });
-  // A row shows only to whom may read it; a section with none left goes. The owner may read everything,
-  // and the systems list already says who that is — so the owner's rows need no my_permissions, which a
-  // fresh start in airplane mode has not fetched.
-  const sections = SECTIONS.map((section) => ({
-    ...section,
-    entries: section.entries.filter((entry) => isOwner || can(permissions.data, entry.doctype, 'read')),
-  })).filter((section) => section.entries.length > 0);
-  // Rows of `columns` sections, the last one padded with empty cells so every card keeps the same width.
-  const rows = Array.from({ length: Math.ceil(sections.length / columns) }, (_, row) =>
-    sections.slice(row * columns, row * columns + columns)
-  );
-
   return (
-    <View style={styles.fill}>
-      <PageHeader kicker={merchantName} title="Setup" meta="Set these up before the first item is sold" />
-      <ScrollView contentContainerStyle={styles.body}>
-        {isOwner || permissions.data ? null : (
-          <View style={styles.state}>
-            <QueryState query={permissions} offline="You're offline. Setup will load when you reconnect." failure="Couldn't load Setup. Try again." />
-          </View>
-        )}
-        {permissions.data && sections.length === 0 ? (
-          <Text variant="bodyMedium">Your roles give you nothing to set up here. Ask the owner if you need more.</Text>
-        ) : null}
-        <View style={styles.grid} onLayout={onLayout}>
-          {rows.map((row) => (
-            <View key={row[0].title} style={styles.gridRow}>
-              {row.map((section) => (
-                <SectionCard key={section.title} section={section} merchantId={merchantId} />
-              ))}
-              {Array.from({ length: columns - row.length }, (_, index) => (
-                <View key={index} style={styles.fill} />
-              ))}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
+    <RecordIndex
+      merchantId={merchantId}
+      kicker={merchantName}
+      title="Setup"
+      meta="Set these up before the first item is sold"
+      isOwner={isOwner}
+      sections={SECTIONS}
+      onOpen={(route) => router.push(`/systems/${merchantId}/setup/${route}`)}
+      offline="You're offline. Setup will load when you reconnect."
+      failure="Couldn't load Setup. Try again."
+      empty="Your roles give you nothing to set up here. Ask the owner if you need more."
+    />
   );
 }
-
-function SectionCard({ section, merchantId }: { section: Section; merchantId: string }) {
-  const { colors } = useAppTheme();
-
-  return (
-    <View style={styles.section}>
-      {/* Section heading: headlineSmall and its bodySmall hint (.claude/instruction_mds/frontend.md §5). */}
-      <View style={styles.heading}>
-        <Text variant="headlineSmall">{section.title}</Text>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-          {section.hint}
-        </Text>
-      </View>
-      <View style={[styles.box, { borderColor: colors.outlineVariant }]}>
-        {section.entries.map((entry, index) => (
-          <Pressable
-            key={entry.label}
-            onPress={() => router.push(`/systems/${merchantId}/setup/${entry.route}`)}
-            // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
-            android_ripple={{ color: colors.ripple }}
-            accessibilityRole="button"
-            accessibilityLabel={entry.label}
-            // A 1px surfaceVariant hairline between rows (.claude/instruction_mds/frontend.md §5).
-            style={[styles.row, index > 0 ? { borderTopWidth: 1, borderTopColor: colors.surfaceVariant } : null]}
-          >
-            <View style={styles.rowText}>
-              <Text variant="titleMedium">{entry.label}</Text>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-                {entry.hint}
-              </Text>
-            </View>
-            <Icon source="chevron-right" size={20} color={colors.onSurfaceMuted} />
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  body: { gap: spacing.md, padding: spacing.md },
-  state: { gap: spacing.ms, alignItems: 'flex-start' },
-  grid: { gap: spacing.lg },
-  gridRow: { flexDirection: 'row', gap: spacing.md },
-  section: { flex: 1, gap: spacing.sm },
-  heading: { gap: spacing.xs },
-  box: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 56, paddingHorizontal: spacing.md, paddingVertical: spacing.ms },
-  rowText: { flex: 1, gap: spacing.xs },
-});

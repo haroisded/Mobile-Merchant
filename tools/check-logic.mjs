@@ -4,6 +4,7 @@
 // (.claude/instruction_mds/testing-workflow.md), and this file covers only what arithmetic can settle.
 import assert from 'node:assert/strict';
 
+import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
@@ -154,5 +155,31 @@ assert.deepEqual(labels({ compact: false, showItemCode: false }), ['Item Name', 
 const PRINTED = [{ description: 'VAT @ 12', amount: 34.38 }, { description: 'Service Charge', amount: 0 }];
 assert.deepEqual(printedTaxes(PRINTED, false).map((row) => row.description), ['VAT @ 12']);
 assert.deepEqual(printedTaxes(PRINTED, true).map((row) => row.description), ['VAT @ 12', 'Service Charge']);
+
+// src/features/item-prices/resolve.ts — the price a sale's line takes (docs.frappe.io/erpnext/item-price 2.1,
+// 2.6; /Selling-in-different-UOM): the line's unit in the sale's list on its date, a Price Not UOM Dependent
+// list's stock-unit price times the conversion factor, then Selling Settings' fallback list.
+const price = (rate, row) => ({ item_id: 'rice', price_list_id: 'retail', uom_id: 'kg', price_list_rate: rate, valid_from: null, valid_upto: null, ...row });
+const RETAIL = { id: 'retail', price_not_uom_dependent: false };
+const line = (request) => ({ itemId: 'rice', uomId: 'kg', stockUomId: 'kg', conversionFactor: 1, date: '2026-12-15', priceList: RETAIL, fallback: null, ...request });
+const rateOf = (prices, request) => resolvePrice(prices, line(request))?.rate ?? null;
+assert.equal(rateOf([], {}), null);
+assert.equal(rateOf([price(60), price(99, { item_id: 'beans' }), price(55, { price_list_id: 'wholesale' })], {}), 60);
+// Validity bounds a price, both ends included; the later Valid From wins over an open-ended one.
+const DATED_PRICES = [price(60), price(50, { valid_from: '2026-12-01', valid_upto: '2026-12-31' }), price(70, { valid_from: '2027-01-01' })];
+assert.equal(rateOf(DATED_PRICES, { date: '2026-12-31' }), 50);
+assert.equal(rateOf(DATED_PRICES, { date: '2026-11-30' }), 60);
+assert.equal(rateOf(DATED_PRICES, { date: '2027-01-01' }), 70);
+assert.equal(rateOf([price(60, { valid_upto: '2026-12-14' })], {}), null);
+// A sack of 25 Kg: its own price when it has one; otherwise none, unless the list prices units by conversion.
+const SACK = { uomId: 'sack', conversionFactor: 25 };
+assert.equal(rateOf([price(60), price(1400, { uom_id: 'sack' })], SACK), 1400);
+assert.equal(rateOf([price(60)], SACK), null);
+assert.equal(rateOf([price(60)], { ...SACK, priceList: { id: 'retail', price_not_uom_dependent: true } }), 1500);
+// Selling Settings' fallback: the default list answers when the sale's own has no price, by the same steps.
+const WHOLESALE = { id: 'wholesale', price_not_uom_dependent: true };
+assert.deepEqual(resolvePrice([price(55, { price_list_id: 'wholesale' })], line({ fallback: WHOLESALE })), { rate: 55, priceListId: 'wholesale' });
+assert.equal(rateOf([price(55, { price_list_id: 'wholesale' })], { ...SACK, fallback: WHOLESALE }), 1375);
+assert.equal(rateOf([price(60), price(55, { price_list_id: 'wholesale' })], { fallback: WHOLESALE }), 60);
 
 console.log('check:logic — all assertions passed.');

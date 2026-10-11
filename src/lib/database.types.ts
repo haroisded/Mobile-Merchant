@@ -600,6 +600,71 @@ export type Database = {
           },
         ]
       }
+      item_prices: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          merchant_id: string
+          price_list_id: string
+          price_list_rate: number
+          uom_id: string
+          valid_from: string | null
+          valid_upto: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          merchant_id: string
+          price_list_id: string
+          price_list_rate: number
+          uom_id: string
+          valid_from?: string | null
+          valid_upto?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          merchant_id?: string
+          price_list_id?: string
+          price_list_rate?: number
+          uom_id?: string
+          valid_from?: string | null
+          valid_upto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_prices_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_prices_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_prices_price_list_fk"
+            columns: ["price_list_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_prices_uom_fk"
+            columns: ["uom_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       item_tax_template_rows: {
         Row: {
           account: string
@@ -681,6 +746,254 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "merchants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_taxes: {
+        Row: {
+          id: string
+          idx: number
+          item_id: string
+          item_tax_template_id: string
+          merchant_id: string
+          tax_category_id: string | null
+          valid_from: string | null
+        }
+        Insert: {
+          id?: string
+          idx: number
+          item_id: string
+          item_tax_template_id: string
+          merchant_id: string
+          tax_category_id?: string | null
+          valid_from?: string | null
+        }
+        Update: {
+          id?: string
+          idx?: number
+          item_id?: string
+          item_tax_template_id?: string
+          merchant_id?: string
+          tax_category_id?: string | null
+          valid_from?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_taxes_category_fk"
+            columns: ["tax_category_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "tax_categories"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_taxes_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_taxes_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_taxes_template_fk"
+            columns: ["item_tax_template_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      item_uoms: {
+        Row: {
+          conversion_factor: number
+          id: string
+          idx: number
+          item_id: string
+          merchant_id: string
+          uom_id: string
+        }
+        Insert: {
+          conversion_factor: number
+          id?: string
+          idx: number
+          item_id: string
+          merchant_id: string
+          uom_id: string
+        }
+        Update: {
+          conversion_factor?: number
+          id?: string
+          idx?: number
+          item_id?: string
+          merchant_id?: string
+          uom_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_uoms_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "item_uoms_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_uoms_uom_fk"
+            columns: ["uom_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          allow_negative_stock: boolean
+          brand_id: string | null
+          created_at: string
+          default_price_list: string | null
+          default_warehouse: string | null
+          description: string | null
+          disabled: boolean
+          expense_account: string | null
+          id: string
+          income_account: string | null
+          is_stock_item: boolean
+          item_code: string
+          item_group_id: string
+          item_name: string
+          merchant_id: string
+          reorder_level: number | null
+          sales_uom: string | null
+          selling_cost_center: string | null
+          stock_uom: string
+          valuation_method: string | null
+        }
+        Insert: {
+          allow_negative_stock?: boolean
+          brand_id?: string | null
+          created_at?: string
+          default_price_list?: string | null
+          default_warehouse?: string | null
+          description?: string | null
+          disabled?: boolean
+          expense_account?: string | null
+          id?: string
+          income_account?: string | null
+          is_stock_item?: boolean
+          item_code: string
+          item_group_id: string
+          item_name: string
+          merchant_id: string
+          reorder_level?: number | null
+          sales_uom?: string | null
+          selling_cost_center?: string | null
+          stock_uom: string
+          valuation_method?: string | null
+        }
+        Update: {
+          allow_negative_stock?: boolean
+          brand_id?: string | null
+          created_at?: string
+          default_price_list?: string | null
+          default_warehouse?: string | null
+          description?: string | null
+          disabled?: boolean
+          expense_account?: string | null
+          id?: string
+          income_account?: string | null
+          is_stock_item?: boolean
+          item_code?: string
+          item_group_id?: string
+          item_name?: string
+          merchant_id?: string
+          reorder_level?: number | null
+          sales_uom?: string | null
+          selling_cost_center?: string | null
+          stock_uom?: string
+          valuation_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_brand_fk"
+            columns: ["brand_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_cost_center_fk"
+            columns: ["selling_cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_expense_account_fk"
+            columns: ["expense_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_income_account_fk"
+            columns: ["income_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_item_group_fk"
+            columns: ["item_group_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_price_list_fk"
+            columns: ["default_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_sales_uom_fk"
+            columns: ["sales_uom", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_stock_uom_fk"
+            columns: ["stock_uom", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_warehouse_fk"
+            columns: ["default_warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
           },
         ]
       }
@@ -2003,6 +2316,7 @@ export type Database = {
           series: string
         }[]
       }
+      save_item: { Args: { payload: Json }; Returns: string }
       save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }

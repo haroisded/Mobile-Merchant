@@ -44,10 +44,14 @@ const USED_BY = new Map([
   ['tax_rules', 'A tax rule uses it. Change or delete that rule first.'],
   ['selling_settings', "It's the Default Price List in Selling Settings. Pick another there first."],
   ['stock_settings', "It's a default in Stock Settings. Pick another there first."],
+  ['items', 'An item uses it. Change it on that item first.'],
+  ['item_uoms', "It's in an item's Units of Measure. Remove that row first."],
+  ['item_taxes', "It's in an item's Item Tax rows. Remove that row first."],
+  ['item_prices', 'An item price uses it. Change or delete that price first.'],
 ]);
 
 /**
- * The words for a delete refused by one of the settings, item groups or tax rules naming the record — null
+ * The words for a delete refused by one of the settings, item groups, tax rules, items or prices naming the record — null
  * for any other refusal, so each screen keeps its own copy for the references it already had.
  */
 export function usedElsewhere(cause: Error | null): string | null {

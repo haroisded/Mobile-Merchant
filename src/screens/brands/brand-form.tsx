@@ -20,7 +20,7 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useWarehousesQuery, warehouseOptions } from '../../features/warehouses/queries';
 import type { Warehouse } from '../../features/warehouses/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Props = { merchantId: string; brandId?: string; onDismiss: () => void };
 
@@ -89,7 +89,8 @@ function Form({ merchantId, abbr, options, existing, onDismiss }: FormProps) {
       body: 'It leaves the list of brands, with its defaults.',
       confirmLabel: 'Delete',
       run: () => remove.mutateAsync(brand.id),
-      failure: () => failureMessage("Couldn't delete this brand. Try again."),
+      // An item may name it now (items_brand_fk, 23503).
+      failure: (cause) => usedElsewhere(cause) ?? failureMessage("Couldn't delete this brand. Try again."),
       onDone: closesForm(wide, onDismiss),
     });
 

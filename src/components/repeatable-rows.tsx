@@ -47,6 +47,41 @@ export function AddRowButton({ onPress, children }: { onPress: () => void; child
   );
 }
 
+type ListProps = {
+  /** useFieldArray's `fields`. */
+  fields: { id: string }[];
+  /** False on a read-only form: no remove button, no "+ Add …". */
+  editable: boolean;
+  /** The line that stands in for the rows while there are none. */
+  empty: string;
+  addLabel: string;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+  /** One row's fields. */
+  children: (index: number) => ReactNode;
+};
+
+/** A whole child table: its numbered rows, the line for none, and "+ Add …". */
+export function RepeatableList({ fields, editable, empty, addLabel, onAdd, onRemove, children }: ListProps) {
+  const { colors } = useAppTheme();
+
+  return (
+    <>
+      {fields.map((field, index) => (
+        <RepeatableRow key={field.id} title={`Row ${index + 1}`} onRemove={editable ? () => onRemove(index) : undefined}>
+          {children(index)}
+        </RepeatableRow>
+      ))}
+      {fields.length === 0 ? (
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceMuted }}>
+          {empty}
+        </Text>
+      ) : null}
+      {editable ? <AddRowButton onPress={onAdd}>{addLabel}</AddRowButton> : null}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   box: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', padding: spacing.ms, gap: spacing.sm },

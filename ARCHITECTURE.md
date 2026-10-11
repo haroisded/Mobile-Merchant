@@ -50,10 +50,13 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            (inventoryAccount), uoms, uom-conversion-factors, price-lists, brands;
                            item-groups, selling-settings, tax-rules (+ resolve.ts, the rule a sale
                            takes), stock-settings; naming-series, print-formats (+ receipt.ts, what a
-                           receipt prints), letter-heads, print-settings; read-only countries,
+                           receipt prints), letter-heads, print-settings; items, item-prices
+                           (+ resolve.ts, the rate a sale line takes); read-only countries,
                            currency-presets, doctypes
 src/screens/<screen>/      UI by screen — home (the systems list and the create-system form), setup
-                           (the Setup index), company, fiscal-years, users, roles, role-profiles,
+                           (the Setup index), stock (the Stock index), items (list + search, a
+                           full-page item with its UOM and Item Tax rows), item-prices (list +
+                           search, form), company, fiscal-years, users, roles, role-profiles,
                            role-permissions, user-permissions, global-defaults, system-settings,
                            currency, chart-of-accounts, cost-centers, accounts-settings,
                            modes-of-payment, tax-categories, item-tax-templates, warehouses, uoms,
@@ -72,8 +75,12 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            search-select (+ ControlledSelect), country-currency-fields, record-list
                            (a Setup master's list), form-footer (PageForm, a full-page form),
                            confirm-dialog (+ useConfirm), folder-nav (the tree masters' folders),
-                           repeatable-rows (a child table inside its form), section-heading,
-                           sample-box (a worked sample: receipt total, tax preview, valuation) —
+                           repeatable-rows (a child table inside its form; RepeatableList, the
+                           whole table), section-heading, sample-box (a worked sample: receipt
+                           total, tax preview, valuation), record-index (a destination's index: the
+                           rows a person's roles let them read), sales-defaults-fields and
+                           item-tax-fields (the sales defaults and the Item Tax row an Item and an
+                           Item Group both have) —
                            and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
@@ -81,10 +88,10 @@ src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the s
                            formSheet: confirms, the picker) and the forms/ routes (a small form: a
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
 src/app/(app)/(tabs)/      home, notifications, settings, account + the NativeTabs bar
-src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and setup/, a
-                           Stack of its own: the index and one route per Setup page; chart-of-accounts,
-                           cost-centers, warehouses and item-groups push themselves once per folder
-                           (`parent`)
+src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and two Stacks
+                           of their own: stock/ (the index, items, item, item-prices) and setup/ (the
+                           index and one route per Setup page; chart-of-accounts, cost-centers,
+                           warehouses and item-groups push themselves once per folder, `parent`)
 app.config.ts              derives the Google iOS URL scheme from .env
 supabase/migrations/       profiles, merchants, current_merchant_ids, the signup trigger,
                            delete_current_user and rls_auto_enable — whose event trigger hosted
@@ -97,7 +104,8 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261009171705_stock_building_blocks.sql,
                            20261010011003_item_groups_and_selling_settings.sql,
                            20261010011005_tax_rules.sql, 20261010011013_stock_settings.sql,
-                           20261010064803_naming_series.sql, 20261010065138_printing.sql
+                           20261010064803_naming_series.sql, 20261010065138_printing.sql; then the
+                           second batch: 20261011134250_items.sql, 20261011134357_item_prices.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -115,7 +123,8 @@ tools/build-migrations.mjs     npm run build:migrations / check:migrations — w
 tools/fallow-verdict.mjs       runs fallow's review gate and prints a compact verdict, not the raw JSON
 tools/check-logic.mjs          npm run check:logic — asserts the pure date math against Postgres' own,
                                the money module and the tax calculation against ERPNext's results,
-                               the tree walks, the Tax Rule a sale takes, and what a receipt prints
+                               the tree walks, the Tax Rule a sale takes, what a receipt prints, and
+                               the Item Price a sale line takes
 ```
 
 ---
@@ -721,6 +730,48 @@ in words. Which columns an item line prints and which tax rows print is `src/fea
 import-free and asserted like `calculate.ts`; the POS Invoice's receipt will print through it. Out of scope: a
 print format's DocType (only the POS Invoice prints), Custom Format, Raw Printing, the Print Format Builder,
 Print Style, the Print Heading master, a letter head's image.
+
+### Step 13, Item Master — `20261011134250_items.sql`
+
+docs.frappe.io/erpnext/item, /item-valuation-fifo-and-moving-average, /stock-settings.
+
+| Table | Holds |
+| --- | --- |
+| `items` | what is sold: `item_code` (unique per system, never renamed), `item_name` (blank = the code), `item_group_id` (a leaf), `stock_uom`, `brand_id`, `description`, `disabled`; `is_stock_item`, `valuation_method` and `allow_negative_stock` (null = Stock Settings decides), `reorder_level`; `sales_uom`; the five sales defaults an Item Group and a Brand also carry |
+| `item_uoms` | the other units it sells in: `uom_id`, `conversion_factor` (stock units in one of it), one row per unit |
+| `item_taxes` | ERPNext's Item Tax table: `item_tax_template_id`, `tax_category_id`, `valid_from` — these rows come before the item group's |
+
+`private.prepare_item()` runs before every write: with Stock Settings' Item Naming By on **Naming Series** it
+takes the code from the Item series through `private.make_name()` (`no_item_series` when the document has
+none), otherwise a typed code is required (`item_code_required`); it refuses a renamed code
+(`item_code_locked`) and a group as the item group (`item_group_is_group`). `private.validate_defaults()` holds
+the defaults to enabled records of the right kind, as it does for an Item Group. `public.save_item(payload)`
+(security invoker) writes the item and replaces its two child tables in one transaction.
+
+Item Manager keeps the doctype; the stock, sales and accounts roles read it; everybody may pick one. Left
+for Pass 2, when something can post it: Opening Stock and Valuation Rate on a new item. Out of scope:
+variants, barcodes, serial and batch numbers, the supplier and purchase tabs, images.
+
+### Step 14, Item Price — `20261011134357_item_prices.sql`
+
+docs.frappe.io/erpnext/item-price, /price-lists.
+
+`item_prices` holds one rate of one item in one price list for one unit, with an optional `valid_from` /
+`valid_upto`. As in ERPNext, two prices may overlap in time and only an **identical** one is refused — the
+unique constraint is `nulls not distinct` over item, price list, unit and both dates (`23505`). Rejected: an
+exclusion constraint on the date range, which would refuse the seasonal price beside the regular one that
+the docs describe. `private.validate_item_price()` refuses a disabled price list (`price_list_disabled`)
+and a unit the item neither stocks in nor lists (`uom_not_on_item`). Deleting an item takes its prices
+with it; a price list or a unit that a price uses cannot be deleted.
+
+`save_item` is re-created here: a **Standard Selling Rate** above zero on a *new* item writes its Item Price in
+Selling Settings' default price list for the stock unit, with no dates (`no_default_price_list` when there is
+none). Sales Master Manager and Item Manager keep the doctype; the rest read it.
+
+Which price a sale line takes is `src/features/item-prices/resolve.ts`, import-free and asserted: the price
+for that unit valid on the date (the later Valid From wins) → on a **Price Not UOM Dependent** list, the
+stock-unit price × the conversion factor → the same two in the fallback list → none. The Register (Step 18)
+will call it; nothing does yet.
 
 ---
 

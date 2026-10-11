@@ -42,9 +42,10 @@ against when a screen picks its copy for a case it expects. It also narrows `dat
 `src/lib/auth.ts` is exempt — auth-js returns its own error classes and keeps explicit checks.
 
 **A record with child rows saves through one RPC.** A member and its roles, a role profile and its
-roles, a doctype's whole set of rules, a tax template and its rows, an item group and its Item Tax rows:
+roles, a doctype's whole set of rules, a tax template and its rows, an item group and its Item Tax rows, an
+item and its UOM and Item Tax rows:
 `public.save_member`, `save_role_profile`, `save_role_permissions`, `save_sales_tax_template`,
-`save_item_tax_template`, `save_item_group` write them
+`save_item_tax_template`, `save_item_group`, `save_item` write them
 in one transaction, so a failure never leaves a half-saved record. A rule that reads the other rows (a tax
 row's Reference Row #) is a deferred constraint trigger, checked once the replaced rows are all in.
 They are security **invoker** — the caller's own policies decide each row — and take one `payload`

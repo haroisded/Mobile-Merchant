@@ -2,13 +2,12 @@
 
 # Project guide — Expo SDK 57 + Supabase auth scaffold
 
-# Expected AI Response
-When Reporting information to me,
-be extremely concise and sacrifice
-grammar for the sake of concision
-
 # Tool Calling
 For tool calling, always use context mode
+
+# Expected AI Response
+When Reporting information to me, be extremely concise
+and sacrifice grammar for the sake of concision
 
 # Supabase Interaction
 For Supabase CRUDS, dont use the CLI, use the MCP
@@ -311,6 +310,9 @@ defaults), `20261010011005_tax_rules.sql` (`tax_rules`, conflicts as an exclusio
 `naming_series_counters`, `private.series_prefix()` and `private.make_name()`, the invoker RPCs
 `naming_series_preview` and `update_series_counter`) and `20261010065138_printing.sql` (`print_formats`,
 `letter_heads`, `print_settings`; `private.single_default()`, one default per system for any table).
+The second batch (Steps 13–23) starts with `20261011134250_items.sql` (`items`, `item_uoms`, `item_taxes`;
+`private.prepare_item()`, the invoker RPC `save_item`) and `20261011134357_item_prices.sql` (`item_prices`,
+`private.validate_item_price()`; `save_item` re-created so a new item's Standard Selling Rate writes its price).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
