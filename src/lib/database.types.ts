@@ -1649,6 +1649,7 @@ export type Database = {
           price_list_rate: number
           qty: number
           rate: number
+          return_against_item: string | null
           stock_qty: number
           uom_id: string
           valuation_rate: number | null
@@ -1671,6 +1672,7 @@ export type Database = {
           price_list_rate?: number
           qty: number
           rate: number
+          return_against_item?: string | null
           stock_qty: number
           uom_id: string
           valuation_rate?: number | null
@@ -1693,6 +1695,7 @@ export type Database = {
           price_list_rate?: number
           qty?: number
           rate?: number
+          return_against_item?: string | null
           stock_qty?: number
           uom_id?: string
           valuation_rate?: number | null
@@ -1738,6 +1741,13 @@ export type Database = {
             columns: ["pos_invoice_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "pos_invoices"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_return_fk"
+            columns: ["return_against_item", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_invoice_items"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -1824,6 +1834,7 @@ export type Database = {
           id: string
           idx: number
           included_in_print_rate: boolean
+          item_wise_tax_detail: Json
           merchant_id: string
           pos_invoice_id: string
           rate: number
@@ -1839,6 +1850,7 @@ export type Database = {
           id?: string
           idx: number
           included_in_print_rate?: boolean
+          item_wise_tax_detail?: Json
           merchant_id: string
           pos_invoice_id: string
           rate?: number
@@ -1854,6 +1866,7 @@ export type Database = {
           id?: string
           idx?: number
           included_in_print_rate?: boolean
+          item_wise_tax_detail?: Json
           merchant_id?: string
           pos_invoice_id?: string
           rate?: number
@@ -1899,6 +1912,7 @@ export type Database = {
           docstatus: number
           grand_total: number
           id: string
+          is_return: boolean
           merchant_id: string
           name: string
           net_total: number
@@ -1906,6 +1920,7 @@ export type Database = {
           pos_opening_entry_id: string
           pos_profile_id: string
           posting_date: string
+          return_against: string | null
           rounded_total: number
           rounding_adjustment: number
           selling_price_list: string | null
@@ -1922,6 +1937,7 @@ export type Database = {
           docstatus?: number
           grand_total?: number
           id?: string
+          is_return?: boolean
           merchant_id: string
           name: string
           net_total?: number
@@ -1929,6 +1945,7 @@ export type Database = {
           pos_opening_entry_id: string
           pos_profile_id: string
           posting_date: string
+          return_against?: string | null
           rounded_total?: number
           rounding_adjustment?: number
           selling_price_list?: string | null
@@ -1945,6 +1962,7 @@ export type Database = {
           docstatus?: number
           grand_total?: number
           id?: string
+          is_return?: boolean
           merchant_id?: string
           name?: string
           net_total?: number
@@ -1952,6 +1970,7 @@ export type Database = {
           pos_opening_entry_id?: string
           pos_profile_id?: string
           posting_date?: string
+          return_against?: string | null
           rounded_total?: number
           rounding_adjustment?: number
           selling_price_list?: string | null
@@ -1982,6 +2001,13 @@ export type Database = {
             columns: ["pos_profile_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "pos_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_return_fk"
+            columns: ["return_against", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_invoices"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -3707,6 +3733,10 @@ export type Database = {
       }
       close_pos_session: { Args: { payload: Json }; Returns: string }
       delete_current_user: { Args: never; Returns: undefined }
+      delete_document: {
+        Args: { p_doctype: string; p_id: string }
+        Returns: undefined
+      }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
       naming_series_preview: {
         Args: { p_merchant: string }

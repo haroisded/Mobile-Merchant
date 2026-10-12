@@ -21,7 +21,9 @@ export function PosOrders({ merchant }: { merchant: Merchant }) {
   const invoices = usePosInvoicesQuery({ merchantId: merchant.id });
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const money = useMoney(merchant);
-  const status = (invoice: Invoice) => <StatusText words={[DOCSTATUS[invoice.docstatus]]} faint={invoice.docstatus === 2} />;
+  // A return is a POS Invoice too: it says so beside its status, and its total reads below zero.
+  const words = (invoice: Invoice) => (invoice.is_return ? ['Return', DOCSTATUS[invoice.docstatus]] : [DOCSTATUS[invoice.docstatus]]);
+  const status = (invoice: Invoice) => <StatusText words={words(invoice)} faint={invoice.docstatus === 2} />;
 
   return (
     <View style={styles.fill}>
@@ -38,7 +40,7 @@ export function PosOrders({ merchant }: { merchant: Merchant }) {
         title={(invoice) => invoice.name}
         subtitle={(invoice) => `${displayDate(invoice.posting_date)} · ${money(invoice.rounded_total)}`}
         status={status}
-        accessibilityLabel={(invoice) => `Order ${invoice.name}, ${money(invoice.rounded_total)}, ${DOCSTATUS[invoice.docstatus]}`}
+        accessibilityLabel={(invoice) => `Order ${invoice.name}, ${money(invoice.rounded_total)}, ${words(invoice).join(', ')}`}
         onPress={
           can(permissions, 'POS Invoice', 'read')
             ? (invoice) => router.push({ pathname: '/systems/[id]/sell/pos-invoice', params: { id: merchant.id, docId: invoice.id } })

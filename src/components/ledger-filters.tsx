@@ -217,7 +217,7 @@ const DOCUMENT_ROUTES = new Map<string, 'stock-entry' | 'stock-reconciliation' |
  * From a ledger row to its document, and from a document to its entries — in the stack of the rail
  * destination the reader is in, so Back returns to where they were. Each destination therefore has both the
  * document pages and the reports: src/app/(app)/systems/[id]/accounts/ re-exports stock/'s, and the reverse;
- * sell/ holds the POS Invoice and re-exports the rest.
+ * sell/ holds the POS Invoice and its return and re-exports the rest.
  * Rejected: pushing into the other destination's stack — Back would pop that stack instead of returning.
  */
 export function useVoucherRoutes(merchantId: string) {
@@ -231,6 +231,10 @@ export function useVoucherRoutes(merchantId: string) {
       const route = DOCUMENT_ROUTES.get(voucherType);
       if (route) router.push({ pathname: `/systems/[id]/${destination}/${route}`, params: { id: merchantId, docId } });
     },
+    /** The page a sale is returned from. */
+    openReturn: (docId: string) => router.push({ pathname: `/systems/[id]/${destination}/pos-return`, params: { id: merchantId, docId } }),
+    /** A return just made, in place of the page that made it: Back from its receipt is the sale. */
+    showReturn: (docId: string) => router.replace({ pathname: `/systems/[id]/${destination}/pos-invoice`, params: { id: merchantId, docId } }),
     /** A report narrowed first: to a document's own entries, or to one item's movements in one warehouse. */
     openReport: (report: 'general-ledger' | 'stock-ledger', filters: Partial<LedgerFilters>) => {
       setLedgerFilters(merchantId, report, { ...NO_FILTERS, ...filters });

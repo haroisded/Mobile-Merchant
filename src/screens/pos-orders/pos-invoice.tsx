@@ -1,17 +1,17 @@
-import { router } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { Button } from '../../components/button';
-import { DocumentState } from '../../components/document-page';
+import { DocumentHeader, DocumentState } from '../../components/document-page';
 import { useVoucherRoutes } from '../../components/ledger-filters';
-import { PageHeader } from '../../components/page-header';
 import { Receipt, useReceiptRecords } from '../../components/receipt';
-import { DOCSTATUS } from '../../features/documents/queries';
+import { SectionHeading } from '../../components/section-heading';
+import { useMoney } from '../../features/currencies/queries';
 import { useItemsQuery } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries';
-import { usePosInvoiceQuery } from '../../features/pos-invoices/queries';
+import { returnableLines } from '../../features/pos-invoices/cart';
+import { invalidatePosInvoices, usePosInvoiceQuery, usePosInvoiceReturnsQuery } from '../../features/pos-invoices/queries';
 import type { PosInvoiceDocument } from '../../features/pos-invoices/queries';
 import { usePosProfilesQuery } from '../../features/pos-profiles/queries';
 import { usePrintFormatsQuery } from '../../features/print-formats/queries';
@@ -23,6 +23,8 @@ import { spacing } from '../../themes';
 /**
  * One POS Invoice: its receipt, as the sale's POS Profile prints it — the profile's Print Format and Letter
  * Head, else the default ones. Opened from Orders, by a sale that prints its receipt, and by a ledger row.
+ * From here a sale is returned, voided (Cancel) and, once cancelled, deleted
+ * (POS-System-Added-Features 19.1–19.2).
  */
 export function PosInvoicePage({ merchant, docId }: { merchant: Merchant; docId: string }) {
   const invoice = usePosInvoiceQuery({ id: docId });
@@ -34,27 +36,51 @@ export function PosInvoicePage({ merchant, docId }: { merchant: Merchant; docId:
 function Invoice({ merchant, invoice }: { merchant: Merchant; invoice: PosInvoiceDocument }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const routes = useVoucherRoutes(merchant.id);
-  // Each report opens narrowed to this sale.
-  const voucher = { voucher: invoice.name };
-
-  const actions = [
-    can(permissions, 'Stock Ledger Entry', 'read') ? (
-      <Button key="stock-ledger" mode="outlined" onPress={() => routes.openReport('stock-ledger', voucher)}>
-        Stock Ledger
-      </Button>
-    ) : null,
-    can(permissions, 'GL Entry', 'read') ? (
-      <Button key="general-ledger" mode="outlined" onPress={() => routes.openReport('general-ledger', voucher)}>
-        General Ledger
-      </Button>
-    ) : null,
-  ].filter((action) => action !== null);
+  const money = useMoney(merchant);
+  // The returns made against a sale; a return has none.
+  const returns = usePosInvoiceReturnsQuery({ returnAgainst: invoice.id }).data ?? [];
+  // A submitted sale with something left of it, by a role that can ring one up.
+  const returnable =
+    invoice.docstatus === 1 &&
+    !invoice.is_return &&
+    can(permissions, 'POS Invoice', 'create') &&
+    returnableLines(invoice, returns).some((row) => row.left > 0);
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="POS Invoice" title={invoice.name} meta={DOCSTATUS[invoice.docstatus]} onBack={() => router.back()} actions={actions.length > 0 ? actions : null} />
+      <DocumentHeader
+        merchantId={merchant.id}
+        doctype="POS Invoice"
+        document={invoice}
+        invalidate={invalidatePosInvoices}
+        cancelBody={
+          invoice.is_return
+            ? 'The refund is undone: the stock leaves again and the ledgers are reversed. It cannot be submitted again.'
+            : 'The sale is voided: the stock comes back and the ledgers are reversed. It cannot be submitted again.'
+        }
+        note={invoice.is_return ? `Return against ${invoice.return_against_name ?? 'a sale'}` : undefined}
+        extra={
+          returnable
+            ? [
+                <Button key="return" mode="outlined" onPress={() => routes.openReturn(invoice.id)}>
+                  Return
+                </Button>,
+              ]
+            : []
+        }
+      />
       <ScrollView contentContainerStyle={styles.body}>
         <InvoiceReceipt merchant={merchant} invoice={invoice} />
+        {returns.length > 0 ? (
+          <>
+            <SectionHeading title="Returns" hint="What has been returned against this sale. Open one for its receipt." />
+            {returns.map((made) => (
+              <Button key={made.id} mode="outlined" style={styles.open} onPress={() => routes.openDocument('POS Invoice', made.id)}>
+                {`${made.name} · ${money(made.rounded_total)}`}
+              </Button>
+            ))}
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -66,13 +92,16 @@ const named = <T extends { id: string }>(rows: T[] | undefined, id: string, name
   return row ? name(row) : fallback;
 };
 
-/** The sale's payments as the receipt lists them: each method, then the change handed back and anything written off. */
+/**
+ * The sale's payments as the receipt lists them: each method, then the change handed back and anything
+ * written off. A return's are what was handed back, below zero as it stores them, each under "Refund".
+ */
 const paymentLines = (invoice: PosInvoiceDocument, modeName: (id: string) => string) =>
   [
-    ...invoice.pos_invoice_payments.map((payment) => ({ label: modeName(payment.mode_of_payment_id), amount: payment.amount })),
+    ...invoice.pos_invoice_payments.map((payment) => ({ label: invoice.is_return ? `Refund · ${modeName(payment.mode_of_payment_id)}` : modeName(payment.mode_of_payment_id), amount: payment.amount })),
     { label: 'Change', amount: invoice.change_amount },
     { label: 'Write Off', amount: invoice.write_off_amount },
-  ].filter((line) => line.amount > 0);
+  ].filter((line) => line.amount !== 0);
 
 function InvoiceReceipt({ merchant, invoice }: { merchant: Merchant; invoice: PosInvoiceDocument }) {
   const args = { merchantId: merchant.id };
@@ -89,7 +118,7 @@ function InvoiceReceipt({ merchant, invoice }: { merchant: Merchant; invoice: Po
       records={records}
       format={formats?.find((candidate) => candidate.id === profile?.print_format) ?? formats?.find((candidate) => candidate.is_default) ?? {}}
       letterHeadId={profile?.letter_head}
-      meta={[invoice.name, displayDate(invoice.posting_date)]}
+      meta={[invoice.name, displayDate(invoice.posting_date), ...(invoice.is_return ? [`Return against ${invoice.return_against_name ?? 'a sale'}`] : [])]}
       items={invoice.pos_invoice_items.map((line) => ({
         code: named(items, line.item_id, (item) => item.item_code, ''),
         name: line.item_name ?? '',
@@ -110,4 +139,6 @@ function InvoiceReceipt({ merchant, invoice }: { merchant: Merchant; invoice: Po
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: 720 },
+  // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
+  open: { justifyContent: 'flex-start' },
 });

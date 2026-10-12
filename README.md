@@ -182,7 +182,8 @@ and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5
 `item_taxes`; Step 14 `item_prices`; Step 15 the ledgers `gl_entries`, `stock_ledger_entries` and `bins`;
 Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `pos_profiles` with its
 `pos_profile_users`, `pos_profile_payments` and `pos_profile_item_groups`; Step 18 `pos_opening_entries`,
-`pos_invoices` and `pos_closing_entries` with their rows. Triggers named
+`pos_invoices` and `pos_closing_entries` with their rows; Step 19 adds no table — a return is a POS Invoice
+(`is_return`, `return_against`), and `public.delete_document` removes a cancelled document. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

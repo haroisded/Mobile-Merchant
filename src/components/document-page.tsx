@@ -3,6 +3,7 @@ import { router, useNavigation } from 'expo-router';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { useAccountsSettingsQuery } from '../features/accounts-settings/queries';
 import { DOCSTATUS, useDocumentActionMutation } from '../features/documents/queries';
 import { can, usePermissions } from '../features/role-permissions/queries';
 import type { Permissions } from '../features/role-permissions/queries';
@@ -25,22 +26,41 @@ import { Text } from './text';
 /** A saved document, as much of it as the page needs whatever its doctype. */
 type SavedDocument = { id: string; name: string; docstatus: number };
 
-type HeaderProps = {
+type SharedProps = {
   merchantId: string;
   /** The doctype's name, as public.doctypes has it ("Stock Entry"): the kicker, and what allows each action. */
   doctype: string;
-  /** Undefined for a document not yet saved. */
-  document: SavedDocument | undefined;
+  /** The document's own queries, refetched after a submit, a cancel or a delete. */
+  invalidate: (queryClient: ReturnType<typeof useQueryClient>) => Promise<void>;
+  /** What Cancel will do, said in its confirm. */
+  cancelBody: string;
+};
+
+/** What only a draft's header needs. */
+type DraftProps = {
   /** The form holds changes Save has not written: Submit waits for them. */
   dirty: boolean;
   /** The draft's delete. */
   remove: (id: string) => Promise<void>;
-  /** The document's own queries, refetched after a submit or a cancel. */
-  invalidate: (queryClient: ReturnType<typeof useQueryClient>) => Promise<void>;
-  /** What Submit and Cancel will do, said in their confirms. */
+  /** What Submit will do, said in its confirm. */
   submitBody: string;
-  cancelBody: string;
 };
+
+type HeaderProps = SharedProps &
+  DraftProps & {
+    /** Undefined for a document not yet saved. */
+    document: SavedDocument | undefined;
+  };
+
+/** A saved document's header. A document that is never a draft in the app — a POS Invoice — leaves the draft's three out. */
+type SavedHeaderProps = SharedProps &
+  Partial<DraftProps> & {
+    document: SavedDocument;
+    /** After the status in the header's meta line: what else the document is ("Return against …"). */
+    note?: string;
+    /** The document's own actions (a sale's Return), after Submit and Delete. */
+    extra?: ReactNode[];
+  };
 
 /**
  * Whether a document can still be changed, and whether the reader may change it: only a draft, and with
@@ -53,11 +73,15 @@ export function useDocumentAccess(merchantId: string, doctype: string, document:
   return { draft, editable: draft && can(permissions, doctype, document ? 'write' : 'create') };
 }
 
-/** What a saved document's status and the reader's roles allow, action by action. */
-function allowed(permissions: Permissions | null | undefined, doctype: string, docstatus: number) {
+/**
+ * What a saved document's status and the reader's roles allow, action by action. `keepsEntries`: Accounts
+ * Settings' "Delete Ledger Entries with the Document" is off, so a cancelled document stays.
+ */
+function allowed(permissions: Permissions | null | undefined, doctype: string, docstatus: number, keepsEntries: boolean) {
   return {
     submit: docstatus === 0 && can(permissions, doctype, 'submit'),
-    remove: docstatus === 0 && can(permissions, doctype, 'delete'),
+    // A draft, or a cancelled document whose entries may go with it.
+    remove: (docstatus === 0 || (docstatus === 2 && !keepsEntries)) && can(permissions, doctype, 'delete'),
     cancel: docstatus === 1 && can(permissions, doctype, 'cancel'),
     // What it posted, and after a cancel what reversed it.
     stockLedger: docstatus > 0 && can(permissions, 'Stock Ledger Entry', 'read'),
@@ -66,28 +90,35 @@ function allowed(permissions: Permissions | null | undefined, doctype: string, d
 }
 
 /**
- * The three questions a document's header asks. Submit and Cancel go through public.submit_document and
- * public.cancel_document, each after a confirm: neither can be taken back, and the confirm's own button is
- * what stops a second tap posting twice.
+ * The questions a document's header asks. Submit, Cancel and a cancelled document's Delete go through
+ * public.submit_document, public.cancel_document and public.delete_document, each after a confirm: none can
+ * be taken back, and the confirm's own button is what stops a second tap posting twice.
  */
-function useDocumentConfirms({ doctype, document, remove, invalidate, submitBody, cancelBody }: HeaderProps & { document: SavedDocument }) {
+function useDocumentConfirms({ doctype, document, remove, invalidate, submitBody, cancelBody }: SavedHeaderProps) {
   const navigation = useNavigation();
   const wide = useShellWide();
   const submit = useDocumentActionMutation({ doctype, action: 'submit', invalidate });
   const cancel = useDocumentActionMutation({ doctype, action: 'cancel', invalidate });
+  const erase = useDocumentActionMutation({ doctype, action: 'delete', invalidate });
   const confirm = useConfirm();
   const { id, name } = document;
+  const cancelled = document.docstatus === 2;
 
   const failure = (cause: Error) => postingRefusal(cause) ?? failureMessage("Couldn't finish that. Try again.");
   // Narrow, the confirm is a sheet of the outer stack, popped here; wide, useConfirm closes its own Dialog.
   const closeConfirm = () => {
     if (!wide) router.back();
   };
+  // A deleted document's page pops through its own navigator, as an item's does (src/screens/items/item-form.tsx).
+  const leave = () => {
+    navigation.goBack();
+    closeConfirm();
+  };
 
   return {
     dialog: confirm.dialog,
     submit: () =>
-      confirm.ask({ kicker: 'Submit', tone: 'accent', title: `Submit ${name}?`, body: submitBody, confirmLabel: 'Submit', run: () => submit.mutateAsync(id), failure, onDone: closeConfirm }),
+      confirm.ask({ kicker: 'Submit', tone: 'accent', title: `Submit ${name}?`, body: submitBody ?? '', confirmLabel: 'Submit', run: () => submit.mutateAsync(id), failure, onDone: closeConfirm }),
     cancel: () =>
       confirm.ask({
         kicker: 'Cancel',
@@ -102,28 +133,50 @@ function useDocumentConfirms({ doctype, document, remove, invalidate, submitBody
     remove: () =>
       confirm.ask({
         title: `Delete ${name}?`,
-        body: 'This draft goes for good. Nothing was posted from it.',
+        body: cancelled
+          ? 'This cancelled document goes for good, with the ledger entries it posted and the ones that reversed them.'
+          : 'This draft goes for good. Nothing was posted from it.',
         confirmLabel: 'Delete',
-        run: () => remove(id),
+        // A draft goes through its own feature; a cancelled document, entries and all, through public.delete_document.
+        run: () => (cancelled ? erase.mutateAsync(id) : (remove?.(id) ?? Promise.resolve())),
         failure,
-        // The page pops through its own navigator, as an item's does (src/screens/items/item-form.tsx).
-        onDone: () => {
-          navigation.goBack();
-          closeConfirm();
-        },
+        onDone: leave,
       }),
   };
 }
 
-/** A saved document's header: Submit and Delete on a draft, Cancel on a submitted one, then the entries it posted. */
-function SavedHeader(props: HeaderProps & { document: SavedDocument }) {
-  const { merchantId, doctype, document, dirty } = props;
-  const { colors } = useAppTheme();
-  const allow = allowed(usePermissions({ merchantId }).data, doctype, document.docstatus);
-  const ask = useDocumentConfirms(props);
+/** The entries a document posted, each report opened narrowed to it. */
+function useReportActions(merchantId: string, name: string, allow: { stockLedger: boolean; generalLedger: boolean }) {
   const routes = useVoucherRoutes(merchantId);
-  // Each report opens narrowed to this document.
-  const voucher = { voucher: document.name };
+  const voucher = { voucher: name };
+
+  return [
+    allow.stockLedger ? (
+      <Button key="stock-ledger" mode="outlined" onPress={() => routes.openReport('stock-ledger', voucher)}>
+        Stock Ledger
+      </Button>
+    ) : null,
+    allow.generalLedger ? (
+      <Button key="general-ledger" mode="outlined" onPress={() => routes.openReport('general-ledger', voucher)}>
+        General Ledger
+      </Button>
+    ) : null,
+  ];
+}
+
+/**
+ * A saved document's header: Submit and Delete on a draft, Cancel on a submitted one, Delete again on a
+ * cancelled one where Accounts Settings let its entries go, then the entries it posted.
+ */
+export function DocumentHeader(props: SavedHeaderProps) {
+  const { merchantId, doctype, document, dirty = false, note, extra = [] } = props;
+  const { colors } = useAppTheme();
+  // Every member reads Accounts Settings; until it loads, a cancelled document is kept.
+  const keepsEntries = !useAccountsSettingsQuery({ merchantId }).data?.delete_linked_ledger_entries;
+  const allow = allowed(usePermissions({ merchantId }).data, doctype, document.docstatus, keepsEntries);
+  const ask = useDocumentConfirms(props);
+  const reports = useReportActions(merchantId, document.name, allow);
+  const status = allow.submit && dirty ? 'Draft · save your changes before submitting' : DOCSTATUS[document.docstatus];
 
   const actions = [
     allow.submit ? (
@@ -136,32 +189,18 @@ function SavedHeader(props: HeaderProps & { document: SavedDocument }) {
         Delete
       </Button>
     ) : null,
+    ...extra,
     allow.cancel ? (
       <Button key="cancel" mode="outlined" textColor={colors.error} icon="close" onPress={ask.cancel}>
         Cancel
       </Button>
     ) : null,
-    allow.stockLedger ? (
-      <Button key="stock-ledger" mode="outlined" onPress={() => routes.openReport('stock-ledger', voucher)}>
-        Stock Ledger
-      </Button>
-    ) : null,
-    allow.generalLedger ? (
-      <Button key="general-ledger" mode="outlined" onPress={() => routes.openReport('general-ledger', voucher)}>
-        General Ledger
-      </Button>
-    ) : null,
+    ...reports,
   ].filter((action) => action !== null);
 
   return (
     <>
-      <PageHeader
-        kicker={doctype}
-        title={document.name}
-        meta={allow.submit && dirty ? 'Draft · save your changes before submitting' : DOCSTATUS[document.docstatus]}
-        onBack={() => router.back()}
-        actions={actions.length > 0 ? actions : null}
-      />
+      <PageHeader kicker={doctype} title={document.name} meta={note ? `${status} · ${note}` : status} onBack={() => router.back()} actions={actions.length > 0 ? actions : null} />
       {ask.dialog}
     </>
   );
@@ -185,7 +224,7 @@ export function DocumentPage({ draft, editable, save, onSave, children, ...heade
 
   return (
     <View style={styles.fill}>
-      {document ? <SavedHeader {...header} document={document} /> : <PageHeader kicker={doctype} title={`New ${noun}`} meta="Not saved yet" onBack={() => router.back()} />}
+      {document ? <DocumentHeader {...header} document={document} /> : <PageHeader kicker={doctype} title={`New ${noun}`} meta="Not saved yet" onBack={() => router.back()} />}
       <PageForm
         editable={editable}
         readOnly={draft ? `Changing it needs ${doctype} write.` : 'It is no longer a draft, so it stays as it was posted.'}

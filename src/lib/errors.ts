@@ -122,6 +122,17 @@ const POSTING_REFUSALS = new Map([
   ['totals_mismatch', "The totals don't add up against the items, so nothing was sold. Go back and open the cart again."],
   ['underpaid', 'The payments are less than the total, by more than the POS Profile lets you write off.'],
   ['not_cancellable', "A session's entries can't be cancelled: close the session instead."],
+  // Returns, voids and a cancelled document's delete (supabase/migrations/20261012080419_pos_returns_and_voids.sql).
+  ['return_original_invalid', "That sale can't be returned: it isn't submitted any more, or it is a return itself."],
+  ['return_line_invalid', "A line doesn't match the sale it returns. Go back and open the return again."],
+  ['return_qty_exceeds', 'More is being returned than is left of the sale. Go back and open the return again.'],
+  ['refund_method_not_allowed', "One of the payment methods isn't allowed in returns on the POS Profile any more. Go back and open the return again."],
+  ['refund_mismatch', "What is handed back doesn't equal the refund."],
+  ['has_returns', 'A return was made against this sale. Cancel the return first.'],
+  ['session_closed', "Its session is already closed, so it can't be cancelled. Return it instead."],
+  ['not_cancelled', 'Only a cancelled document can be deleted. Go back and open it again.'],
+  ['ledger_entries_kept', 'Accounts Settings keeps ledger entries, so a cancelled document stays. Turn on Delete Ledger Entries with the Document first.'],
+  ['document_in_use', "Another document still names this one, so it can't be deleted."],
 ]);
 
 /** The words for a document the database refused to save, submit or cancel — null for any other failure. */

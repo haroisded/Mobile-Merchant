@@ -36,8 +36,11 @@ export type ItemLine = {
 export type TaxResult = {
   items: { amount: number; netAmount: number; netRate: number }[];
   netTotal: number;
-  /** Each row's Amount and the running Total after it. */
-  rows: { amount: number; total: number }[];
+  /**
+   * Each row's Amount, the running Total after it, and what it charged each line, unrounded — ERPNext's
+   * item_wise_tax_detail, which a return takes its share of.
+   */
+  rows: { amount: number; total: number; byItem: number[] }[];
   totalTaxes: number;
   grandTotal: number;
 };
@@ -92,6 +95,7 @@ export function calculateTaxes(lines: ItemLine[], taxes: TaxRow[], precision: nu
 
   // calculate_taxes: each row per item, unrounded until the last item.
   const amounts = taxes.map(() => 0);
+  const byItem = taxes.map(() => lines.map(() => 0));
   const current = taxes.map(() => 0);
   const grandForItem = taxes.map(() => 0);
   const actualLeft = taxes.map((tax) => (tax.charge_type === 'Actual' ? flt(tax.tax_amount) : 0));
@@ -113,6 +117,7 @@ export function calculateTaxes(lines: ItemLine[], taxes: TaxRow[], precision: nu
         if (n === lines.length - 1) amount += actualLeft[i];
       }
       amounts[i] += amount;
+      byItem[i][n] = amount;
       current[i] = amount;
       grandForItem[i] = (i === 0 ? items[n].netAmount : grandForItem[i - 1]) + amount;
     });
@@ -122,7 +127,7 @@ export function calculateTaxes(lines: ItemLine[], taxes: TaxRow[], precision: nu
   const rows: TaxResult['rows'] = [];
   taxes.forEach((_, i) => {
     const amount = flt(amounts[i]);
-    rows.push({ amount, total: flt((i === 0 ? netTotal : rows[i - 1].total) + amount) });
+    rows.push({ amount, total: flt((i === 0 ? netTotal : rows[i - 1].total) + amount), byItem: byItem[i] });
   });
 
   // adjust_grand_total_for_inclusive_tax: a rounding difference of a few cents between the entered prices and

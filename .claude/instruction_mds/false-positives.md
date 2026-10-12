@@ -94,7 +94,8 @@ dead and correct to delete.
 - **`workspace_diagnostics`** (`boundaries-not-configured`, `rule-packs-not-configured`) are notes
   that a detector did not run, not findings. The script prints them as `not run:`.
 - **`[warn] duplication` between two features' `queries.ts`** (`node tools/fallow-verdict.mjs`, 2026-10-12:
-  `gl-entries` / `stock-ledger-entries`, `stock-entries` / `stock-reconciliations`). Two resources of one
+  `gl-entries` / `stock-ledger-entries`, `stock-entries` / `stock-reconciliations`; the same day, four copies
+  across `pos-closing-entries`, `pos-invoices`, `stock-entries` and `stock-reconciliations`). Two resources of one
   shape read the same way, each in its own file: [`data-layer.md`](./data-layer.md) rules 1–2 put the
   Supabase call inside each resource's `queryFn` and reject the shared builder that would remove the
   finding — a repository layer. Confirmed false positive; the verdict stays `WARN`, not `FAIL`. Duplication
@@ -126,11 +127,14 @@ dead and correct to delete.
   table.** The GraphQL schema lists a table's name and columns, not its rows; RLS still decides every
   read, and `anon` reaches no row of a business table. Expected for each new table — not a fix.
 - **`authenticated_security_definer_function_executable` on `public.my_permissions`,
-  `public.delete_current_user`, `public.submit_document` and `public.cancel_document`.** All four are meant
-  to be called by signed-in users, and all check `(select auth.uid())` inside (CLAUDE.md §6.2); the last
-  two also check the caller's Submit or Cancel permission on the document's own system before touching it
-  (`get_advisors`, 2026-10-12: exactly these four). Any *other* `public` definer function in that list is a
-  real finding.
+  `public.delete_current_user`, `public.submit_document`, `public.cancel_document` and
+  `public.delete_document`.** All five are meant to be called by signed-in users, and all check
+  `(select auth.uid())` inside (CLAUDE.md §6.2); the last three also check the caller's Submit, Cancel or
+  Delete permission on the document's own system before touching it (`get_advisors`, 2026-10-12: the first
+  four; `delete_document` added by Step 19 and confirmed the same day by reading `pg_proc` for definer
+  functions in `public` that `authenticated` may execute — exactly these five; `anon` cannot execute
+  `delete_document`). Any
+  *other* `public` definer function in that list is a real finding.
 
 ## 6. Documented exceptions a reviewer may flag
 

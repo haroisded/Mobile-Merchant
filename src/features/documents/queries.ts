@@ -18,15 +18,17 @@ export function invalidateLedgers(queryClient: Client) {
 type ActionArgs = {
   /** The doctype's name, as public.doctypes has it ("Stock Entry"). */
   doctype: string;
-  action: 'submit' | 'cancel';
+  action: 'submit' | 'cancel' | 'delete';
   /** The document's own queries: its docstatus changed, and a submit writes what its rows moved. */
   invalidate: (queryClient: Client) => Promise<void>;
 };
 
 /**
- * Submit or cancel one document, by id — public.submit_document and public.cancel_document, the two RPCs
- * every document shares. Security definer: they check the caller's Submit or Cancel permission themselves,
- * and post or reverse in one transaction, so a refusal leaves nothing half-posted.
+ * Submit, cancel or delete one document, by id — public.submit_document, public.cancel_document and
+ * public.delete_document, the three RPCs every document shares. Security definer: they check the caller's
+ * Submit, Cancel or Delete permission themselves, and post, reverse or remove in one transaction, so a
+ * refusal leaves nothing half-done. Delete is a cancelled document's, with the ledger entries it posted,
+ * and only while Accounts Settings say so; a draft is deleted through its own feature.
  */
 export function useDocumentActionMutation({ doctype, action, invalidate }: ActionArgs) {
   const queryClient = useQueryClient();
@@ -34,7 +36,12 @@ export function useDocumentActionMutation({ doctype, action, invalidate }: Actio
   return useMutation({
     mutationFn: async (id: string) => {
       const args = { p_doctype: doctype, p_id: id };
-      await (action === 'submit' ? supabase.rpc('submit_document', args) : supabase.rpc('cancel_document', args)).throwOnError();
+      const calls = {
+        submit: () => supabase.rpc('submit_document', args),
+        cancel: () => supabase.rpc('cancel_document', args),
+        delete: () => supabase.rpc('delete_document', args),
+      };
+      await calls[action]().throwOnError();
     },
     onSuccess: async () => {
       await Promise.all([invalidateLedgers(queryClient), invalidate(queryClient)]);

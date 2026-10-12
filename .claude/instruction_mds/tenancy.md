@@ -133,6 +133,12 @@ only then post or reverse. A ledger is written by that engine alone, which is wh
 Read and nothing else. The Role Permissions Manager offers each kind the columns that mean something for
 it: all seven for a document, Read for a ledger, Read and Write for a single.
 
+**Delete on a document means two things.** A draft is deleted through its policy, like any record. A
+cancelled one goes only through `public.delete_document` — definer, the same merchant lookup and
+`permitted_merchant_ids(doctype, 'delete')` check — because its ledger rows go with it and no role may
+delete from a ledger. A return needs no permission of its own: it is a POS Invoice created and submitted, so
+a Sales User refunds; undoing a sale is **Cancel**, which a cashier does not hold.
+
 **A session is its cashier's.** A POS Opening Entry carries `user_id`, and the posters hold the line the
 policies cannot: `private.submit_pos_invoices()` sells only inside the caller's own open session, and
 `private.submit_pos_closing_entries()` lets the cashier close it — or whoever holds **Cancel** on POS Opening

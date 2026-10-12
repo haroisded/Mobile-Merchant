@@ -96,7 +96,7 @@ src/
     pos-profiles/         index.tsx  pos-profile-form.tsx (a Setup-stack page)
     sell/                 index.tsx — the Sell destination's index, with the session box
     register/             index.tsx  cart.tsx  cart-line.tsx — the items, then the cart and its payment
-    pos-orders/           index.tsx  pos-invoice.tsx — the sales, and one sale's receipt
+    pos-orders/           index.tsx  pos-invoice.tsx  pos-return.tsx — the sales, one sale's receipt, its return
     pos-opening-entries/  index.tsx  open-session.tsx
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     profile/
@@ -159,7 +159,7 @@ Anything with no table, schema or query key behind it.
 src/app/(app)/systems/[id]/_layout.tsx   the shell — expo-router Drawer, permanent when wide
 src/app/(app)/systems/[id]/index.tsx     Home
 src/app/(app)/systems/[id]/sell/         Sell — its own Stack: index.tsx, open-session.tsx, register.tsx, cart.tsx,
-                                         pos-invoices.tsx, pos-invoice.tsx, pos-opening-entries.tsx,
+                                         pos-invoices.tsx, pos-invoice.tsx, pos-return.tsx, pos-opening-entries.tsx,
                                          pos-closing-entries.tsx, close-session.tsx, pos-closing-entry.tsx
 src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, items.tsx, item.tsx, item-prices.tsx,
                                          stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
@@ -170,7 +170,8 @@ A ledger row opens its document, and a document its entries, **inside the stack 
 returns there. So a page reached from another destination is re-exported into it, one line a file:
 `accounts/stock-entry.tsx`, `accounts/stock-reconciliation.tsx`, `accounts/stock-ledger.tsx` and
 `stock/general-ledger.tsx`; a sale's page lives in `sell/pos-invoice.tsx` and is re-exported as
-`stock/pos-invoice.tsx` and `accounts/pos-invoice.tsx`, while `sell/` re-exports both reports and the two stock
+`stock/pos-invoice.tsx` and `accounts/pos-invoice.tsx` — and its return, `sell/pos-return.tsx`, the same way,
+so Return works wherever the sale was opened — while `sell/` re-exports both reports and the two stock
 documents (`useVoucherRoutes`, `src/components/ledger-filters.tsx`). A document's page takes
 `docId`, whatever its type. Rejected: pushing into the other destination's stack — Back pops that stack.
 src/app/(app)/systems/[id]/setup/        Setup — its own Stack: index.tsx, then one route per record (company.tsx, fiscal-years.tsx)

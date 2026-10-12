@@ -104,3 +104,21 @@ export function useSaleSetup(merchant: Merchant, profile: PosProfile) {
 
   return { setup, engines, items: records.items, groups: records.groups };
 }
+
+/**
+ * What buildReturn (./cart) rounds a return by — the same precision, method and smallest coin a sale's totals
+ * take. A return reads nothing else: its prices and taxes are the sale's own. Undefined while loading.
+ */
+export function useReturnRounding(merchant: Merchant) {
+  const totals = useTotalsSettings(merchant);
+  if (!totals) return undefined;
+
+  const method = asRoundingMethod(totals.system.rounding_method);
+  const precision = totals.system.currency_precision;
+
+  return {
+    round: (value: number) => roundTo(value, precision, method),
+    cashRound: (value: number) => cashRound(value, totals.currency.smallest_currency_fraction_value, precision, method),
+    roundedTotalDisabled: totals.globals.disable_rounded_total,
+  };
+}

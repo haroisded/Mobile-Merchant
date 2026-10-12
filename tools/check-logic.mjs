@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
-import { buildSale, checkoutPayload, offeredItems, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
+import { buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
@@ -98,7 +98,7 @@ assert.deepEqual([result.netTotal, result.totalTaxes, result.grandTotal], [90.91
 assert.equal(run([{ rate: 108, qty: 1 }], [tax({ rate: 8 })]).grandTotal, 116.64);
 // Tax on another tax amount, and on the running total.
 result = run([{ rate: 1000, qty: 1 }], [tax({ rate: 8 }), tax({ charge_type: 'On Previous Row Amount', rate: 2, row_id: 1 })]);
-assert.deepEqual(result.rows, [{ amount: 80, total: 1080 }, { amount: 1.6, total: 1081.6 }]);
+assert.deepEqual(result.rows, [{ amount: 80, total: 1080, byItem: [80] }, { amount: 1.6, total: 1081.6, byItem: [1.6] }]);
 result = run([{ rate: 1000, qty: 1 }], [tax({ rate: 8 }), tax({ charge_type: 'On Previous Row Total', rate: 2, row_id: 1 })]);
 assert.deepEqual([result.rows[1].amount, result.grandTotal, result.totalTaxes], [21.6, 1101.6, 101.6]);
 // A fixed $25 charge, spread over two items with the remainder on the last.
@@ -270,5 +270,42 @@ assert.deepEqual(tenderedAmounts(METHODS, { cash: null, card: 50 }, 179.2).map((
 assert.deepEqual(tenderedAmounts(METHODS, {}, null).map((row) => row.amount), [0, 0]);
 const sent = checkoutPayload(twoCoffees, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 200 }, { mode_of_payment_id: 'card', amount: 0 }], settle(179.2, [200], cents));
 assert.deepEqual([sent.paid_amount, sent.change_amount, sent.payments.length, sent.items[0].stock_qty, sent.taxes[0].account_head], [200, 20.8, 1, 2, 'vat']);
+// Each tax row says what it charged each line: what a return takes its share of.
+assert.deepEqual(sent.taxes[0].item_wise_tax_detail, [19.2]);
+
+// A return, made from the sale as the database stored it — the figures the probe posted: 2 coffees and a
+// zero-rated cake, VAT 12 % on top, the Rounded Total at a whole peso.
+const stored = (sale, id) => ({
+  id,
+  taxes_and_charges: sale.templateId,
+  net_total: sale.netTotal,
+  total_taxes_and_charges: sale.totalTaxes,
+  grand_total: sale.grandTotal,
+  pos_invoice_items: sale.lines.map((line, index) => ({ id: `${id}-${index}`, item_id: line.itemId, item_name: line.itemName, qty: line.qty, uom_id: line.uomId, conversion_factor: line.conversionFactor, price_list_rate: line.priceListRate, rate: line.rate, amount: line.amount, net_rate: line.netRate, net_amount: line.netAmount, item_tax_template_id: line.itemTaxTemplateId })),
+  pos_invoice_taxes: sale.taxes.map((tax) => ({ charge_type: tax.charge_type, account_head: tax.account, description: tax.description, rate: tax.rate, row_id: tax.row_id, included_in_print_rate: tax.included_in_print_rate, cost_center: tax.cost_center, item_wise_tax_detail: tax.byItem })),
+});
+const PESO = { round: cents, cashRound: (value) => cashRound(value, null, 2, BANKERS), roundedTotalDisabled: false };
+const sold = stored(saleOf(cartOf(['coffee', 2], ['cake', 1])), 'sale');
+const figures = (made) => [made.netTotal, made.totalTaxes, made.grandTotal, made.roundedTotal, made.roundingAdjustment];
+// One of the two coffees: half the line and half its tax, below zero; the refund is the magnitude rounded.
+const oneBack = buildReturn(sold, new Map([['sale-0', 1]]), PESO);
+assert.deepEqual(figures(oneBack), [-80, -9.6, -89.6, -90, -0.4]);
+assert.deepEqual((({ qty, stock_qty, amount, net_amount, return_against_item }) => [qty, stock_qty, amount, net_amount, return_against_item])(oneBack.items[0]), [-1, -1, -80, -80, 'sale-0']);
+assert.deepEqual([oneBack.taxes[0].tax_amount, oneBack.taxes[0].total, oneBack.taxes[0].item_wise_tax_detail], [-9.6, -89.6, [-9.6]]);
+// The zero-rated cake refunds no tax, and a line left at 0 is not in the return.
+assert.deepEqual(figures(buildReturn(sold, new Map([['sale-0', 0], ['sale-1', 1]]), PESO)), [-100, 0, -100, -100, 0]);
+// Everything back is the sale negated.
+assert.deepEqual(figures(buildReturn(sold, new Map([['sale-0', 2], ['sale-1', 1]]), PESO)), [-260, -19.2, -279.2, -279, 0.2]);
+// A tax included in the price: a third of 3 at 100 is the third the sale stored, not a new calculation.
+const INCLUSIVE = { templates: [{ id: 'ph', rows: [{ ...VAT_ROW, included_in_print_rate: true }] }], prices: [{ item_id: 'coffee', price_list_id: 'retail', uom_id: 'nos', price_list_rate: 100, valid_from: null, valid_upto: null }] };
+const inclusive = stored(saleOf(cartOf(['coffee', 3]), INCLUSIVE), 'incl');
+assert.deepEqual([inclusive.net_total, inclusive.grand_total], [267.86, 300]);
+assert.deepEqual(figures(buildReturn(inclusive, new Map([['incl-0', 1]]), PESO)), [-89.29, -10.71, -100, -100, 0]);
+// What is left of each line after the returns already made.
+assert.deepEqual(returnableLines(sold, [{ pos_invoice_items: oneBack.items }]).map((row) => row.left), [1, 1]);
+assert.deepEqual(returnableLines(sold, [{ pos_invoice_items: oneBack.items }, { pos_invoice_items: oneBack.items }]).map((row) => row.left), [0, 1]);
+// What is sent: the sale it returns, each line's own, and the refund below zero with nothing as change.
+const back = returnPayload(sold, oneBack, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 90 }, { mode_of_payment_id: 'card', amount: 0 }]);
+assert.deepEqual([back.return_against, back.paid_amount, back.change_amount, back.write_off_amount, back.payments], ['sale', -90, 0, 0, [{ mode_of_payment_id: 'cash', amount: -90 }]]);
 
 console.log('check:logic — all assertions passed.');

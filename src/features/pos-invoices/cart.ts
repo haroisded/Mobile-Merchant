@@ -6,6 +6,7 @@
 // Import-free at runtime, so tools/check-logic.mjs can run it under plain Node: the price lookup
 // (item-prices/resolve.ts), the tax rule (tax-rules/resolve.ts), the tax arithmetic (sales-tax-templates/
 // calculate.ts) and the rounding (src/lib/money.ts) come in as `engines`.
+import type { Tables } from '../../lib/database.types';
 import type { PriceRequest, PriceRow, ResolvedPrice } from '../item-prices/resolve';
 import type { ItemLine, TaxResult, TaxRow } from '../sales-tax-templates/calculate';
 import type { RuleConditions, SaleContext } from '../tax-rules/resolve';
@@ -97,7 +98,8 @@ export type SaleLine = {
   priced: boolean;
 };
 
-export type SaleTax = TemplateRow & { tax_amount: number; total: number };
+/** `byItem`: what the row charged each line, unrounded, in the lines' order. */
+export type SaleTax = TemplateRow & { tax_amount: number; total: number; byItem: number[] };
 
 export type Sale = {
   lines: SaleLine[];
@@ -261,7 +263,7 @@ export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines):
       priced: entry.priced,
     })),
     templateId: template?.id ?? null,
-    taxes: rows.map((row, index) => ({ ...row, tax_amount: result.rows[index].amount, total: result.rows[index].total })),
+    taxes: rows.map((row, index) => ({ ...row, tax_amount: result.rows[index].amount, total: result.rows[index].total, byItem: result.rows[index].byItem })),
     netTotal: result.netTotal,
     totalTaxes: result.totalTaxes,
     grandTotal: result.grandTotal,
@@ -330,7 +332,144 @@ export function checkoutPayload(
       cost_center: tax.cost_center,
       tax_amount: tax.tax_amount,
       total: tax.total,
+      item_wise_tax_detail: tax.byItem,
     })),
     payments: payments.filter((payment) => payment.amount > 0).map((payment) => ({ mode_of_payment_id: payment.mode_of_payment_id, amount: payment.amount })),
+  };
+}
+
+// Returns (.claude/erpnext-docs/POS-System-Added-Features.md 19.1; docs.frappe.io/erpnext/sales-return): a
+// return is made from the sale as it was stored, never from today's prices, templates or rules.
+
+/** A line of a submitted sale. */
+type SoldLine = Pick<
+  Tables<'pos_invoice_items'>,
+  'id' | 'item_id' | 'item_name' | 'qty' | 'uom_id' | 'conversion_factor' | 'price_list_rate' | 'rate' | 'amount' | 'net_rate' | 'net_amount' | 'item_tax_template_id'
+>;
+
+/** A tax row of a submitted sale. `item_wise_tax_detail` is what it charged each line, in the lines' order. */
+type SoldTax = Pick<Tables<'pos_invoice_taxes'>, 'charge_type' | 'account_head' | 'description' | 'rate' | 'row_id' | 'included_in_print_rate' | 'cost_center' | 'item_wise_tax_detail'>;
+
+/** A submitted sale as stored: as much of it as a return is made from. */
+export type SoldInvoice = Pick<Tables<'pos_invoices'>, 'id' | 'taxes_and_charges' | 'net_total' | 'total_taxes_and_charges' | 'grand_total'> & {
+  pos_invoice_items: SoldLine[];
+  pos_invoice_taxes: SoldTax[];
+};
+
+// Quantities are decimals: 0.3 less 0.1 has to read 0.2.
+const tidy = (value: number) => Math.round(value * 1e6) / 1e6;
+
+const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+
+/**
+ * "Negative quantities up to what was sold": each line of a sale with what is left of it to return — sold,
+ * less what the returns already submitted against it took. A return's quantities are below zero, so adding
+ * them takes them off.
+ */
+export function returnableLines(invoice: SoldInvoice, returns: { pos_invoice_items: { return_against_item: string | null; qty: number }[] }[]) {
+  const taken = new Map<string, number>();
+  for (const line of returns.flatMap((made) => made.pos_invoice_items)) {
+    if (line.return_against_item) taken.set(line.return_against_item, (taken.get(line.return_against_item) ?? 0) + line.qty);
+  }
+
+  return invoice.pos_invoice_items.map((line) => ({ line, left: tidy(line.qty + (taken.get(line.id) ?? 0)) }));
+}
+
+type Rounding = {
+  round: (value: number) => number;
+  /** A total at the currency's smallest coin. */
+  cashRound: (value: number) => number;
+  /** Global Defaults' Disable Rounded Total. */
+  roundedTotalDisabled: boolean;
+};
+
+/**
+ * The return of part of a sale: each line by its share of the line sold, at the rate it was sold at, and
+ * each tax row by the same shares of what it charged each line. Nothing is recalculated — a template edited
+ * since the sale changes no refund — and the database checks every figure against the sale
+ * (supabase/migrations/20261012080419_pos_returns_and_voids.sql). Quantities, amounts and totals are below
+ * zero, as ERPNext stores a return. `quantities` is what to take back of each line, by the line's id.
+ */
+export function buildReturn(invoice: SoldInvoice, quantities: ReadonlyMap<string, number>, { round, cashRound, roundedTotalDisabled }: Rounding) {
+  const picked = invoice.pos_invoice_items.flatMap((line, position) => {
+    const qty = quantities.get(line.id) ?? 0;
+    return qty > 0 ? [{ line, position, qty, share: qty / line.qty }] : [];
+  });
+
+  const items = picked.map(({ line, qty, share }) => ({
+    return_against_item: line.id,
+    item_id: line.item_id,
+    item_name: line.item_name ?? '',
+    qty: -qty,
+    uom_id: line.uom_id,
+    conversion_factor: line.conversion_factor,
+    stock_qty: -qty * line.conversion_factor,
+    price_list_rate: line.price_list_rate,
+    rate: line.rate,
+    amount: round(-line.amount * share),
+    net_rate: line.net_rate,
+    net_amount: round(-line.net_amount * share),
+    item_tax_template_id: line.item_tax_template_id,
+  }));
+  const netTotal = round(sum(items.map((item) => item.net_amount)));
+
+  let running = netTotal;
+  const taxes = invoice.pos_invoice_taxes.map((tax) => {
+    const charged = Array.isArray(tax.item_wise_tax_detail) ? tax.item_wise_tax_detail : [];
+    const detail = picked.map(({ position, share }) => -(Number(charged[position]) || 0) * share);
+    const amount = round(sum(detail));
+    running = round(running + amount);
+
+    return {
+      charge_type: tax.charge_type,
+      account_head: tax.account_head,
+      description: tax.description,
+      rate: tax.rate,
+      row_id: tax.row_id,
+      included_in_print_rate: tax.included_in_print_rate,
+      cost_center: tax.cost_center,
+      tax_amount: amount,
+      total: running,
+      item_wise_tax_detail: detail,
+    };
+  });
+  const totalTaxes = round(sum(taxes.map((tax) => tax.tax_amount)));
+
+  // An inclusive tax can leave a sale's grand total a few cents off net + tax; the return takes its share of that.
+  const sold = sum(invoice.pos_invoice_items.map((line) => line.amount));
+  const gap = invoice.grand_total - invoice.net_total - invoice.total_taxes_and_charges;
+  const grandTotal = round(netTotal + totalTaxes + (sold ? (gap * sum(items.map((item) => item.amount))) / sold : 0));
+  // The magnitude is what is rounded, so the return of a whole sale hands back the sale's own Rounded Total.
+  const roundedTotal = roundedTotalDisabled ? grandTotal : round(-cashRound(-grandTotal));
+
+  return { items, taxes, netTotal, totalTaxes, grandTotal, roundingAdjustment: round(roundedTotal - grandTotal), roundedTotal };
+}
+
+/**
+ * What public.pos_checkout() takes for a return: the sale it is made against, the figures above, and what is
+ * handed back per payment method — the whole of it, so nothing is change and nothing is written off.
+ */
+export function returnPayload(
+  invoice: SoldInvoice,
+  made: ReturnType<typeof buildReturn>,
+  session: { id: string; pos_profile_id: string },
+  refunds: { mode_of_payment_id: string; amount: number }[]
+) {
+  return {
+    pos_profile_id: session.pos_profile_id,
+    pos_opening_entry_id: session.id,
+    taxes_and_charges: invoice.taxes_and_charges,
+    return_against: invoice.id,
+    net_total: made.netTotal,
+    total_taxes_and_charges: made.totalTaxes,
+    grand_total: made.grandTotal,
+    rounding_adjustment: made.roundingAdjustment,
+    rounded_total: made.roundedTotal,
+    paid_amount: made.roundedTotal,
+    change_amount: 0,
+    write_off_amount: 0,
+    items: made.items,
+    taxes: made.taxes,
+    payments: refunds.filter((refund) => refund.amount > 0).map((refund) => ({ mode_of_payment_id: refund.mode_of_payment_id, amount: -refund.amount })),
   };
 }

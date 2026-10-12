@@ -62,12 +62,16 @@ that inserts it with its rows and submits it in the same transaction: `public.op
 and uses no number, and the database sets the date. The answer is the document's id; a screen that goes on
 with it sends through `sendOnce` (`src/components/adaptive-dialog.tsx`), `saveOnce`'s guard with the answer
 passed on. What a sale sends is calculated on the device (`src/features/pos-invoices/cart.ts`) and checked by
-the poster — never calculated twice.
+the poster — never calculated twice. A return goes through the same `pos_checkout`: `buildReturn` prorates
+the **stored** sale by quantity — its lines, and each tax row's `item_wise_tax_detail` — and never runs the
+price or tax engines again. Rejected: recalculating a return, wrong once a template changes after the sale.
 
-**A document is submitted and cancelled through two RPCs, whatever its type.** `useDocumentActionMutation({
-doctype, action, invalidate })` (`src/features/documents/queries.ts`) calls `public.submit_document` or
-`public.cancel_document` — security **definer**, because posting writes ledgers no role may write; they check
-the caller's Submit or Cancel permission themselves. It invalidates the three ledgers
+**A document is submitted, cancelled and deleted through three RPCs, whatever its type.**
+`useDocumentActionMutation({ doctype, action, invalidate })` (`src/features/documents/queries.ts`) calls
+`public.submit_document`, `public.cancel_document` or `public.delete_document` — security **definer**, because
+posting writes ledgers no role may write; they check the caller's Submit, Cancel or Delete permission
+themselves. Delete is a cancelled document's, with its ledger rows, while Accounts Settings allow it; a draft
+is still deleted through its own feature's mutation. It invalidates the three ledgers
 (`invalidateLedgers`) and the document's own queries. A ledger feature (`gl-entries`, `stock-ledger-entries`,
 `bins`) has queries and no mutation. Rejected: a submit hook per document type.
 

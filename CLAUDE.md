@@ -327,7 +327,11 @@ Then the posting engine and the first documents that post through it: `202610111
 `20261012004616_pos_shift_and_sale.sql` (`pos_opening_entries`, `pos_invoices`, `pos_closing_entries` and their
 rows; `private.pos_profile_usable()`, `private.keep_pos_entry()`, the posters `private.submit_pos_opening_entries()`
 / `submit_pos_invoices()` / `submit_pos_closing_entries()`; the invoker RPCs `open_pos_session`, `pos_checkout`
-and `close_pos_session`).
+and `close_pos_session`). Then returns and voids, with no new table:
+`20261012080419_pos_returns_and_voids.sql` (`pos_invoices.is_return` and `return_against`,
+`pos_invoice_items.return_against_item`, `pos_invoice_taxes.item_wise_tax_detail`; `pos_checkout` and
+`private.submit_pos_invoices()` re-created with the return branch; `private.guard_pos_invoice_void()`; the
+definer RPC `public.delete_document`).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
@@ -427,11 +431,20 @@ Two kinds post, and each has one rule that must hold:
   `public.submit_document(doctype, id)` and `public.cancel_document(doctype, id)` and nowhere else; a new
   document type adds `private.submit_<table_name>(uuid)`, which `submit_document` calls. Rejected: a
   `submit_*` / `cancel_*` pair per document — the same lock, `auth.uid()` and permission check repeated,
-  each one another definer function PostgREST serves.
+  each one another definer function PostgREST serves. A cancelled document is removed only by
+  `public.delete_document(doctype, id)`, which takes its ledger rows with it and refuses unless Accounts
+  Settings' `delete_linked_ledger_entries` is on — never delete from a ledger any other way. What a void
+  must refuse for one doctype is a trigger on that table (`private.guard_pos_invoice_void()`), not a branch
+  inside `cancel_document`.
 - **A `ledger`** (GL Entry, Stock Ledger Entry, Bin) gets a select policy and no other: nobody writes it,
   the owner included. Only the engine in `private` does, and a document's poster goes through it —
   `private.post_gl()` refuses an unbalanced voucher, `private.post_sle()` keeps the bin and its valuation.
   Never insert into a ledger from a poster directly.
+
+**A return is a document of the same doctype, negated** — a POS Invoice with `return_against`, through the
+same RPC and poster as the sale. Its figures are the original's stored ones by share of quantity
+(`item_wise_tax_detail` for the taxes), and the poster checks them against the original. Never recalculate a
+return from today's prices or templates.
 
 ## graphify
 
