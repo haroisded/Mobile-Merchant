@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict';
 
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
-import { buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
+import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
+import { pickPricingRule, ruleRate } from '../src/features/pricing-rules/apply.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
@@ -118,6 +119,25 @@ result = run(
 assert.deepEqual([result.totalTaxes, result.grandTotal], [61.88, 1008.88]);
 // No rows: the net total is the grand total.
 assert.deepEqual([run([{ rate: 50, qty: 2 }], []).grandTotal, run([{ rate: 50, qty: 2 }], []).totalTaxes], [100, 0]);
+// An additional discount (docs.frappe.io/erpnext/applying-discount, /discount_accounting): 2 × 699 at 10 % off
+// is 1,258.20, and 5 % off that is 62.91 — 1,195.29.
+const off = (lines, taxes, discount) => calculateTaxes(lines, taxes, 2, round2, { percentage: 0, amount: 0, ...discount });
+const totalsOf = ({ discountAmount, netTotal, totalTaxes, grandTotal }) => [discountAmount, netTotal, totalTaxes, grandTotal];
+const DISCOUNTED = [{ rate: 629.1, qty: 2 }];
+result = off(DISCOUNTED, [], { applyOn: 'Net Total', percentage: 5 });
+assert.deepEqual([...totalsOf(result), result.items[0].distributed, result.items[0].amount], [62.91, 1195.29, 0, 1195.29, 62.91, 1258.2]);
+// With VAT 12 % on top: off the Net Total the tax is charged on what is left; off the Grand Total the
+// discount is 5 % of 1,409.18, and its net part comes out of the line.
+assert.deepEqual(totalsOf(off(DISCOUNTED, [tax({ rate: 12 })], { applyOn: 'Net Total', percentage: 5 })), [62.91, 1195.29, 143.43, 1338.72]);
+assert.deepEqual(totalsOf(off(DISCOUNTED, [tax({ rate: 12 })], { applyOn: 'Grand Total', percentage: 5 })), [70.46, 1195.29, 143.43, 1338.72]);
+// A tax included in the price: 10 % off $108 leaves $97.20, of which $90 net and $7.20 tax.
+assert.deepEqual(totalsOf(off([{ rate: 108, qty: 1 }], [tax({ rate: 8, included_in_print_rate: true })], { applyOn: 'Grand Total', percentage: 10 })), [10.8, 90, 7.2, 97.2]);
+// An amount spread over three lines: the cent rounding loses goes on the line that lost it.
+result = off([{ rate: 10, qty: 1 }, { rate: 10, qty: 1 }, { rate: 10, qty: 1 }], [], { applyOn: 'Net Total', amount: 10 });
+assert.deepEqual([result.items.map((item) => item.netAmount), result.items.map((item) => item.distributed), result.netTotal], [[6.67, 6.66, 6.67], [3.33, 3.34, 3.33], 20]);
+// A fixed charge is not discounted, and a discount is never more than there is to take: 500 off 100 + 25 takes the 100.
+assert.deepEqual(totalsOf(off([{ rate: 100, qty: 1 }], [tax({ charge_type: 'Actual', tax_amount: 25 })], { applyOn: 'Grand Total', amount: 500 })), [100, 0, 25, 25]);
+assert.equal(off([{ rate: 100, qty: 1 }], [], { applyOn: 'Net Total' }).discountAmount, 0);
 
 // src/features/tax-rules/resolve.ts — the Tax Rule a sale takes (docs.frappe.io/erpnext/tax-rule): blank
 // conditions match anything, the most conditions filled in win, then priority 1 over 2.
@@ -194,6 +214,8 @@ const ENGINES = {
   resolvePrice,
   resolveTaxRule,
   calculateTaxes,
+  pickPricingRule,
+  ruleRate,
   round: (value, places) => roundTo(value, places, BANKERS),
   cashRound: (value) => cashRound(value, 0.25, 2, BANKERS),
 };
@@ -217,6 +239,7 @@ const setupOf = (over = {}) => ({
   defaultTemplateId: null,
   taxCategoryId: null,
   rules: [],
+  pricingRules: [],
   addTaxesFromItemTemplates: false,
   accountName: (accountId) => `Account ${accountId}`,
   precision: 2,
@@ -281,7 +304,10 @@ const stored = (sale, id) => ({
   net_total: sale.netTotal,
   total_taxes_and_charges: sale.totalTaxes,
   grand_total: sale.grandTotal,
-  pos_invoice_items: sale.lines.map((line, index) => ({ id: `${id}-${index}`, item_id: line.itemId, item_name: line.itemName, qty: line.qty, uom_id: line.uomId, conversion_factor: line.conversionFactor, price_list_rate: line.priceListRate, rate: line.rate, amount: line.amount, net_rate: line.netRate, net_amount: line.netAmount, item_tax_template_id: line.itemTaxTemplateId })),
+  apply_discount_on: sale.applyDiscountOn,
+  additional_discount_percentage: sale.additionalDiscountPercentage,
+  discount_amount: sale.discountAmount,
+  pos_invoice_items: sale.lines.map((line, index) => ({ id: `${id}-${index}`, item_id: line.itemId, item_name: line.itemName, qty: line.qty, uom_id: line.uomId, conversion_factor: line.conversionFactor, price_list_rate: line.priceListRate, rate: line.rate, amount: line.amount, net_rate: line.netRate, net_amount: line.netAmount, item_tax_template_id: line.itemTaxTemplateId, discount_percentage: line.discountPercentage, discount_amount: line.discountAmount, distributed_discount_amount: line.distributed, pricing_rule_id: line.pricingRule?.id ?? null })),
   pos_invoice_taxes: sale.taxes.map((tax) => ({ charge_type: tax.charge_type, account_head: tax.account, description: tax.description, rate: tax.rate, row_id: tax.row_id, included_in_print_rate: tax.included_in_print_rate, cost_center: tax.cost_center, item_wise_tax_detail: tax.byItem })),
 });
 const PESO = { round: cents, cashRound: (value) => cashRound(value, null, 2, BANKERS), roundedTotalDisabled: false };
@@ -307,5 +333,56 @@ assert.deepEqual(returnableLines(sold, [{ pos_invoice_items: oneBack.items }, { 
 // What is sent: the sale it returns, each line's own, and the refund below zero with nothing as change.
 const back = returnPayload(sold, oneBack, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 90 }, { mode_of_payment_id: 'card', amount: 0 }]);
 assert.deepEqual([back.return_against, back.paid_amount, back.change_amount, back.write_off_amount, back.payments], ['sale', -90, 0, 0, [{ mode_of_payment_id: 'cash', amount: -90 }]]);
+
+// src/features/pricing-rules/apply.ts — the rule a line takes (20.4), and the rate it gives.
+const ruleOf = (over) => ({ id: 'r', title: 'Rule', apply_on: 'Item Code', min_qty: 0, max_qty: 0, min_amt: 0, max_amt: 0, valid_from: null, valid_upto: null, for_price_list: null, priority: 1, disable: false, rate_or_discount: 'Discount Percentage', rate: 0, discount_percentage: 10, discount_amount: 0, created_at: '2026-01-01', pricing_rule_targets: [{ item_id: 'coffee', item_group_id: null, brand_id: null }], ...over });
+const LINE = { itemId: 'coffee', brandId: 'acme', groupPath: ['drinks', 'products', 'all'], stockQty: 2, amount: 160, date: '2026-10-12', priceListId: 'retail' };
+const picked = (rules, line = LINE) => pickPricingRule(rules, line)?.id ?? null;
+assert.equal(picked([ruleOf()]), 'r');
+// Another item's; disabled; outside its dates, quantities or amounts; for another price list.
+for (const miss of [{ pricing_rule_targets: [{ item_id: 'cake', item_group_id: null, brand_id: null }] }, { disable: true }, { valid_from: '2026-10-13' }, { valid_upto: '2026-10-11' }, { min_qty: 3 }, { max_qty: 1 }, { min_amt: 161 }, { max_amt: 159 }, { for_price_list: 'wholesale' }]) {
+  assert.equal(picked([ruleOf(miss)]), null, JSON.stringify(miss));
+}
+// A group above the item's covers it, and so does its brand.
+const onGroup = ruleOf({ id: 'g', apply_on: 'Item Group', pricing_rule_targets: [{ item_id: null, item_group_id: 'products', brand_id: null }] });
+const onBrand = ruleOf({ id: 'b', apply_on: 'Brand', pricing_rule_targets: [{ item_id: null, item_group_id: null, brand_id: 'acme' }] });
+assert.deepEqual([picked([onGroup]), picked([onBrand]), picked([onBrand], { ...LINE, brandId: null })], ['g', 'b', null]);
+// Item Code over Item Group over Brand; then priority, 1 first; then the rule naming the price list; then the older.
+assert.deepEqual([picked([onBrand, onGroup, ruleOf()]), picked([onBrand, onGroup])], ['r', 'g']);
+assert.equal(picked([ruleOf({ id: 'p2', priority: 2 }), ruleOf({ id: 'p1' })]), 'p1');
+assert.equal(picked([ruleOf({ id: 'any' }), ruleOf({ id: 'list', for_price_list: 'retail' })]), 'list');
+assert.equal(picked([ruleOf({ id: 'new', created_at: '2026-02-01' }), ruleOf({ id: 'old' })]), 'old');
+// A Rate per stock unit (a box of 12), a percentage and an amount off the Price List Rate — never below zero.
+assert.deepEqual([ruleRate(ruleOf({ rate_or_discount: 'Rate', rate: 70 }), 960, 12), ruleRate(ruleOf(), 80, 1), ruleRate(ruleOf({ rate_or_discount: 'Discount Amount', discount_amount: 100 }), 80, 1)], [840, 72, 0]);
+
+// The cart with discounts. 10 % from 2 coffees by rule: one coffee, or anything typed on the line, leaves the rule out.
+const PROMO = { pricingRules: [ruleOf({ id: 'promo', title: 'Coffee promo', min_qty: 2 })] };
+const lineOf = (sale) => (({ rate, discountAmount, discountPercentage, amount, pricingRule }) => [rate, discountAmount, discountPercentage, amount, pricingRule?.id ?? null])(sale.lines[0]);
+assert.deepEqual(lineOf(saleOf(cartOf(['coffee', 2]), PROMO)), [72, 8, 10, 144, 'promo']);
+assert.deepEqual(lineOf(saleOf(cartOf(['coffee', 1]), PROMO)), [80, 0, 0, 80, null]);
+// 20.1: a Discount (%) or a Discount Amount against the Price List Rate; a typed lower rate is a discount too, a higher one is not.
+const typedLine = (over) => lineOf(saleOf([{ itemId: 'coffee', uomId: 'nos', qty: 2, rate: null, ...over }], PROMO));
+assert.deepEqual(typedLine({ discountPercentage: 25 }), [60, 20, 25, 120, null]);
+assert.deepEqual(typedLine({ discountAmount: 5 }), [75, 5, 6.25, 150, null]);
+assert.deepEqual(typedLine({ rate: 70 }), [70, 10, 12.5, 140, null]);
+assert.deepEqual(typedLine({ rate: 90 }), [90, 0, 0, 180, null]);
+assert.deepEqual(typedLine({ discountPercentage: 150 }), [0, 80, 100, 0, null]);
+// 20.2: the additional discount is the POS Profile's to allow, on its Apply Discount On unless another was picked.
+const PROFILE = { apply_discount_on: 'Net Total', allow_discount_change: true };
+assert.deepEqual(additionalDiscount({ applyOn: null, percentage: 5, amount: null }, PROFILE), { applyOn: 'Net Total', percentage: 5, amount: 0 });
+assert.deepEqual(additionalDiscount({ applyOn: 'Grand Total', percentage: null, amount: 3 }, PROFILE), { applyOn: 'Grand Total', percentage: 0, amount: 3 });
+assert.equal(additionalDiscount({ applyOn: null, percentage: 5, amount: null }, { ...PROFILE, allow_discount_change: false }), undefined);
+assert.equal(additionalDiscount({ applyOn: 'Grand Total', percentage: null, amount: null }, PROFILE), undefined);
+// 144 + 17.28 VAT is 161.28; 5 % off it is 8.06, leaving 153.22 — 136.80 net, the line 7.20 lighter.
+const cheaper = buildSale(cartOf(['coffee', 2]), setupOf(PROMO), ENGINES, { applyOn: 'Grand Total', percentage: 5, amount: 0 });
+assert.deepEqual([cheaper.discountAmount, cheaper.netTotal, cheaper.totalTaxes, cheaper.grandTotal, cheaper.lines[0].distributed], [8.06, 136.8, 16.42, 153.22, 7.2]);
+const discounted = checkoutPayload(cheaper, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 153.22 }], settle(153.22, [153.22], cents));
+assert.deepEqual([discounted.apply_discount_on, discounted.additional_discount_percentage, discounted.discount_amount], ['Grand Total', 5, 8.06]);
+assert.deepEqual((({ price_list_rate, discount_percentage, discount_amount, rate, distributed_discount_amount, pricing_rule_id }) => [price_list_rate, discount_percentage, discount_amount, rate, distributed_discount_amount, pricing_rule_id])(discounted.items[0]), [80, 10, 8, 72, 7.2, 'promo']);
+// One of the two returned takes half of each discount back with it.
+const halfBack = buildReturn(stored(cheaper, 'promo-sale'), new Map([['promo-sale-0', 1]]), { ...PESO, roundedTotalDisabled: true });
+assert.deepEqual([halfBack.discountAmount, halfBack.netTotal, halfBack.totalTaxes, halfBack.grandTotal], [-4.03, -68.4, -8.21, -76.61]);
+assert.deepEqual((({ discount_percentage, discount_amount, distributed_discount_amount, pricing_rule_id }) => [discount_percentage, discount_amount, distributed_discount_amount, pricing_rule_id])(halfBack.items[0]), [10, 8, -3.6, 'promo']);
+assert.equal(returnPayload(stored(cheaper, 'promo-sale'), halfBack, { id: 'session', pos_profile_id: 'front' }, []).discount_amount, -4.03);
 
 console.log('check:logic — all assertions passed.');

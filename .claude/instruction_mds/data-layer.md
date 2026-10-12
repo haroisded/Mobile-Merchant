@@ -66,6 +66,12 @@ the poster — never calculated twice. A return goes through the same `pos_check
 the **stored** sale by quantity — its lines, and each tax row's `item_wise_tax_detail` — and never runs the
 price or tax engines again. Rejected: recalculating a return, wrong once a template changes after the sale.
 
+**A choice among records that prices or taxes a sale is an import-free module beside its `queries.ts`** —
+`item-prices/resolve.ts`, `tax-rules/resolve.ts`, `pricing-rules/apply.ts` — handed to `cart.ts` as an
+engine and asserted in `tools/check-logic.mjs`. The poster checks the outcome a sale claims (the rule covers
+the line and gives that rate), not the choice. Rejected: a second ranking engine in SQL. Typed cart state
+that two pages share — the lines, the additional discount — is `src/Store/cart.ts`, never a query.
+
 **A document is submitted, cancelled and deleted through three RPCs, whatever its type.**
 `useDocumentActionMutation({ doctype, action, invalidate })` (`src/features/documents/queries.ts`) calls
 `public.submit_document`, `public.cancel_document` or `public.delete_document` — security **definer**, because

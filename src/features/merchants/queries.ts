@@ -95,6 +95,7 @@ const companyRow = (values: CompanyFormValues) => ({
   write_off_account: values.write_off_account || null,
   round_off_account: values.round_off_account || null,
   round_off_cost_center: values.round_off_cost_center || null,
+  default_discount_account: values.default_discount_account || null,
   default_inventory_account: values.default_inventory_account || null,
   stock_adjustment_account: values.stock_adjustment_account || null,
   stock_received_but_not_billed: values.stock_received_but_not_billed || null,

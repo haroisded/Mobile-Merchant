@@ -7,7 +7,7 @@ import { SearchSelect } from '../../components/search-select';
 import { Text } from '../../components/text';
 import { TextInput } from '../../components/text-input';
 import type { Item } from '../../features/items/queries';
-import type { SaleLine } from '../../features/pos-invoices/cart';
+import type { CartLine, SaleLine } from '../../features/pos-invoices/cart';
 import type { Uom } from '../../features/uoms/queries';
 import { useAppTheme } from '../../lib/theme';
 import { removeCartLine, updateCartLine } from '../../Store/cart';
@@ -61,21 +61,35 @@ export function NumberField({ label, hint, value, placeholder, onChange, blank, 
 type Props = {
   sessionId: string;
   line: SaleLine;
-  /** The rate the cashier typed; null while the price list's stands. */
-  typedRate: number | null;
+  /** The line as the cashier left it: what was typed for its rate or its discount, null while the price list's stands. */
+  typed: CartLine;
   item: Item | undefined;
   uoms: Uom[];
-  /** The POS Profile's Allow User to Edit Rate. */
+  /** The POS Profile's Allow User to Edit Rate, and Allow User to Edit Discount. */
   rateEditable: boolean;
+  discountEditable: boolean;
   money: (value: number) => string;
 };
 
-/** One line of the cart: its quantity, its unit where the item sells in several, its rate where the profile lets it change, and its amount. */
-export function CartLineRow({ sessionId, line, typedRate, item, uoms, rateEditable, money }: Props) {
+/** "₱ 72.00 per Nos · ₱ 144.00 · 10% off · Coffee promo": what the line sells at, and what brought it under the list's rate. */
+function lineSummary(line: SaleLine, unit: string, money: (value: number) => string) {
+  const parts = [`${money(line.rate)} per ${unit}`, money(line.amount)];
+  if (line.discountAmount > 0) parts.push(`${Number(line.discountPercentage.toFixed(2))}% off`);
+  if (line.pricingRule) parts.push(line.pricingRule.title);
+  return parts.join(' · ');
+}
+
+/**
+ * One line of the cart: its quantity, its unit where the item sells in several, its rate and its discount
+ * where the profile lets them change, and its amount. A rate, a Discount (%) and a Discount Amount are three
+ * ways to say one thing, so typing one empties the other two.
+ */
+export function CartLineRow({ sessionId, line, typed, item, uoms, rateEditable, discountEditable, money }: Props) {
   const index = line.cartIndex;
   const { colors } = useAppTheme();
   const unitIds = item ? [item.stock_uom, ...item.item_uoms.map((unit) => unit.uom_id).filter((id) => id !== item.stock_uom)] : [line.uomId];
   const unitName = (id: string) => uoms.find((uom) => uom.id === id)?.uom_name ?? 'Unit';
+  const price = (patch: Pick<CartLine, 'rate' | 'discountPercentage' | 'discountAmount'>) => updateCartLine(sessionId, index, patch);
 
   return (
     <View style={[styles.line, { borderColor: colors.outlineVariant }]}>
@@ -83,7 +97,7 @@ export function CartLineRow({ sessionId, line, typedRate, item, uoms, rateEditab
         <View style={styles.fill}>
           <Text variant="titleMedium">{line.itemName}</Text>
           <Text variant="bodySmall" style={{ color: line.priced ? colors.onSurfaceMuted : colors.error }}>
-            {line.priced ? `${money(line.rate)} per ${unitName(line.uomId)} · ${money(line.amount)}` : 'No price list prices this item.'}
+            {line.priced ? lineSummary(line, unitName(line.uomId), money) : 'No price list prices this item.'}
           </Text>
         </View>
         <IconButton icon="delete" accessibilityLabel={`Remove ${line.itemName} from the cart`} onPress={() => removeCartLine(sessionId, index)} />
@@ -96,8 +110,8 @@ export function CartLineRow({ sessionId, line, typedRate, item, uoms, rateEditab
             title="UOM"
             value={line.uomId}
             options={unitIds.map((id) => ({ value: id, label: unitName(id) }))}
-            // Another unit is another price: the rate goes back to the price list's.
-            onChange={(uomId) => updateCartLine(sessionId, index, { uomId, rate: null })}
+            // Another unit is another price: the rate goes back to the price list's, and an amount off the old unit goes.
+            onChange={(uomId) => updateCartLine(sessionId, index, { uomId, rate: null, discountAmount: null })}
           />
         ) : null}
         {rateEditable ? (
@@ -105,12 +119,34 @@ export function CartLineRow({ sessionId, line, typedRate, item, uoms, rateEditab
             label="Rate"
             hint="Blank takes the price list's"
             // The typed rate only: the price list's shows as the placeholder.
-            value={typedRate}
+            value={typed.rate}
             placeholder={String(line.priceListRate)}
             blank
             min={0}
-            onChange={(rate) => updateCartLine(sessionId, index, { rate })}
+            onChange={(rate) => price({ rate, discountPercentage: null, discountAmount: null })}
           />
+        ) : null}
+        {discountEditable ? (
+          <>
+            <NumberField
+              label="Discount (%)"
+              hint="Off the price list's rate"
+              value={typed.discountPercentage ?? null}
+              placeholder="0"
+              blank
+              min={0}
+              onChange={(discountPercentage) => price({ rate: null, discountPercentage, discountAmount: null })}
+            />
+            <NumberField
+              label="Discount Amount"
+              hint={`Off each ${unitName(line.uomId)}`}
+              value={typed.discountAmount ?? null}
+              placeholder="0"
+              blank
+              min={0}
+              onChange={(discountAmount) => price({ rate: null, discountPercentage: null, discountAmount })}
+            />
+          </>
         ) : null}
       </FieldGrid>
     </View>

@@ -11,6 +11,9 @@ const once = <T>(rows: T[], key: (row: T) => string, field: string, ctx: z.Refin
   });
 };
 
+/** What a sale's additional discount is taken from (pos_profiles_apply_discount_on). */
+export const APPLY_DISCOUNT_ON = ['Grand Total', 'Net Total'] as const;
+
 // Form input, so Zod (.claude/instruction_mds/data-layer.md §3); save_pos_profile takes the same object. Empty
 // strings are "none" — the RPC stores null. Which record each link may name is the database's rule
 // (private.validate_pos_profile), and so are the payment rows' (private.validate_pos_profile_payments),
@@ -35,6 +38,10 @@ export const posProfileSchema = z.object({
   allow_rate_change: z.boolean(),
   set_grand_total_to_default_mop: z.boolean(),
   print_receipt_on_order_complete: z.boolean(),
+  apply_discount_on: z.enum(APPLY_DISCOUNT_ON),
+  allow_discount_change: z.boolean(),
+  ignore_pricing_rule: z.boolean(),
+  discount_account: z.string(),
   users: z
     .array(z.object({ member_id: z.string().min(1, 'Pick a user.'), is_default: z.boolean() }))
     .superRefine((rows, ctx) => once(rows, (row) => row.member_id, 'member_id', ctx)),

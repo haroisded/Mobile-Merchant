@@ -139,6 +139,12 @@ cancelled one goes only through `public.delete_document` — definer, the same m
 delete from a ledger. A return needs no permission of its own: it is a POS Invoice created and submitted, so
 a Sales User refunds; undoing a sale is **Cancel**, which a cashier does not hold.
 
+**What the device applies, the cashier must read.** A Pricing Rule is chosen on the device
+(`src/features/pricing-rules/apply.ts`), so Sales User holds Read on Pricing Rule — as it does on Item
+Price and Tax Rule. What a cashier may *give* is not a permission at all but the POS Profile's switches
+(Allow User to Edit Rate, Allow User to Edit Discount, Ignore Pricing Rule) and the Item's Max Discount,
+which `private.submit_pos_invoices()` holds whoever is selling — the owner included.
+
 **A session is its cashier's.** A POS Opening Entry carries `user_id`, and the posters hold the line the
 policies cannot: `private.submit_pos_invoices()` sells only inside the caller's own open session, and
 `private.submit_pos_closing_entries()` lets the cashier close it — or whoever holds **Cancel** on POS Opening

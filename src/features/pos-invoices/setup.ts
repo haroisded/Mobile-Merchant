@@ -12,6 +12,8 @@ import { useItemsQuery } from '../items/queries';
 import type { Merchant } from '../merchants/queries';
 import type { PosProfile } from '../pos-profiles/queries';
 import { usePriceListsQuery } from '../price-lists/queries';
+import { pickPricingRule, ruleRate } from '../pricing-rules/apply';
+import { usePricingRulesQuery } from '../pricing-rules/queries';
 import { calculateTaxes } from '../sales-tax-templates/calculate';
 import { useSalesTaxTemplatesQuery } from '../sales-tax-templates/queries';
 import { useSellingSettingsQuery } from '../selling-settings/queries';
@@ -19,16 +21,17 @@ import { useTaxRulesQuery } from '../tax-rules/queries';
 import { resolveTaxRule } from '../tax-rules/resolve';
 import type { Engines, SaleSetup } from './cart';
 
-/** What is sold and for how much: the items, their groups, the prices and the price lists. Undefined until all have loaded. */
+/** What is sold and for how much: the items, their groups, the prices, the price lists and the Pricing Rules. Undefined until all have loaded. */
 function useCatalog(merchantId: string) {
   const args = { merchantId };
   const items = useItemsQuery(args).data;
   const groups = useItemGroupsQuery(args).data;
   const prices = useItemPricesQuery(args).data;
   const priceLists = usePriceListsQuery(args).data;
+  const pricingRules = usePricingRulesQuery(args).data;
   const selling = useSellingSettingsQuery(args).data;
 
-  return items && groups && prices && priceLists && selling ? { items, groups, prices, priceLists, selling } : undefined;
+  return items && groups && prices && priceLists && pricingRules && selling ? { items, groups, prices, priceLists, pricingRules, selling } : undefined;
 }
 
 /** How a sale is taxed: the templates, the rules, and the switch that adds an item's own taxes. Undefined until all have loaded. */
@@ -89,6 +92,8 @@ export function useSaleSetup(merchant: Merchant, profile: PosProfile) {
     defaultTemplateId: templates.find((template) => template.is_default)?.id ?? null,
     taxCategoryId: profile.tax_category,
     rules: records.rules,
+    // 20.4, "POS Profile Ignore Pricing Rule switches it off for a register".
+    pricingRules: profile.ignore_pricing_rule ? [] : records.pricingRules,
     addTaxesFromItemTemplates: records.accountsSettings.add_taxes_from_item_tax_template,
     accountName: (accountId) => accountNames.get(accountId) ?? 'Tax',
     precision,
@@ -98,6 +103,8 @@ export function useSaleSetup(merchant: Merchant, profile: PosProfile) {
     resolvePrice,
     resolveTaxRule,
     calculateTaxes,
+    pickPricingRule,
+    ruleRate,
     round: (value, places) => roundTo(value, places, method),
     cashRound: (value) => cashRound(value, currency.smallest_currency_fraction_value, precision, method),
   };

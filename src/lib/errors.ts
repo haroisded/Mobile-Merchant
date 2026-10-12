@@ -51,6 +51,8 @@ const USED_BY = new Map([
   ['pos_profiles', 'A POS Profile uses it. Change it on that profile first.'],
   ['pos_profile_payments', "It's one of a POS Profile's payment methods. Remove that row first."],
   ['pos_profile_item_groups', "It's one of a POS Profile's item groups. Remove that row first."],
+  ['pricing_rules', 'A pricing rule uses it. Change it on that rule first.'],
+  ['pricing_rule_targets', 'A pricing rule applies on it. Remove it from that rule first.'],
   // A session or a sale names it, and neither is ever edited to let it go.
   ['pos_opening_entries', 'A session was opened on it, so it stays. Disable it instead.'],
   ['pos_opening_entry_balances', 'A session opened with it, so it stays. Disable it instead.'],
@@ -133,6 +135,11 @@ const POSTING_REFUSALS = new Map([
   ['not_cancelled', 'Only a cancelled document can be deleted. Go back and open it again.'],
   ['ledger_entries_kept', 'Accounts Settings keeps ledger entries, so a cancelled document stays. Turn on Delete Ledger Entries with the Document first.'],
   ['document_in_use', "Another document still names this one, so it can't be deleted."],
+  // Discounts (supabase/migrations/20261012085548_pos_invoice_discounts.sql).
+  ['discount_locked', "The POS Profile doesn't allow that discount. Go back and open the cart again."],
+  ['max_discount_exceeded', "One of the items is discounted by more than its Max Discount allows."],
+  ['pricing_rule_mismatch', "A pricing rule has changed since, or no longer applies. Go back and open the cart again."],
+  ['below_valuation', "One of the items would sell for less than it is valued at, which Selling Settings don't allow."],
 ]);
 
 /** The words for a document the database refused to save, submit or cancel — null for any other failure. */

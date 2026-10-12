@@ -60,6 +60,7 @@ src/
     documents/            queries.ts — submit / cancel for every document, and what a posting invalidates
     stock-entries/  stock-reconciliations/                queries.ts  schema.ts — list, one by id, save, delete
     pos-profiles/         queries.ts  schema.ts — a register's settings and its three child tables
+    pricing-rules/        queries.ts  schema.ts  apply.ts — the rule a cart line takes and its rate, import-free
     pos-opening-entries/  queries.ts  schema.ts — a session: the list, the open one, open_pos_session
     pos-invoices/         queries.ts  cart.ts (the sale a cart becomes, import-free)  setup.ts (the records it reads)
     pos-closing-entries/  queries.ts — the list, one by id, close_pos_session
@@ -94,6 +95,7 @@ src/
     letter-heads/         index.tsx  letter-head-form.tsx
     print-settings/       index.tsx
     pos-profiles/         index.tsx  pos-profile-form.tsx (a Setup-stack page)
+    pricing-rules/        index.tsx  pricing-rule-form.tsx (a Setup-stack page)
     sell/                 index.tsx — the Sell destination's index, with the session box
     register/             index.tsx  cart.tsx  cart-line.tsx — the items, then the cart and its payment
     pos-orders/           index.tsx  pos-invoice.tsx  pos-return.tsx — the sales, one sale's receipt, its return

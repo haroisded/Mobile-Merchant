@@ -991,6 +991,7 @@ export type Database = {
           default_warehouse: string | null
           description: string | null
           disabled: boolean
+          discount_account: string | null
           expense_account: string | null
           id: string
           income_account: string | null
@@ -998,6 +999,7 @@ export type Database = {
           item_code: string
           item_group_id: string
           item_name: string
+          max_discount: number
           merchant_id: string
           reorder_level: number | null
           sales_uom: string | null
@@ -1013,6 +1015,7 @@ export type Database = {
           default_warehouse?: string | null
           description?: string | null
           disabled?: boolean
+          discount_account?: string | null
           expense_account?: string | null
           id?: string
           income_account?: string | null
@@ -1020,6 +1023,7 @@ export type Database = {
           item_code: string
           item_group_id: string
           item_name: string
+          max_discount?: number
           merchant_id: string
           reorder_level?: number | null
           sales_uom?: string | null
@@ -1035,6 +1039,7 @@ export type Database = {
           default_warehouse?: string | null
           description?: string | null
           disabled?: boolean
+          discount_account?: string | null
           expense_account?: string | null
           id?: string
           income_account?: string | null
@@ -1042,6 +1047,7 @@ export type Database = {
           item_code?: string
           item_group_id?: string
           item_name?: string
+          max_discount?: number
           merchant_id?: string
           reorder_level?: number | null
           sales_uom?: string | null
@@ -1062,6 +1068,13 @@ export type Database = {
             columns: ["selling_cost_center", "merchant_id"]
             isOneToOne: false
             referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "items_discount_account_fk"
+            columns: ["discount_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -1253,6 +1266,7 @@ export type Database = {
           default_bank_account: string | null
           default_cash_account: string | null
           default_currency: string
+          default_discount_account: string | null
           default_expense_account: string | null
           default_income_account: string | null
           default_inventory_account: string | null
@@ -1275,6 +1289,7 @@ export type Database = {
           default_bank_account?: string | null
           default_cash_account?: string | null
           default_currency: string
+          default_discount_account?: string | null
           default_expense_account?: string | null
           default_income_account?: string | null
           default_inventory_account?: string | null
@@ -1297,6 +1312,7 @@ export type Database = {
           default_bank_account?: string | null
           default_cash_account?: string | null
           default_currency?: string
+          default_discount_account?: string | null
           default_expense_account?: string | null
           default_income_account?: string | null
           default_inventory_account?: string | null
@@ -1346,6 +1362,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currency_presets"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "merchants_default_discount_account_fk"
+            columns: ["default_discount_account", "id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
           },
           {
             foreignKeyName: "merchants_default_expense_account_fk"
@@ -1635,6 +1658,10 @@ export type Database = {
           amount: number
           conversion_factor: number
           cost_center: string | null
+          discount_account: string | null
+          discount_amount: number
+          discount_percentage: number
+          distributed_discount_amount: number
           expense_account: string | null
           id: string
           idx: number
@@ -1647,6 +1674,7 @@ export type Database = {
           net_rate: number
           pos_invoice_id: string
           price_list_rate: number
+          pricing_rule_id: string | null
           qty: number
           rate: number
           return_against_item: string | null
@@ -1658,6 +1686,10 @@ export type Database = {
           amount: number
           conversion_factor?: number
           cost_center?: string | null
+          discount_account?: string | null
+          discount_amount?: number
+          discount_percentage?: number
+          distributed_discount_amount?: number
           expense_account?: string | null
           id?: string
           idx: number
@@ -1670,6 +1702,7 @@ export type Database = {
           net_rate: number
           pos_invoice_id: string
           price_list_rate?: number
+          pricing_rule_id?: string | null
           qty: number
           rate: number
           return_against_item?: string | null
@@ -1681,6 +1714,10 @@ export type Database = {
           amount?: number
           conversion_factor?: number
           cost_center?: string | null
+          discount_account?: string | null
+          discount_amount?: number
+          discount_percentage?: number
+          distributed_discount_amount?: number
           expense_account?: string | null
           id?: string
           idx?: number
@@ -1693,6 +1730,7 @@ export type Database = {
           net_rate?: number
           pos_invoice_id?: string
           price_list_rate?: number
+          pricing_rule_id?: string | null
           qty?: number
           rate?: number
           return_against_item?: string | null
@@ -1706,6 +1744,13 @@ export type Database = {
             columns: ["cost_center", "merchant_id"]
             isOneToOne: false
             referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_discount_account_fk"
+            columns: ["discount_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -1741,6 +1786,13 @@ export type Database = {
             columns: ["pos_invoice_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "pos_invoices"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_pricing_rule_fk"
+            columns: ["pricing_rule_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_rules"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -1907,8 +1959,12 @@ export type Database = {
       }
       pos_invoices: {
         Row: {
+          additional_discount_account: string | null
+          additional_discount_percentage: number
+          apply_discount_on: string
           change_amount: number
           created_at: string
+          discount_amount: number
           docstatus: number
           grand_total: number
           id: string
@@ -1932,8 +1988,12 @@ export type Database = {
           write_off_amount: number
         }
         Insert: {
+          additional_discount_account?: string | null
+          additional_discount_percentage?: number
+          apply_discount_on?: string
           change_amount?: number
           created_at?: string
+          discount_amount?: number
           docstatus?: number
           grand_total?: number
           id?: string
@@ -1957,8 +2017,12 @@ export type Database = {
           write_off_amount?: number
         }
         Update: {
+          additional_discount_account?: string | null
+          additional_discount_percentage?: number
+          apply_discount_on?: string
           change_amount?: number
           created_at?: string
+          discount_amount?: number
           docstatus?: number
           grand_total?: number
           id?: string
@@ -1982,6 +2046,13 @@ export type Database = {
           write_off_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pos_invoices_discount_account_fk"
+            columns: ["additional_discount_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
           {
             foreignKeyName: "pos_invoices_merchant_id_fkey"
             columns: ["merchant_id"]
@@ -2293,13 +2364,17 @@ export type Database = {
       pos_profiles: {
         Row: {
           account_for_change_amount: string | null
+          allow_discount_change: boolean
           allow_rate_change: boolean
+          apply_discount_on: string
           cost_center: string | null
           created_at: string
           disabled: boolean
+          discount_account: string | null
           expense_account: string | null
           hide_unavailable_items: boolean
           id: string
+          ignore_pricing_rule: boolean
           income_account: string | null
           letter_head: string | null
           merchant_id: string
@@ -2317,13 +2392,17 @@ export type Database = {
         }
         Insert: {
           account_for_change_amount?: string | null
+          allow_discount_change?: boolean
           allow_rate_change?: boolean
+          apply_discount_on?: string
           cost_center?: string | null
           created_at?: string
           disabled?: boolean
+          discount_account?: string | null
           expense_account?: string | null
           hide_unavailable_items?: boolean
           id?: string
+          ignore_pricing_rule?: boolean
           income_account?: string | null
           letter_head?: string | null
           merchant_id: string
@@ -2341,13 +2420,17 @@ export type Database = {
         }
         Update: {
           account_for_change_amount?: string | null
+          allow_discount_change?: boolean
           allow_rate_change?: boolean
+          apply_discount_on?: string
           cost_center?: string | null
           created_at?: string
           disabled?: boolean
+          discount_account?: string | null
           expense_account?: string | null
           hide_unavailable_items?: boolean
           id?: string
+          ignore_pricing_rule?: boolean
           income_account?: string | null
           letter_head?: string | null
           merchant_id?: string
@@ -2376,6 +2459,13 @@ export type Database = {
             columns: ["cost_center", "merchant_id"]
             isOneToOne: false
             referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_discount_account_fk"
+            columns: ["discount_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -2499,6 +2589,150 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "merchants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_rule_targets: {
+        Row: {
+          brand_id: string | null
+          id: string
+          idx: number
+          item_group_id: string | null
+          item_id: string | null
+          merchant_id: string
+          pricing_rule_id: string
+        }
+        Insert: {
+          brand_id?: string | null
+          id?: string
+          idx: number
+          item_group_id?: string | null
+          item_id?: string | null
+          merchant_id: string
+          pricing_rule_id: string
+        }
+        Update: {
+          brand_id?: string | null
+          id?: string
+          idx?: number
+          item_group_id?: string | null
+          item_id?: string | null
+          merchant_id?: string
+          pricing_rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_rule_targets_brand_fk"
+            columns: ["brand_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pricing_rule_targets_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pricing_rule_targets_item_group_fk"
+            columns: ["item_group_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pricing_rule_targets_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_rule_targets_rule_fk"
+            columns: ["pricing_rule_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_rules"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pricing_rules: {
+        Row: {
+          apply_on: string
+          created_at: string
+          disable: boolean
+          discount_amount: number
+          discount_percentage: number
+          for_price_list: string | null
+          id: string
+          max_amt: number
+          max_qty: number
+          merchant_id: string
+          min_amt: number
+          min_qty: number
+          priority: number
+          rate: number
+          rate_or_discount: string
+          title: string
+          valid_from: string | null
+          valid_upto: string | null
+        }
+        Insert: {
+          apply_on?: string
+          created_at?: string
+          disable?: boolean
+          discount_amount?: number
+          discount_percentage?: number
+          for_price_list?: string | null
+          id?: string
+          max_amt?: number
+          max_qty?: number
+          merchant_id: string
+          min_amt?: number
+          min_qty?: number
+          priority?: number
+          rate?: number
+          rate_or_discount?: string
+          title: string
+          valid_from?: string | null
+          valid_upto?: string | null
+        }
+        Update: {
+          apply_on?: string
+          created_at?: string
+          disable?: boolean
+          discount_amount?: number
+          discount_percentage?: number
+          for_price_list?: string | null
+          id?: string
+          max_amt?: number
+          max_qty?: number
+          merchant_id?: string
+          min_amt?: number
+          min_qty?: number
+          priority?: number
+          rate?: number
+          rate_or_discount?: string
+          title?: string
+          valid_from?: string | null
+          valid_upto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_rules_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_rules_price_list_fk"
+            columns: ["for_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
           },
         ]
       }
@@ -3756,6 +3990,7 @@ export type Database = {
       save_item_with_opening_stock: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }
       save_pos_profile: { Args: { payload: Json }; Returns: string }
+      save_pricing_rule: { Args: { payload: Json }; Returns: string }
       save_role_permissions: {
         Args: { p_doctype: string; p_merchant: string; p_rows: Json }
         Returns: undefined

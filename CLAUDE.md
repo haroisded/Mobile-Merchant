@@ -331,7 +331,14 @@ and `close_pos_session`). Then returns and voids, with no new table:
 `20261012080419_pos_returns_and_voids.sql` (`pos_invoices.is_return` and `return_against`,
 `pos_invoice_items.return_against_item`, `pos_invoice_taxes.item_wise_tax_detail`; `pos_checkout` and
 `private.submit_pos_invoices()` re-created with the return branch; `private.guard_pos_invoice_void()`; the
-definer RPC `public.delete_document`).
+definer RPC `public.delete_document`). Then discounts, in two:
+`20261012085121_discounts.sql` (`merchants.default_discount_account`, `items.max_discount` and
+`discount_account`, the POS Profile's four discount fields; `private.validate_discount_account()`, one check
+for every discount account; `private.seed_discounts_for()` behind `merchants_seed_52_discounts`;
+`pricing_rules` with `pricing_rule_targets`, the invoker RPC `save_pricing_rule`; `save_item` and
+`save_pos_profile` re-created) and `20261012085548_pos_invoice_discounts.sql` (the discount columns on
+`pos_invoices` and `pos_invoice_items`; `pos_checkout` and `private.submit_pos_invoices()` re-created with
+the discount checks and Discount Accounting).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

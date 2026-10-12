@@ -9,21 +9,23 @@ import { PageForm } from '../../components/form-footer';
 import { PageHeader } from '../../components/page-header';
 import { SessionState, useRegisterSession } from '../../components/pos-session';
 import { SampleBox, SampleLine } from '../../components/sample-box';
+import { SearchSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
 import { useMoney } from '../../features/currencies/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries';
 import type { ModeOfPayment } from '../../features/modes-of-payment/queries';
-import { buildSale, checkoutPayload, settle, tenderedAmounts } from '../../features/pos-invoices/cart';
-import type { Sale } from '../../features/pos-invoices/cart';
+import { additionalDiscount, buildSale, checkoutPayload, settle, tenderedAmounts } from '../../features/pos-invoices/cart';
+import type { CartDiscount, Sale } from '../../features/pos-invoices/cart';
 import { useCheckoutMutation } from '../../features/pos-invoices/queries';
 import { useSaleSetup } from '../../features/pos-invoices/setup';
 import type { PosOpeningEntry } from '../../features/pos-opening-entries/queries';
 import type { PosProfile } from '../../features/pos-profiles/queries';
+import { APPLY_DISCOUNT_ON } from '../../features/pos-profiles/schema';
 import { useUomsQuery } from '../../features/uoms/queries';
 import type { Uom } from '../../features/uoms/queries';
 import { failureMessage, mutationNotice, postingRefusal } from '../../lib/errors';
-import { clearCart, useCart } from '../../Store/cart';
+import { clearCart, setCartDiscount, useCart, useCartDiscount } from '../../Store/cart';
 import { spacing } from '../../themes';
 import { CartLineRow, NumberField } from './cart-line';
 
@@ -80,12 +82,13 @@ type FormProps = {
 function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormProps) {
   const { setup, engines } = sale;
   const lines = useCart(session.id);
+  const discount = useCartDiscount(session.id);
   const money = useMoney(merchant);
   const checkout = useCheckoutMutation({ merchantId: merchant.id });
   // What the cashier typed per payment method; a method not in here still shows its default.
   const [typed, setTyped] = useState<Record<string, number | null>>({});
 
-  const built = buildSale(lines, setup, engines);
+  const built = buildSale(lines, setup, engines, additionalDiscount(discount, profile));
   const payments = tenderedAmounts(profile.pos_profile_payments, typed, profile.set_grand_total_to_default_mop && built.lines.length > 0 ? built.roundedTotal : null);
   const settled = settle(
     built.roundedTotal,
@@ -118,14 +121,17 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
           key={`${line.cartIndex}:${line.itemId}`}
           sessionId={session.id}
           line={line}
-          typedRate={lines[line.cartIndex].rate}
+          typed={lines[line.cartIndex]}
           item={sale.items.find((candidate) => candidate.id === line.itemId)}
           uoms={uoms}
           rateEditable={profile.allow_rate_change}
+          discountEditable={profile.allow_discount_change}
           money={money}
         />
       ))}
+      {profile.allow_discount_change ? <AdditionalDiscount sessionId={session.id} discount={discount} applyOn={built.applyDiscountOn} /> : null}
       <SampleBox>
+        {built.discountAmount > 0 ? <SampleLine label="Additional Discount" value={money(-built.discountAmount)} sub={`Off the ${built.applyDiscountOn}`} /> : null}
         <SampleLine label="Net Total" value={money(built.netTotal)} />
         {built.taxes.map((tax, index) => (
           <SampleLine key={`${index}:${tax.account}`} label={tax.description} value={money(tax.tax_amount)} />
@@ -149,6 +155,29 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
       </FieldGrid>
       <Settlement settled={settled} writtenOff={gap === null} money={money} />
     </PageForm>
+  );
+}
+
+/**
+ * 20.2, the sale's Additional Discount: a percentage or an amount — typing one empties the other — taken from
+ * the Grand Total or the Net Total, the POS Profile's Apply Discount On to start with.
+ */
+function AdditionalDiscount({ sessionId, discount, applyOn }: { sessionId: string; discount: CartDiscount; applyOn: string }) {
+  return (
+    <>
+      <SectionHeading title="Additional Discount" hint="Off the whole sale, after each line's own discount" />
+      <FieldGrid>
+        <NumberField label="Discount (%)" value={discount.percentage} placeholder="0" blank min={0} onChange={(percentage) => setCartDiscount(sessionId, { percentage, amount: null })} />
+        <NumberField label="Discount Amount" value={discount.amount} placeholder="0" blank min={0} onChange={(amount) => setCartDiscount(sessionId, { percentage: null, amount })} />
+        <SearchSelect
+          label="Apply Discount On"
+          title="Apply Discount On"
+          value={applyOn}
+          options={APPLY_DISCOUNT_ON.map((basis) => ({ value: basis, label: basis }))}
+          onChange={(picked) => setCartDiscount(sessionId, { applyOn: picked })}
+        />
+      </FieldGrid>
+    </>
   );
 }
 

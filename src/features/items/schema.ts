@@ -34,6 +34,9 @@ export const itemSchema = (codeTyped: boolean) =>
       selling_cost_center: z.string(),
       income_account: z.string(),
       expense_account: z.string(),
+      // items_max_discount: a percentage; blank or 0 is no limit.
+      max_discount: atLeastZero.refine((value) => Number(value || 0) <= 100, 'Enter 100 or less.'),
+      discount_account: z.string(),
       // Read on creation only: it becomes the item's first Item Price.
       standard_rate: atLeastZero,
       // Read on creation only: together they become an Opening Stock reconciliation, saved and submitted with

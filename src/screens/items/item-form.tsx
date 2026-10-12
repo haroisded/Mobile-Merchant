@@ -17,6 +17,7 @@ import { SampleBox, SampleLine } from '../../components/sample-box';
 import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
 import { Text } from '../../components/text';
+import { ledgerOptions } from '../../features/accounts/queries';
 import { useBinsQuery } from '../../features/bins/queries';
 import { useBrandsQuery } from '../../features/brands/queries';
 import type { Brand } from '../../features/brands/queries';
@@ -101,6 +102,8 @@ const blank = ({ groups, stockSettings }: Records): ItemValues => ({
   selling_cost_center: '',
   income_account: '',
   expense_account: '',
+  max_discount: '',
+  discount_account: '',
   standard_rate: '',
   opening_stock: '',
   valuation_rate: '',
@@ -128,6 +131,9 @@ const saved = (item: Item): ItemValues => ({
   selling_cost_center: text(item.selling_cost_center),
   income_account: text(item.income_account),
   expense_account: text(item.expense_account),
+  // 0 is "no limit", shown as the empty field it is saved from.
+  max_discount: item.max_discount ? String(item.max_discount) : '',
+  discount_account: text(item.discount_account),
   standard_rate: '',
   opening_stock: '',
   valuation_rate: '',
@@ -230,6 +236,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
           abbr={merchant.abbr}
           disabled={!editable}
         />
+        <Discounts {...section} abbr={merchant.abbr} savedAccount={existing?.discount_account} />
         <Taxes {...section} />
       </PageForm>
     </View>
@@ -237,6 +244,36 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
 }
 
 type SectionProps = { control: Control<ItemValues>; records: Records; disabled: boolean };
+
+/** 20.3 and 20.5: the most a line of this item may be discounted, and where its discounts post. */
+function Discounts({ control, records, disabled, abbr, savedAccount }: SectionProps & { abbr: string; savedAccount: string | null | undefined }) {
+  return (
+    <>
+      <SectionHeading title="Discounts" hint="What a sale may take off it, and where that shows in the books" />
+      <FieldGrid>
+        <ControlledText
+          control={control}
+          name="max_discount"
+          label="Max Discount (%)"
+          hint="The most any line of it may be discounted. Empty: no limit"
+          placeholder="0"
+          keyboardType="decimal-pad"
+          maxLength={6}
+          disabled={disabled}
+        />
+        <ControlledSelect
+          control={control}
+          name="discount_account"
+          label="Discount Account"
+          hint="Under Discount Accounting, where its discounts post. None: the company's"
+          title="Discount Account"
+          options={ledgerOptions(records.sales.accounts, abbr, (account) => account.root_type === 'Income' || account.root_type === 'Expense', savedAccount)}
+          disabled={disabled}
+        />
+      </FieldGrid>
+    </>
+  );
+}
 
 type DetailsProps = SectionProps & {
   existing: Item | undefined;

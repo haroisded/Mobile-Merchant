@@ -38,6 +38,7 @@ export const companyFormSchema = companySchema.extend({
   write_off_account: z.string(),
   round_off_account: z.string(),
   round_off_cost_center: z.string(),
+  default_discount_account: z.string(),
   enable_perpetual_inventory: z.boolean(),
   default_inventory_account: z.string(),
   stock_adjustment_account: z.string(),

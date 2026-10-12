@@ -69,6 +69,7 @@ type AccountField = {
     | 'default_expense_account'
     | 'write_off_account'
     | 'round_off_account'
+    | 'default_discount_account'
     | 'default_inventory_account'
     | 'stock_adjustment_account'
     | 'stock_received_but_not_billed'
@@ -90,6 +91,13 @@ const ACCOUNTS: AccountField[] = [
   { name: 'default_expense_account', label: 'Default Expense Account', hint: 'Expense ledger', fits: underRoot('Expense') },
   { name: 'write_off_account', label: 'Write Off Account', hint: 'Small balances written off', fits: underRoot('Expense') },
   { name: 'round_off_account', label: 'Round Off Account', hint: 'Differences from rounding', fits: underRoot('Expense') },
+  // private.validate_discount_account: an Income or Expense ledger.
+  {
+    name: 'default_discount_account',
+    label: 'Default Discount Account',
+    hint: 'Discounts, under Discount Accounting',
+    fits: (account) => account.root_type === 'Income' || account.root_type === 'Expense',
+  },
 ];
 
 // Perpetual Inventory's four accounts (docs.frappe.io/erpnext/perpetual-inventory §1).
@@ -110,8 +118,9 @@ const STOCK: AccountField[] = [
   },
 ];
 
+// private.validate_company_accounts, and private.validate_discount_account for the discount account.
 const saveFailure = (error: Error | null) =>
-  postgrestError(error)?.message === 'company_account_invalid'
+  ['company_account_invalid', 'default_invalid'].includes(postgrestError(error)?.message ?? '')
     ? "One of the accounts can't be used there any more — it was disabled or changed. Pick it again."
     : failureMessage("Couldn't save the company. Try again.");
 
@@ -128,6 +137,7 @@ const defaults = (merchant: Merchant): CompanyFormValues => ({
   write_off_account: merchant.write_off_account ?? '',
   round_off_account: merchant.round_off_account ?? '',
   round_off_cost_center: merchant.round_off_cost_center ?? '',
+  default_discount_account: merchant.default_discount_account ?? '',
   enable_perpetual_inventory: merchant.enable_perpetual_inventory,
   default_inventory_account: merchant.default_inventory_account ?? '',
   stock_adjustment_account: merchant.stock_adjustment_account ?? '',

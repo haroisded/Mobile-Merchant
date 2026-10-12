@@ -183,7 +183,9 @@ and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5
 Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `pos_profiles` with its
 `pos_profile_users`, `pos_profile_payments` and `pos_profile_item_groups`; Step 18 `pos_opening_entries`,
 `pos_invoices` and `pos_closing_entries` with their rows; Step 19 adds no table — a return is a POS Invoice
-(`is_return`, `return_against`), and `public.delete_document` removes a cancelled document. Triggers named
+(`is_return`, `return_against`), and `public.delete_document` removes a cancelled document; Step 20
+`pricing_rules` with its `pricing_rule_targets`, and the discount columns on `merchants`, `items`,
+`pos_profiles`, `pos_invoices` and `pos_invoice_items`. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

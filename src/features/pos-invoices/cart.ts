@@ -8,11 +8,25 @@
 // calculate.ts) and the rounding (src/lib/money.ts) come in as `engines`.
 import type { Tables } from '../../lib/database.types';
 import type { PriceRequest, PriceRow, ResolvedPrice } from '../item-prices/resolve';
-import type { ItemLine, TaxResult, TaxRow } from '../sales-tax-templates/calculate';
+import type { RuleLine, RuleRow } from '../pricing-rules/apply';
+import type { AdditionalDiscount, ItemLine, TaxResult, TaxRow } from '../sales-tax-templates/calculate';
 import type { RuleConditions, SaleContext } from '../tax-rules/resolve';
 
-/** One line of the cart. `rate` is what the cashier typed where the POS Profile allows it; null takes the price list's. */
-export type CartLine = { itemId: string; uomId: string; qty: number; rate: number | null };
+/**
+ * One line of the cart. `rate` is what the cashier typed where the POS Profile allows it; null takes the
+ * price list's. A discount typed on the line (20.1) is a percentage or an amount off one unit's Price List
+ * Rate — one of the two at most, and none while a rate is typed.
+ */
+export type CartLine = { itemId: string; uomId: string; qty: number; rate: number | null; discountPercentage?: number | null; discountAmount?: number | null };
+
+/** The sale's additional discount as typed (20.2): a percentage or an amount. `applyOn` null takes the POS Profile's Apply Discount On. */
+export type CartDiscount = { applyOn: string | null; percentage: number | null; amount: number | null };
+
+/** What buildSale takes off the sale for what was typed — nothing where the POS Profile does not allow a discount. */
+export function additionalDiscount(typed: CartDiscount, profile: { apply_discount_on: string; allow_discount_change: boolean }): AdditionalDiscount | undefined {
+  if (!profile.allow_discount_change || !(typed.percentage || typed.amount)) return undefined;
+  return { applyOn: typed.applyOn ?? profile.apply_discount_on, percentage: typed.percentage ?? 0, amount: typed.amount ?? 0 };
+}
 
 /** An Item Tax row of an Item or of an Item Group. */
 export type ItemTaxRow = {
@@ -29,6 +43,7 @@ export type SaleItem = {
   id: string;
   item_name: string;
   item_group_id: string;
+  brand_id?: string | null;
   stock_uom: string;
   item_uoms: { uom_id: string; conversion_factor: number }[];
   item_taxes: ItemTaxRow[];
@@ -61,6 +76,8 @@ export type SaleSetup = {
   defaultTemplateId: string | null;
   taxCategoryId: string | null;
   rules: RuleConditions[];
+  /** The Pricing Rules a line may take: none where the POS Profile ignores them. */
+  pricingRules: RuleRow[];
   /** Accounts Settings: a tax an item's template names is added when the sale lacks it. */
   addTaxesFromItemTemplates: boolean;
   accountName: (accountId: string) => string;
@@ -72,7 +89,9 @@ export type SaleSetup = {
 export type Engines = {
   resolvePrice: (prices: PriceRow[], request: PriceRequest) => ResolvedPrice | null;
   resolveTaxRule: (rules: RuleConditions[], sale: SaleContext, disabled?: Set<string>) => RuleConditions | null;
-  calculateTaxes: (lines: ItemLine[], taxes: TaxRow[], precision: number, round: (value: number, precision: number) => number) => TaxResult;
+  calculateTaxes: (lines: ItemLine[], taxes: TaxRow[], precision: number, round: (value: number, precision: number) => number, discount?: AdditionalDiscount) => TaxResult;
+  pickPricingRule: (rules: RuleRow[], line: RuleLine) => RuleRow | null;
+  ruleRate: (rule: RuleRow, listRate: number, factor: number) => number;
   round: (value: number, precision: number) => number;
   /** The grand total at the currency's smallest coin. */
   cashRound: (value: number) => number;
@@ -89,10 +108,17 @@ export type SaleLine = {
   qty: number;
   stockQty: number;
   priceListRate: number;
+  /** What one unit is under its Price List Rate, and that as a percentage of it: ERPNext's two discount fields. */
+  discountPercentage: number;
+  discountAmount: number;
   rate: number;
   amount: number;
   netRate: number;
   netAmount: number;
+  /** The line's share of the sale's additional discount, already out of `netAmount`. */
+  distributed: number;
+  /** The Pricing Rule that priced the line; null for the list's price and for anything typed. */
+  pricingRule: { id: string; title: string } | null;
   itemTaxTemplateId: string | null;
   /** False: no price list gives it a rate and none was typed — the sale cannot be paid yet. */
   priced: boolean;
@@ -105,6 +131,10 @@ export type Sale = {
   lines: SaleLine[];
   templateId: string | null;
   taxes: SaleTax[];
+  /** The additional discount (20.2): what it was taken from, its percentage when it was given as one, and the amount. */
+  applyDiscountOn: string;
+  additionalDiscountPercentage: number;
+  discountAmount: number;
   netTotal: number;
   totalTaxes: number;
   grandTotal: number;
@@ -206,17 +236,76 @@ export function offeredItems<T extends OfferedItem>(items: T[], setup: Pick<Sale
   );
 }
 
-/** The cart priced, taxed and totalled. A line whose item is gone is left out. */
-export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines): Sale {
+/**
+ * What one unit of a cart line sells for (20.1, 20.4): the rate typed; else the line's own discount off its
+ * Price List Rate; else the Pricing Rule that covers it; else the list's rate. Anything typed on a line
+ * stands in for a rule — the database takes a rule's line only at the rule's own rate.
+ */
+function priceLine(line: CartLine, item: SaleItem, setup: SaleSetup, engines: Engines) {
+  const round = (value: number) => engines.round(value, setup.precision);
+  const factor = conversionFactor(item, line.uomId);
+  const price = listPrice(item, line.uomId, setup, engines);
+  const priceListRate = price?.rate ?? 0;
+  const typed = line.rate !== null || (line.discountPercentage ?? null) !== null || (line.discountAmount ?? null) !== null;
+  const rule =
+    typed || !price
+      ? null
+      : engines.pickPricingRule(setup.pricingRules, {
+          itemId: item.id,
+          brandId: item.brand_id ?? null,
+          groupPath: setup.groupPath(item.item_group_id),
+          stockQty: line.qty * factor,
+          amount: line.qty * priceListRate,
+          date: setup.date,
+          priceListId: setup.priceList?.id ?? null,
+        });
+
+  let rate = priceListRate;
+  if (line.rate !== null) rate = line.rate;
+  else if (line.discountPercentage) rate = round(Math.max(priceListRate * (1 - line.discountPercentage / 100), 0));
+  else if (line.discountAmount) rate = round(Math.max(priceListRate - line.discountAmount, 0));
+  else if (rule) rate = round(engines.ruleRate(rule, priceListRate, factor));
+
+  // "Calculated against the Price List Rate": a rate under the list's is a discount, however it came about.
+  const discountAmount = round(Math.max(priceListRate - rate, 0));
+
+  return {
+    factor,
+    rate,
+    priceListRate,
+    discountAmount,
+    discountPercentage: priceListRate > 0 ? (discountAmount / priceListRate) * 100 : 0,
+    pricingRule: rule ? { id: rule.id, title: rule.title } : null,
+    priced: line.rate !== null || price !== null,
+  };
+}
+
+/**
+ * The sale's tax rows: its template's, and — "a tax an item's template names is added when the sale lacks
+ * it" — a row at rate 0 for each such account, so only the items whose template names it are taxed by it
+ * (ERPNext's add_taxes_from_item_tax_template). `itemTemplates` is each line's Item Tax Template.
+ */
+function taxRows(template: SaleTemplate | null, itemTemplates: (string | null)[], setup: SaleSetup) {
+  const rows: TemplateRow[] = [...(template?.rows ?? [])];
+  if (!setup.addTaxesFromItemTemplates) return rows;
+
+  for (const itemTemplate of itemTemplates) {
+    for (const account of setup.itemTaxRates.get(itemTemplate ?? '')?.keys() ?? []) {
+      if (rows.some((row) => row.account === account)) continue;
+      rows.push({ charge_type: 'On Net Total', account, rate: 0, tax_amount: 0, row_id: null, included_in_print_rate: false, description: setup.accountName(account), cost_center: null });
+    }
+  }
+  return rows;
+}
+
+/** The cart priced, taxed and totalled, less `discount` — the sale's additional discount. A line whose item is gone is left out. */
+export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines, discount?: AdditionalDiscount): Sale {
   const entries = cart.flatMap((line, cartIndex) => {
     const item = setup.items.get(line.itemId);
     if (!item) return [];
 
-    const factor = conversionFactor(item, line.uomId);
-    const price = listPrice(item, line.uomId, setup, engines);
-    const rate = line.rate ?? price?.rate ?? 0;
-
-    return [{ line, cartIndex, item, factor, rate, priceListRate: price?.rate ?? 0, priced: line.rate !== null || price !== null, taxTemplate: itemTaxTemplate(item, setup, rate) }];
+    const priced = priceLine(line, item, setup, engines);
+    return [{ ...priced, line, cartIndex, item, taxTemplate: itemTaxTemplate(item, setup, priced.rate) }];
   });
 
   const template = saleTemplate(
@@ -224,24 +313,18 @@ export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines):
     setup,
     engines
   );
-  const rows: TemplateRow[] = [...(template?.rows ?? [])];
-
-  // "A tax an item's template names is added when the sale lacks it" — at rate 0, so only the items whose
-  // template names that account are taxed by it (ERPNext's add_taxes_from_item_tax_template).
-  if (setup.addTaxesFromItemTemplates) {
-    for (const entry of entries) {
-      for (const account of setup.itemTaxRates.get(entry.taxTemplate ?? '')?.keys() ?? []) {
-        if (rows.some((row) => row.account === account)) continue;
-        rows.push({ charge_type: 'On Net Total', account, rate: 0, tax_amount: 0, row_id: null, included_in_print_rate: false, description: setup.accountName(account), cost_center: null });
-      }
-    }
-  }
+  const rows = taxRows(
+    template,
+    entries.map((entry) => entry.taxTemplate),
+    setup
+  );
 
   const result = engines.calculateTaxes(
     entries.map((entry) => ({ rate: entry.rate, qty: entry.line.qty, itemTaxRates: setup.itemTaxRates.get(entry.taxTemplate ?? '') })),
     rows,
     setup.precision,
-    engines.round
+    engines.round,
+    discount
   );
   const roundedTotal = setup.roundedTotalDisabled ? result.grandTotal : engines.cashRound(result.grandTotal);
 
@@ -255,15 +338,23 @@ export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines):
       qty: entry.line.qty,
       stockQty: entry.line.qty * entry.factor,
       priceListRate: entry.priceListRate,
+      discountPercentage: entry.discountPercentage,
+      discountAmount: entry.discountAmount,
       rate: entry.rate,
       amount: result.items[index].amount,
       netRate: result.items[index].netRate,
       netAmount: result.items[index].netAmount,
+      distributed: result.items[index].distributed,
+      pricingRule: entry.pricingRule,
       itemTaxTemplateId: entry.taxTemplate,
       priced: entry.priced,
     })),
     templateId: template?.id ?? null,
     taxes: rows.map((row, index) => ({ ...row, tax_amount: result.rows[index].amount, total: result.rows[index].total, byItem: result.rows[index].byItem })),
+    applyDiscountOn: discount?.applyOn ?? 'Grand Total',
+    // Kept where the discount was given as a percentage.
+    additionalDiscountPercentage: discount && result.discountAmount > 0 ? discount.percentage : 0,
+    discountAmount: result.discountAmount,
     netTotal: result.netTotal,
     totalTaxes: result.totalTaxes,
     grandTotal: result.grandTotal,
@@ -301,6 +392,9 @@ export function checkoutPayload(
     pos_profile_id: session.pos_profile_id,
     pos_opening_entry_id: session.id,
     taxes_and_charges: sale.templateId,
+    apply_discount_on: sale.applyDiscountOn,
+    additional_discount_percentage: sale.additionalDiscountPercentage,
+    discount_amount: sale.discountAmount,
     net_total: sale.netTotal,
     total_taxes_and_charges: sale.totalTaxes,
     grand_total: sale.grandTotal,
@@ -316,10 +410,14 @@ export function checkoutPayload(
       conversion_factor: line.conversionFactor,
       stock_qty: line.stockQty,
       price_list_rate: line.priceListRate,
+      discount_percentage: line.discountPercentage,
+      discount_amount: line.discountAmount,
       rate: line.rate,
       amount: line.amount,
       net_rate: line.netRate,
       net_amount: line.netAmount,
+      distributed_discount_amount: line.distributed,
+      pricing_rule_id: line.pricingRule?.id ?? null,
       item_tax_template_id: line.itemTaxTemplateId,
     })),
     taxes: sale.taxes.map((tax) => ({
@@ -344,14 +442,32 @@ export function checkoutPayload(
 /** A line of a submitted sale. */
 type SoldLine = Pick<
   Tables<'pos_invoice_items'>,
-  'id' | 'item_id' | 'item_name' | 'qty' | 'uom_id' | 'conversion_factor' | 'price_list_rate' | 'rate' | 'amount' | 'net_rate' | 'net_amount' | 'item_tax_template_id'
+  | 'id'
+  | 'item_id'
+  | 'item_name'
+  | 'qty'
+  | 'uom_id'
+  | 'conversion_factor'
+  | 'price_list_rate'
+  | 'discount_percentage'
+  | 'discount_amount'
+  | 'rate'
+  | 'amount'
+  | 'net_rate'
+  | 'net_amount'
+  | 'distributed_discount_amount'
+  | 'pricing_rule_id'
+  | 'item_tax_template_id'
 >;
 
 /** A tax row of a submitted sale. `item_wise_tax_detail` is what it charged each line, in the lines' order. */
 type SoldTax = Pick<Tables<'pos_invoice_taxes'>, 'charge_type' | 'account_head' | 'description' | 'rate' | 'row_id' | 'included_in_print_rate' | 'cost_center' | 'item_wise_tax_detail'>;
 
 /** A submitted sale as stored: as much of it as a return is made from. */
-export type SoldInvoice = Pick<Tables<'pos_invoices'>, 'id' | 'taxes_and_charges' | 'net_total' | 'total_taxes_and_charges' | 'grand_total'> & {
+export type SoldInvoice = Pick<
+  Tables<'pos_invoices'>,
+  'id' | 'taxes_and_charges' | 'apply_discount_on' | 'additional_discount_percentage' | 'discount_amount' | 'net_total' | 'total_taxes_and_charges' | 'grand_total'
+> & {
   pos_invoice_items: SoldLine[];
   pos_invoice_taxes: SoldTax[];
 };
@@ -405,13 +521,21 @@ export function buildReturn(invoice: SoldInvoice, quantities: ReadonlyMap<string
     conversion_factor: line.conversion_factor,
     stock_qty: -qty * line.conversion_factor,
     price_list_rate: line.price_list_rate,
+    // Per unit, so the sale's own; its share of the additional discount goes back with it.
+    discount_percentage: line.discount_percentage,
+    discount_amount: line.discount_amount,
     rate: line.rate,
     amount: round(-line.amount * share),
     net_rate: line.net_rate,
     net_amount: round(-line.net_amount * share),
+    distributed_discount_amount: round(-line.distributed_discount_amount * share),
+    pricing_rule_id: line.pricing_rule_id,
     item_tax_template_id: line.item_tax_template_id,
   }));
   const netTotal = round(sum(items.map((item) => item.net_amount)));
+  // The additional discount handed back: the sale's, by the share of it these lines took.
+  const distributed = sum(invoice.pos_invoice_items.map((line) => line.distributed_discount_amount));
+  const discountAmount = distributed ? round((invoice.discount_amount * sum(items.map((item) => item.distributed_discount_amount))) / distributed) : 0;
 
   let running = netTotal;
   const taxes = invoice.pos_invoice_taxes.map((tax) => {
@@ -442,7 +566,7 @@ export function buildReturn(invoice: SoldInvoice, quantities: ReadonlyMap<string
   // The magnitude is what is rounded, so the return of a whole sale hands back the sale's own Rounded Total.
   const roundedTotal = roundedTotalDisabled ? grandTotal : round(-cashRound(-grandTotal));
 
-  return { items, taxes, netTotal, totalTaxes, grandTotal, roundingAdjustment: round(roundedTotal - grandTotal), roundedTotal };
+  return { items, taxes, discountAmount, netTotal, totalTaxes, grandTotal, roundingAdjustment: round(roundedTotal - grandTotal), roundedTotal };
 }
 
 /**
@@ -460,6 +584,9 @@ export function returnPayload(
     pos_opening_entry_id: session.id,
     taxes_and_charges: invoice.taxes_and_charges,
     return_against: invoice.id,
+    apply_discount_on: invoice.apply_discount_on,
+    additional_discount_percentage: invoice.additional_discount_percentage,
+    discount_amount: made.discountAmount,
     net_total: made.netTotal,
     total_taxes_and_charges: made.totalTaxes,
     grand_total: made.grandTotal,

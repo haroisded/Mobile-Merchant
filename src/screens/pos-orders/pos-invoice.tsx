@@ -103,6 +103,19 @@ const paymentLines = (invoice: PosInvoiceDocument, modeName: (id: string) => str
     { label: 'Write Off', amount: invoice.write_off_amount },
   ].filter((line) => line.amount !== 0);
 
+/**
+ * What the sale's discounts took (20.1, 20.2), as the receipt lists them above its Net Total: the lines' own
+ * against their Price List Rates, then the additional one. Below zero on a sale; a return hands them back.
+ */
+const discountLines = (invoice: PosInvoiceDocument) =>
+  [
+    { label: 'Item Discount', amount: -invoice.pos_invoice_items.reduce((sum, line) => sum + line.qty * line.discount_amount, 0) },
+    {
+      label: invoice.additional_discount_percentage ? `Additional Discount (${invoice.additional_discount_percentage}%)` : 'Additional Discount',
+      amount: -invoice.discount_amount,
+    },
+  ].filter((line) => line.amount !== 0);
+
 function InvoiceReceipt({ merchant, invoice }: { merchant: Merchant; invoice: PosInvoiceDocument }) {
   const args = { merchantId: merchant.id };
   const records = useReceiptRecords(merchant);
@@ -128,6 +141,7 @@ function InvoiceReceipt({ merchant, invoice }: { merchant: Merchant; invoice: Po
         amount: line.amount,
       }))}
       taxes={invoice.pos_invoice_taxes.map((tax) => ({ description: tax.description, amount: tax.tax_amount }))}
+      discounts={discountLines(invoice)}
       netTotal={invoice.net_total}
       grandTotal={invoice.grand_total}
       roundedTotal={invoice.rounded_total}

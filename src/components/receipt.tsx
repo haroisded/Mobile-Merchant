@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useTotalsSettings } from '../features/currencies/queries';
@@ -53,6 +54,8 @@ type Props = {
   /** `rate` as entered — the price the customer was told, tax included when a row includes it. */
   items: { code: string; name: string; uom: string; qty: number; rate: number; amount: number }[];
   taxes: { description: string; amount: number }[];
+  /** Above the Net Total, which is already less them: what the lines' own discounts and the additional one took. */
+  discounts?: { label: string; amount: number }[];
   netTotal: number;
   grandTotal: number;
   /** The grand total at the smallest coin; printed unless Global Defaults disables it. */
@@ -77,7 +80,7 @@ export function Printed({ text, variant, muted }: { text: string | undefined; va
 const paperWidth = (paper: string | undefined) =>
   paper === '58mm' ? { maxWidth: fontScaled(RECEIPT_58MM) } : paper === '80mm' ? { maxWidth: fontScaled(RECEIPT_80MM) } : null;
 
-export function Receipt({ records, format, letterHeadId, meta, items, taxes, netTotal, grandTotal, roundedTotal, payments }: Props) {
+export function Receipt({ records, format, letterHeadId, meta, items, taxes, discounts, netTotal, grandTotal, roundedTotal, payments }: Props) {
   const { colors } = useAppTheme();
   const { settings, globals, system, currency } = records;
 
@@ -106,6 +109,7 @@ export function Receipt({ records, format, letterHeadId, meta, items, taxes, net
         />
       ))}
       {rule}
+      <AmountLines lines={discounts} money={money} />
       <SampleLine label="Net Total" value={money(netTotal)} />
       {printedTaxes(taxes, settings.print_taxes_with_zero_amount).map((tax, index) => (
         <SampleLine key={`${index}:${tax.description}`} label={tax.description} value={money(tax.amount)} />
@@ -113,14 +117,32 @@ export function Receipt({ records, format, letterHeadId, meta, items, taxes, net
       <SampleLine label="Grand Total" value={money(grandTotal)} />
       {globals.disable_rounded_total ? null : <SampleLine label="Rounded Total" value={money(roundedTotal)} />}
       <Printed muted variant="bodySmall" text={globals.disable_in_words ? undefined : moneyInWords(globals.disable_rounded_total ? grandTotal : roundedTotal, currency)} />
-      {payments && payments.length > 0 ? rule : null}
-      {payments?.map((payment, index) => (
-        <SampleLine key={`${index}:${payment.label}`} label={payment.label} value={money(payment.amount)} />
-      ))}
+      <AmountLines lines={payments} money={money} lead={rule} />
       {footerNote || header?.footer ? rule : null}
       <Printed variant="bodyMedium" text={footerNote} />
       <Printed variant="bodySmall" text={header?.footer} />
     </View>
+  );
+}
+
+type AmountLinesProps = {
+  lines: { label: string; amount: number }[] | undefined;
+  money: (value: number) => string;
+  /** Drawn above the lines when there are any: the rule that sets the payments off from the totals. */
+  lead?: ReactNode;
+};
+
+/** A run of label-and-amount lines: the discounts above the Net Total, the payments under the totals. Nothing for none. */
+function AmountLines({ lines = [], money, lead }: AmountLinesProps) {
+  if (lines.length === 0) return null;
+
+  return (
+    <>
+      {lead}
+      {lines.map((line, index) => (
+        <SampleLine key={`${index}:${line.label}`} label={line.label} value={money(line.amount)} />
+      ))}
+    </>
   );
 }
 

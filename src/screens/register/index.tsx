@@ -14,12 +14,12 @@ import { useBinsQuery } from '../../features/bins/queries';
 import { useMoney } from '../../features/currencies/queries';
 import type { Item } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
-import { buildSale, listPrice, offeredItems } from '../../features/pos-invoices/cart';
+import { additionalDiscount, buildSale, listPrice, offeredItems } from '../../features/pos-invoices/cart';
 import { useSaleSetup } from '../../features/pos-invoices/setup';
 import type { PosOpeningEntry } from '../../features/pos-opening-entries/queries';
 import type { PosProfile } from '../../features/pos-profiles/queries';
 import { useAppTheme } from '../../lib/theme';
-import { addToCart, useCart } from '../../Store/cart';
+import { addToCart, useCart, useCartDiscount } from '../../Store/cart';
 import { spacing } from '../../themes';
 
 /**
@@ -39,6 +39,7 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
   const sale = useSaleSetup(merchant, profile);
   const bins = useBinsQuery({ merchantId: merchant.id, item: '', warehouse: profile.warehouse }).data;
   const lines = useCart(session.id);
+  const discount = useCartDiscount(session.id);
   const money = useMoney(merchant);
   const [search, setSearch] = useState('');
 
@@ -64,7 +65,8 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
   });
   const inCart = new Map<string, number>();
   for (const line of lines) inCart.set(line.itemId, (inCart.get(line.itemId) ?? 0) + line.qty);
-  const total = buildSale(lines, setup, engines).roundedTotal;
+  // The bar's total is the Cart's: less the additional discount typed there.
+  const total = buildSale(lines, setup, engines, additionalDiscount(discount, profile)).roundedTotal;
   const count = lines.reduce((sum, line) => sum + line.qty, 0);
 
   // What a row says under the name: its code, its price in the unit it sells in, and what is on hand.

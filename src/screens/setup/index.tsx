@@ -26,6 +26,7 @@ type SetupRoute =
   | 'item-groups'
   | 'stock-settings'
   | 'selling-settings'
+  | 'pricing-rules'
   | 'pos-profiles'
   | 'users'
   | 'roles'
@@ -126,6 +127,7 @@ const SECTIONS: IndexSection<SetupRoute>[] = [
         doctype: 'Selling Settings',
         route: 'selling-settings',
       },
+      { label: 'Pricing Rules', hint: 'Automatic discounts by item, item group or brand', doctype: 'Pricing Rule', route: 'pricing-rules' },
     ],
   },
   {

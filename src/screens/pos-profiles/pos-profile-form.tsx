@@ -25,7 +25,7 @@ import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries'
 import type { ModeOfPayment } from '../../features/modes-of-payment/queries';
 import { useDeletePosProfileMutation, usePosProfilesQuery, useSavePosProfileMutation } from '../../features/pos-profiles/queries';
 import type { PosProfile } from '../../features/pos-profiles/queries';
-import { paymentsGap, posProfileSchema } from '../../features/pos-profiles/schema';
+import { APPLY_DISCOUNT_ON, paymentsGap, posProfileSchema } from '../../features/pos-profiles/schema';
 import type { PosProfileValues } from '../../features/pos-profiles/schema';
 import { priceListOptions } from '../../features/price-lists/queries';
 import { usePrintFormatsQuery } from '../../features/print-formats/queries';
@@ -98,6 +98,10 @@ const BLANK: PosProfileValues = {
   allow_rate_change: false,
   set_grand_total_to_default_mop: true,
   print_receipt_on_order_complete: false,
+  apply_discount_on: 'Grand Total',
+  allow_discount_change: false,
+  ignore_pricing_rule: false,
+  discount_account: '',
   users: [],
   payments: [],
   item_groups: [],
@@ -116,6 +120,7 @@ const LINKS = [
   'income_account',
   'expense_account',
   'cost_center',
+  'discount_account',
 ] as const;
 
 const saved = (profile: PosProfile): PosProfileValues => {
@@ -129,6 +134,9 @@ const saved = (profile: PosProfile): PosProfileValues => {
     allow_rate_change: profile.allow_rate_change,
     set_grand_total_to_default_mop: profile.set_grand_total_to_default_mop,
     print_receipt_on_order_complete: profile.print_receipt_on_order_complete,
+    apply_discount_on: profile.apply_discount_on === 'Net Total' ? 'Net Total' : 'Grand Total',
+    allow_discount_change: profile.allow_discount_change,
+    ignore_pricing_rule: profile.ignore_pricing_rule,
     users: profile.pos_profile_users.map((row) => ({ member_id: row.member_id, is_default: row.is_default })),
     payments: profile.pos_profile_payments.map((row) => ({
       mode_of_payment_id: row.mode_of_payment_id,
@@ -455,6 +463,15 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             options={costCenterOptions(costCenters, abbr, existing?.cost_center)}
             disabled={!editable}
           />
+          <ControlledSelect
+            control={control}
+            name="discount_account"
+            label="Discount Account"
+            hint="Under Discount Accounting, where this register's additional discounts post. None: the company's"
+            title="Discount Account"
+            options={ledgerOptions(accounts, abbr, (account) => account.root_type === 'Income' || account.root_type === 'Expense', existing?.discount_account)}
+            disabled={!editable}
+          />
         </FieldGrid>
 
         {/* docs.frappe.io/erpnext/pos-profile, Configurations */}
@@ -474,6 +491,31 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             label="Allow User to Edit Rate"
             on="A cashier can change a line's rate"
             off="A line's rate always comes from the price list"
+            disabled={!editable}
+          />
+          <ControlledSwitch
+            control={control}
+            name="allow_discount_change"
+            label="Allow User to Edit Discount"
+            on="A cashier can discount a line, and the whole sale"
+            off="Only a pricing rule discounts a sale"
+            disabled={!editable}
+          />
+          <ControlledSelect
+            control={control}
+            name="apply_discount_on"
+            label="Apply Discount On"
+            hint="What a sale's additional discount is taken from, to start with"
+            title="Apply Discount On"
+            options={APPLY_DISCOUNT_ON.map((basis) => ({ value: basis, label: basis }))}
+            disabled={!editable}
+          />
+          <ControlledSwitch
+            control={control}
+            name="ignore_pricing_rule"
+            label="Ignore Pricing Rule"
+            on="No pricing rule applies at this register"
+            off="Pricing rules price its sales"
             disabled={!editable}
           />
           <ControlledSwitch
