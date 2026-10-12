@@ -33,8 +33,8 @@ together and explained inline.
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
 - **A systems list and a merchant shell** — create a system (a company: name, abbreviation, country,
-  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with five
-  destinations — Home, Sell, Stock, Accounts and Setup — each listed only for someone whose roles can read
+  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with six
+  destinations — Home, Dashboard, Sell, Stock, Accounts and Setup — each listed only for someone whose roles can read
   something in it
 - **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Users & Access
   (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
@@ -71,6 +71,10 @@ together and explained inline.
   the Register (search, cart, quantity, unit, taxes, rounded total, one amount per payment method, change),
   and closes the session against a count. A sale posts its stock and its ledger entries at once, shows its
   receipt on screen, and is reopened from Orders
+- **Dashboard** — a rail destination: Today, Last 7 Days or This Month; four number cards (Sales with its
+  invoice count, Gross Profit, Open Registers with the cash they should hold, Low Stock); sales per day as a
+  bar chart; the best sellers by quantity or amount, by item or item group; and the items out of stock or at
+  their re-order level. Each figure is added up from the rows the reader's own roles let them read
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -188,7 +192,8 @@ Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `po
 (`is_return`, `return_against`), and `public.delete_document` removes a cancelled document; Step 20
 `pricing_rules` with its `pricing_rule_targets`, and the discount columns on `merchants`, `items`,
 `pos_profiles`, `pos_invoices` and `pos_invoice_items`; Step 21 the read-only `doctype_links` — which
-document types follow a User Permission on the record they link to. Triggers named
+document types follow a User Permission on the record they link to; Step 22 adds no table — four read-only
+report functions the Dashboard calls, each run under the caller's own policies. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

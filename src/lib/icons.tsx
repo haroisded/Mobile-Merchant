@@ -42,6 +42,8 @@ export const ICONS = {
   home: { ios: 'house', android: 'home' },
   menu: { ios: 'line.3.horizontal', android: 'menu' },
   settings: { ios: 'gearshape', android: 'settings' },
+  // The shell's Dashboard destination. Checked against both sets on 2026-10-13.
+  dashboard: { ios: 'chart.bar', android: 'dashboard' },
   // The shell's Sell destination: the Register and its sessions.
   sell: { ios: 'cart', android: 'point_of_sale' },
   // The shell's Stock destination: items, prices and stock.

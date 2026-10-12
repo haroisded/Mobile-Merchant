@@ -1,0 +1,14 @@
+import { useLocalSearchParams } from 'expo-router';
+
+import { useMerchantsQuery } from '../../../../features/merchants/queries';
+import { Dashboard } from '../../../../screens/dashboard';
+import { useSession } from '../../../../Store/StoreUser';
+
+export default function DashboardRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  // The shell only renders this once the merchant is in the list, so this is a cache hit.
+  const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === id);
+  const userId = useSession()?.user.id;
+
+  return merchant ? <Dashboard merchant={merchant} isOwner={merchant.owner_id === userId} /> : null;
+}

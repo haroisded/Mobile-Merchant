@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '../../lib/supabase';
 import { invalidateBins } from '../bins/queries';
+import { invalidateDashboard } from '../dashboard/queries';
 import { invalidateGlEntries } from '../gl-entries/queries';
 import { invalidateStockLedgerEntries } from '../stock-ledger-entries/queries';
 
@@ -10,9 +11,14 @@ type Client = ReturnType<typeof useQueryClient>;
 /** A document's docstatus in words, by its number: only a draft can be changed, and a cancelled one is final. */
 export const DOCSTATUS = ['Draft', 'Submitted', 'Cancelled'];
 
-/** What any posting writes: both ledgers and the stock balance. */
+/** What any posting writes: both ledgers and the stock balance — and so every figure the Dashboard adds up from them. */
 export function invalidateLedgers(queryClient: Client) {
-  return Promise.all([invalidateGlEntries(queryClient), invalidateStockLedgerEntries(queryClient), invalidateBins(queryClient)]);
+  return Promise.all([
+    invalidateGlEntries(queryClient),
+    invalidateStockLedgerEntries(queryClient),
+    invalidateBins(queryClient),
+    invalidateDashboard(queryClient),
+  ]);
 }
 
 type ActionArgs = {

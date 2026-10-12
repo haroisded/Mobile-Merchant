@@ -15,7 +15,7 @@ import type { IndexSection } from '../../../../components/record-index';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
-import { usePermissions } from '../../../../features/role-permissions/queries';
+import { can, usePermissions } from '../../../../features/role-permissions/queries';
 import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import type { IconName } from '../../../../lib/icons';
@@ -35,16 +35,19 @@ import { radius, spacing } from '../../../../themes';
 // drawer — so the two share one route table and one destination list (.claude/instruction_mds/frontend.md §4.4).
 
 // `sections` is the destination's index (the same list its screen draws): the item shows only to someone
-// who may read one of its rows. Without it — Home — the item always shows.
-type Destination = { name: string; label: string; icon: IconName; stack?: boolean; sections?: IndexSection<string>[] };
+// who may read one of its rows. The Dashboard has no index, so it names the doctypes its blocks add up
+// (`doctypes`) and shows to someone who may read one of them. With neither — Home — the item always shows.
+type Destination = { name: string; label: string; icon: IconName; stack?: boolean; sections?: IndexSection<string>[]; doctypes?: string[] };
 
 // Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
 // as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Stock is the items,
 // their prices and their stock (./stock/); Accounts is the books every document posts to (./accounts/);
 // Setup is the company's foundation records (./setup/) — each a stack of its own. Sell is the Register and
-// its sessions (./sell/). Dashboard arrives with its step, between Home and Sell.
+// its sessions (./sell/). Dashboard is the numbers they add up to (./dashboard.tsx) — its own destination,
+// not Home, which stays as it is.
 const DESTINATIONS: Destination[] = [
   { name: 'index', label: 'Home', icon: 'home' },
+  { name: 'dashboard', label: 'Dashboard', icon: 'dashboard', doctypes: ['POS Invoice', 'POS Opening Entry', 'Bin'] },
   { name: 'sell', label: 'Sell', icon: 'sell', stack: true, sections: SELL_SECTIONS },
   { name: 'stock', label: 'Stock', icon: 'stock', stack: true, sections: STOCK_SECTIONS },
   { name: 'accounts', label: 'Accounts', icon: 'accounts', stack: true, sections: ACCOUNTS_SECTIONS },
@@ -88,7 +91,13 @@ export default function SystemLayout() {
   // everything and needs no my_permissions; a member sees Home until theirs arrive. Hidden is not refused —
   // every screen stays registered below, RLS decides, and an index says so when it has nothing to show.
   const isOwner = merchant.owner_id === userId;
-  const shown = DESTINATIONS.filter((entry) => !entry.sections || isOwner || readsAny(entry.sections, permissions.data));
+  const shown = DESTINATIONS.filter(
+    (entry) =>
+      (!entry.sections && !entry.doctypes) ||
+      isOwner ||
+      (entry.sections !== undefined && readsAny(entry.sections, permissions.data)) ||
+      (entry.doctypes ?? []).some((doctype) => can(permissions.data, doctype, 'read'))
+  );
 
   // The expanded rail grows with the font scale so its labels stay whole (fontScaled).
   const drawerWidth = wide ? (expanded ? fontScaled(RAIL_EXPANDED) : RAIL_COLLAPSED) : DRAWER_WIDTH;
@@ -260,12 +269,13 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations }
             // A destination with a stack of its own opens at its first screen: tapping Setup from deep
             // inside Setup returns to its index, as a rail item should, rather than to wherever the
             // stack was left. `pop`: without it, React Navigation 7's NAVIGATE pushes a second index
-            // over the pages above the first (StackRouter.js, 'NAVIGATE'). `params`: a nested screen gets
-            // only the params passed here, so without `id` the index reads no system at all.
+            // over the pages above the first (StackRouter.js, 'NAVIGATE'). `params`: a screen gets only the
+            // params passed here, so without `id` it reads no system at all — a stack's index, and a
+            // destination that is one screen (the Dashboard drew nothing without it, emulator 2026-10-13).
             onPress={() =>
               entry.stack
                 ? navigation.navigate(entry.name, { screen: 'index', params: { id }, pop: true })
-                : navigation.navigate(entry.name)
+                : navigation.navigate(entry.name, { id })
             }
           />
         ))}

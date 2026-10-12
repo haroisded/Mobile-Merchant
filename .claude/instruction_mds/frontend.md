@@ -193,6 +193,7 @@ Paper components drawing own label (`Button`, `Chip`, `TextInput`) take their ow
 | `Appbar.Content` | `titleLarge` | nothing |
 | `TextInput` value | `bodyLarge` (unverified vs 5.15.3 source) | nothing |
 | `Card.Title` | `bodyLarge` / `bodyMedium` — body type on a heading | pass `titleVariant="titleMedium"` |
+| `SegmentedButtons` | `labelLarge`, on one line, with no font-scale cap | import `src/components/segmented-buttons.tsx`: it passes each segment the variant's 1.5 cap |
 | `List.Item` | none — raw `fontSize` from own stylesheet | `titleStyle` / `descriptionStyle` from `theme.fonts`, or build row from `Text` |
 
 Override allowed when needed (rule 3) — spread a variant, never numbers (rule 6).
@@ -333,7 +334,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Section heading | `headlineSmall` + `bodySmall` hint on same baseline |
 | Full-width button | Paper centres label → `contentStyle` with `justifyContent: 'flex-start'` |
 | Button width | narrow: full width, label left. Wide: content width (`alignSelf: 'flex-start'`), several in a wrapping row. Never a full-width button across a tablet |
-| Pane switch (`SegmentedButtons`) | narrow: full width, own row under the page header. Wide: in the page header's actions beside the add button, `width: fontScaled(PANE_SWITCH)`† — segments are `flex: 1` and do not measure labels, so content width collapses them to 76dp |
+| Pane switch (`SegmentedButtons`) | narrow: full width, own row under the page header. Wide: in the page header's actions beside the add button, `width: fontScaled(PANE_SWITCH)`† — segments are `flex: 1` and do not measure labels, so content width collapses them to 76dp. Three segments (the Dashboard's period switch) can outgrow a phone at a large font scale: a horizontal `ScrollView` around the switch, its `minWidth` the segments' padding plus `fontScaled(<labels>)`, so it fills the row at the default size and slides sideways past it — never a cut-off label. Rejected: shorter labels than the feature's own ("7 Days") |
 
 ### Shell
 
@@ -344,6 +345,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Rail / drawer item | `Pressable`: `Icon` + `labelLarge`. Active: `primaryHighlight` ground, 4px `accent` bar left. Listed only for someone who may read a row of the destination's index (`readsAny`, `src/components/record-index.tsx`, over the sections that index exports): Home always, the owner everything, a member Home alone until their permissions load. Rejected: not registering the screen — a deep link must still land, and the index already says when it has nothing to show |
 | Group row | opens / closes its screens, not a destination (none now: Home, Stock and Setup are the destinations) |
 | Destination with a stack | Stock and Setup (`systems/[id]/stock/`, `systems/[id]/setup/`, each its own `Stack`): a tap on one always lands on its index, as a rail item should |
+| Destination of one screen | the Dashboard (`systems/[id]/dashboard.tsx`): a route file and no `Stack`. It has no index, so its `DESTINATIONS` row names the doctypes it adds up and it is listed for whoever may read one. The shell navigates to it with `{ id }`, as to every destination |
 | Collapse to icons | menu action toggles `RAIL_EXPANDED` / `RAIL_COLLAPSED` |
 | `(tabs)` bar | `NativeTabs`. Colours passed as props from `useAppTheme()` — `PaperProvider` does not reach native views. Icons: `{ sf, md }` halves of the map |
 | System badge | `Avatar.Text` on `onPrimary` |
@@ -426,6 +428,10 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Pattern | Build |
 | --- | --- |
 | In-system Home | empty for now: the shell's header and drawer around a blank body |
+| Dashboard | `src/screens/dashboard/index.tsx`: `PageHeader` (kicker the system), the period pane switch, then blocks one under another, each shown only with Read on what it adds up and each with its own `QueryState`: the number cards, `SectionHeading` "Sales per Day" over the bar chart, `SectionHeading` "Top-Selling Items" over two two-option pane switches and ranked rows, `SectionHeading` "Stock Alerts" over alert rows. Narrow anatomy at every width until the tablet pass |
+| Number card | a 1px `outlineVariant` box, `radius.lg`: `labelMedium` label in `secondary`, the figure in `amount`, a `bodySmall` muted line. In a `useColumns(fontScaled(<card min>))` grid — two across a phone, one at a large font scale — rows padded with empty cells |
+| Bar chart (sales per day) | `src/screens/dashboard/sales-chart.tsx`, drawn with `View`s — no chart library: a fixed-height plot (a size: it holds no text), one `flex: 1` bar a day in `primary`, its height the day's share of the best day's; a day without a sale a 2px `outlineVariant` foot. Day numbers in `bodySmall` under every bar up to seven, else under the first, middle and last; a `bodySmall` muted "Best day: …" line; each bar's day and amount as its `accessibilityLabel` |
+| Ranked rows, alert rows | a 1px `outlineVariant` box of rows, `surfaceVariant` hairlines between: `titleMedium` name over a `bodySmall` muted line, then a `titleMedium` figure at the end (a best seller) or a `labelMedium` status in `error` under them (an alert: "Out of stock", "8 left · re-order at 9"). The line an empty list shows replaces the box |
 | Systems list, wide | `headlineMedium` "Your POS Systems", `bodyLarge` line. Grid from `useColumns(SYSTEM_CARD)` (3 across 1180dp). First cell `src/screens/home/create-system-card.tsx`: `Pressable`, 1px dashed `outlineVariant`, `surfaceMuted`, `radius.lg`, centred `accent` + circle, `titleMedium` name, `bodySmall` line; always there, so it is also the empty state. Narrow keeps the Create button |
 
 ## 6. Icons
@@ -488,6 +494,8 @@ Symptom → cause → rule. Entry stays while the stack that caused it stays. Pr
 | Lone half field stretched across its row | `flexGrow` on a half `Field` with no partner beside it | `FieldGrid` caps a half at one column (measured, `HalfWidthContext`) |
 | Crash when the window widens past `WIDE_MIN` | a hook called after `wide &&`, so the hook order changed | call every hook unconditionally (`useTableFits`) |
 | "Invalid prop `compact` supplied to `React.Fragment`" | `Dialog.Actions` clones `compact` onto each child, and the child was the caller's Fragment | `AdaptiveDialog` lays out its own actions row |
+| A destination's page blank, with no error (the Dashboard, 2026-10-13) | the shell called `navigation.navigate(name)` with no params, and a drawer screen reads only the params it is given: no `id`, no system, nothing drawn | the shell passes `{ id }` to every destination, stack or not |
+| A segment's label cut to "Last 7 …" at the largest font size (2026-10-13) | Paper's `SegmentedButtons` draws its label on one line, uncapped, in `flex: 1` segments that do not measure it | the wrapper caps the label at 1.5; three segments sit in a sideways `ScrollView` at `padding + fontScaled(labels)` (§5, Pane switch) |
 
 ## 8. Skill overrides
 

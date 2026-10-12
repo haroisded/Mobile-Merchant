@@ -90,6 +90,21 @@ numbers are handed out: `public.naming_series_preview` returns each series' pref
 name, and `public.update_series_counter` sets a counter — both invoker, both called from
 `src/features/naming-series/queries.ts`. Rejected: a second parser in TypeScript.
 
+**A report that adds rows up is an invoker RPC.** The Dashboard's `public.dashboard_cards`, `sales_by_day`,
+`top_selling` and `stock_alerts` (`src/features/dashboard/queries.ts`) are `stable`, security **invoker** and
+`returns table`: the caller's own policies decide every row, so a figure is what that person's own lists add
+up to, and the generated types carry the row with no cast. The app sends the dates, worked out in the
+system's time zone (`periodRange`, `src/features/dashboard/period.ts`, over `todayIn`). Generated types mark
+every `returns table` column non-null: a column the function answers null for someone (`gross_profit`) is
+shown behind the same permission the function checks, never tested for null. Rejected: summing fetched
+invoices on the device — a list stops at `LEDGER_PAGE` rows.
+
+The shell's drawer keeps the Dashboard mounted, so it never remounts to ask again. A posting or a session
+of this device invalidates it (`invalidateDashboard`, from `invalidateLedgers` and
+`invalidatePosOpeningEntries`); another register's sales arrive when the screen is focused
+(`refetchStaleDashboard` in a `useFocusEffect`) or the app resumes (`refetchOnWindowFocus`, opted in) — its
+queries are `STALE.MINUTES.ONE`.
+
 **Permissions are read once per system.** `usePermissions({ merchantId })` and `can(permissions,
 doctype, ptype)` (`src/features/role-permissions/queries.ts`) gate what a screen shows; a mutation that
 changes roles, members or rules calls `invalidatePermissions(queryClient)`. RLS still decides

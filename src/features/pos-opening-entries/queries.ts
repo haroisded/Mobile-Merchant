@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { LEDGER_PAGE, STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
+import { invalidateDashboard } from '../dashboard/queries';
 import type { SessionAmountsValues } from './schema';
 
 // The only file that knows the tables are called `pos_opening_entries` and `pos_opening_entry_balances`
@@ -40,9 +41,9 @@ export type PosOpeningEntry = NonNullable<ReturnType<typeof usePosOpeningEntries
 export const openSession = (entries: PosOpeningEntry[] | undefined, userId: string | undefined) =>
   entries?.find((entry) => entry.user_id === userId && entry.docstatus === 1 && entry.status === 'Open');
 
-/** After a session opens or closes. */
+/** After a session opens or closes: the sessions, and the Dashboard's Open Registers that counts them. */
 export function invalidatePosOpeningEntries(queryClient: ReturnType<typeof useQueryClient>) {
-  return queryClient.invalidateQueries({ queryKey: posOpeningEntriesKey.lists() });
+  return Promise.all([queryClient.invalidateQueries({ queryKey: posOpeningEntriesKey.lists() }), invalidateDashboard(queryClient)]);
 }
 
 /**

@@ -343,7 +343,9 @@ the discount checks and Discount Accounting). Then access for those documents:
 restrictable doctype and through which column; `private.restricted_merchant_ids()` and
 `private.allowed_record_ids()` taking the document type asked for; `private.apply_doctype_policies()`
 re-created with the link clause and a linking document's rows held to their parent, and re-applied;
-`private.validate_user_permission()` holding Applicable For to a doctype that links).
+`private.validate_user_permission()` holding Applicable For to a doctype that links). Then the Dashboard,
+with no table: `20261012200010_dashboard.sql` (the invoker report functions `public.dashboard_cards`,
+`sales_by_day`, `top_selling` and `stock_alerts` — the caller's own policies decide every row they add up).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

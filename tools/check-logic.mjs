@@ -4,6 +4,7 @@
 // (.claude/instruction_mds/testing-workflow.md), and this file covers only what arithmetic can settle.
 import assert from 'node:assert/strict';
 
+import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { pickPricingRule, ruleRate } from '../src/features/pricing-rules/apply.ts';
@@ -384,5 +385,20 @@ const halfBack = buildReturn(stored(cheaper, 'promo-sale'), new Map([['promo-sal
 assert.deepEqual([halfBack.discountAmount, halfBack.netTotal, halfBack.totalTaxes, halfBack.grandTotal], [-4.03, -68.4, -8.21, -76.61]);
 assert.deepEqual((({ discount_percentage, discount_amount, distributed_discount_amount, pricing_rule_id }) => [discount_percentage, discount_amount, distributed_discount_amount, pricing_rule_id])(halfBack.items[0]), [10, 8, -3.6, 'promo']);
 assert.equal(returnPayload(stored(cheaper, 'promo-sale'), halfBack, { id: 'session', pos_profile_id: 'front' }, []).discount_amount, -4.03);
+
+// src/features/dashboard/period.ts — the Dashboard's periods (POS-System-Added-Features.md 22.1), both ends
+// included, every one ending today.
+assert.deepEqual(periodRange('today', '2026-10-13'), { from: '2026-10-13', to: '2026-10-13' });
+assert.deepEqual(periodRange('week', '2026-10-13'), { from: '2026-10-07', to: '2026-10-13' });
+assert.deepEqual(periodRange('month', '2026-10-13'), { from: '2026-10-01', to: '2026-10-13' });
+// Seven days reach back across a month's end, a year's end and a leap day.
+assert.deepEqual(periodRange('week', '2026-11-03'), { from: '2026-10-28', to: '2026-11-03' });
+assert.deepEqual(periodRange('week', '2027-01-02'), { from: '2026-12-27', to: '2027-01-02' });
+assert.deepEqual(periodRange('week', '2028-03-02'), { from: '2028-02-25', to: '2028-03-02' });
+// On the 1st, This Month is that day alone.
+assert.deepEqual(periodRange('month', '2026-11-01'), { from: '2026-11-01', to: '2026-11-01' });
+// One bar is no chart: Today draws the last seven days; the other periods draw their own.
+assert.deepEqual(chartRange('today', '2026-10-13'), periodRange('week', '2026-10-13'));
+assert.deepEqual(chartRange('month', '2026-10-13'), periodRange('month', '2026-10-13'));
 
 console.log('check:logic — all assertions passed.');

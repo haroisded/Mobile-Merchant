@@ -3999,6 +3999,17 @@ export type Database = {
         Returns: undefined
       }
       close_pos_session: { Args: { payload: Json }; Returns: string }
+      dashboard_cards: {
+        Args: { p_from: string; p_merchant: string; p_to: string }
+        Returns: {
+          expected_cash: number
+          gross_profit: number
+          invoices: number
+          low_stock: number
+          open_registers: number
+          sales: number
+        }[]
+      }
       delete_current_user: { Args: never; Returns: undefined }
       delete_document: {
         Args: { p_doctype: string; p_id: string }
@@ -4017,6 +4028,14 @@ export type Database = {
       }
       open_pos_session: { Args: { payload: Json }; Returns: string }
       pos_checkout: { Args: { payload: Json }; Returns: string }
+      sales_by_day: {
+        Args: { p_from: string; p_merchant: string; p_to: string }
+        Returns: {
+          day: string
+          invoices: number
+          sales: number
+        }[]
+      }
       save_item: { Args: { payload: Json }; Returns: string }
       save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
@@ -4032,9 +4051,38 @@ export type Database = {
       save_sales_tax_template: { Args: { payload: Json }; Returns: string }
       save_stock_entry: { Args: { payload: Json }; Returns: string }
       save_stock_reconciliation: { Args: { payload: Json }; Returns: string }
+      stock_alerts: {
+        Args: { p_limit?: number; p_merchant: string }
+        Returns: {
+          actual_qty: number
+          item_code: string
+          item_id: string
+          item_name: string
+          reorder_level: number
+          warehouse_id: string
+          warehouse_name: string
+        }[]
+      }
       submit_document: {
         Args: { p_doctype: string; p_id: string }
         Returns: undefined
+      }
+      top_selling: {
+        Args: {
+          p_by?: string
+          p_from: string
+          p_group?: boolean
+          p_limit?: number
+          p_merchant: string
+          p_to: string
+        }
+        Returns: {
+          amount: number
+          code: string
+          id: string
+          name: string
+          qty: number
+        }[]
       }
       update_series_counter: {
         Args: { p_current: number; p_merchant: string; p_series: string }
