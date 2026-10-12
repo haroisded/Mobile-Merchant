@@ -320,7 +320,10 @@ Then the posting engine and the first documents that post through it: `202610111
 `public.submit_document` and `public.cancel_document`) and `20261011170112_stock_in_and_adjustments.sql`
 (`stock_reconciliations`, `stock_entries` and their rows; the invoker RPCs `save_stock_reconciliation`,
 `save_stock_entry` and `save_item_with_opening_stock`; `private.submit_stock_reconciliations()` /
-`submit_stock_entries()`, which `submit_document` dispatches to by table name).
+`submit_stock_entries()`, which `submit_document` dispatches to by table name). Then the register:
+`20261011233916_pos_profiles.sql` (`pos_profiles` with `pos_profile_users`, `pos_profile_payments` and
+`pos_profile_item_groups`; `private.validate_pos_profile()`, the deferred
+`private.validate_pos_profile_payments()`, the invoker RPC `save_pos_profile`).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

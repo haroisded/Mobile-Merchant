@@ -62,6 +62,9 @@ together and explained inline.
   reverses it. Posting writes the Stock Ledger and the Stock Balance, valued by FIFO or Moving Average, and
   with Perpetual Inventory the General Ledger — three read-only reports with filters, each row opening its
   document. A new item can carry its Opening Stock
+- **POS Profiles** — a register's settings under Setup → Point of Sale: its warehouse, price list, taxes and
+  print layout, the users who may use it, the payment methods it offers (a default, Allow in Returns), the
+  item groups it lists, the accounts that win over an item's, and its switches
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -173,7 +176,8 @@ and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5
 `tax_rules`; Step 10 `stock_settings`; Step 12 `naming_series` with its `naming_series_counters`, and
 `print_formats`, `letter_heads` and `print_settings`; Step 13 `items` with their `item_uoms` and
 `item_taxes`; Step 14 `item_prices`; Step 15 the ledgers `gl_entries`, `stock_ledger_entries` and `bins`;
-Step 16 `stock_reconciliations` and `stock_entries` with their rows. Triggers named
+Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `pos_profiles` with its
+`pos_profile_users`, `pos_profile_payments` and `pos_profile_item_groups`. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

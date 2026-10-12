@@ -48,6 +48,9 @@ const USED_BY = new Map([
   ['item_uoms', "It's in an item's Units of Measure. Remove that row first."],
   ['item_taxes', "It's in an item's Item Tax rows. Remove that row first."],
   ['item_prices', 'An item price uses it. Change or delete that price first.'],
+  ['pos_profiles', 'A POS Profile uses it. Change it on that profile first.'],
+  ['pos_profile_payments', "It's one of a POS Profile's payment methods. Remove that row first."],
+  ['pos_profile_item_groups', "It's one of a POS Profile's item groups. Remove that row first."],
   // A ledger or a document names it, and neither is ever edited to let it go.
   ['gl_entries', 'It has ledger entries, so it stays. Disable it instead.'],
   ['stock_ledger_entries', 'It has stock movements, so it stays. Disable it instead.'],

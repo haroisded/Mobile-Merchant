@@ -1,17 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router, useNavigation } from 'expo-router';
+import { router } from 'expo-router';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { saveOnce } from '../../components/adaptive-dialog';
-import { Button } from '../../components/button';
-import { useConfirm } from '../../components/confirm-dialog';
 import { ControlledSwitch, ControlledText, FieldGrid } from '../../components/form-fields';
 import { PageForm } from '../../components/form-footer';
 import { ItemTaxFields, useItemTaxRecords } from '../../components/item-tax-fields';
 import type { ItemTaxRecords } from '../../components/item-tax-fields';
-import { PageHeader } from '../../components/page-header';
+import { RecordPageHeader } from '../../components/record-page-header';
 import { RepeatableList } from '../../components/repeatable-rows';
 import { SalesDefaultsFields, useSalesDefaultsRecords } from '../../components/sales-defaults-fields';
 import type { SalesDefaultsRecords } from '../../components/sales-defaults-fields';
@@ -37,9 +35,7 @@ import type { StockSettings } from '../../features/stock-settings/queries';
 import { uomOptions, useUomsQuery } from '../../features/uoms/queries';
 import type { Uom } from '../../features/uoms/queries';
 import { warehouseLabel } from '../../features/warehouses/queries';
-import { useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice, postgrestError, postingRefusal, usedElsewhere } from '../../lib/errors';
-import { useAppTheme } from '../../lib/theme';
 
 type Records = {
   groups: ItemGroup[];
@@ -165,44 +161,24 @@ const deleteFailure = (cause: Error | null) =>
 
 /** The page's header: kicker, title, and the red Delete with its confirm for whoever may delete. */
 function ItemHeader({ merchant, existing }: { merchant: Merchant; existing: Item | undefined }) {
-  const { colors } = useAppTheme();
-  const navigation = useNavigation();
-  const wide = useShellWide();
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const remove = useDeleteItemMutation();
-  const confirm = useConfirm();
-
-  const askDelete = (item: Item) =>
-    confirm.ask({
-      title: `Delete ${item.item_code}?`,
-      body: 'Its units, Item Tax rows and prices go with it. Disable it instead to keep them.',
-      confirmLabel: 'Delete',
-      run: () => remove.mutateAsync(item.id),
-      failure: deleteFailure,
-      // A page of the Stock stack, as an item group's is of Setup's (src/screens/item-groups/item-group-form.tsx):
-      // it pops through its own navigator, and on a phone the confirm's sheet of the outer stack pops too.
-      onDone: () => {
-        navigation.goBack();
-        if (!wide) router.back();
-      },
-    });
 
   return (
-    <>
-      <PageHeader
-        kicker="Item"
-        title={existing ? itemLabel(existing) : 'New item'}
-        onBack={() => router.back()}
-        actions={
-          existing && can(permissions, 'Item', 'delete') ? (
-            <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
-              Delete
-            </Button>
-          ) : null
-        }
-      />
-      {confirm.dialog}
-    </>
+    <RecordPageHeader
+      kicker="Item"
+      title={existing ? itemLabel(existing) : 'New item'}
+      remove={
+        existing && can(permissions, 'Item', 'delete')
+          ? {
+              title: `Delete ${existing.item_code}?`,
+              body: 'Its units, Item Tax rows and prices go with it. Disable it instead to keep them.',
+              run: () => remove.mutateAsync(existing.id),
+              failure: deleteFailure,
+            }
+          : undefined
+      }
+    />
   );
 }
 

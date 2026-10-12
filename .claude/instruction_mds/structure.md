@@ -59,6 +59,7 @@ src/
     gl-entries/  stock-ledger-entries/  bins/             queries.ts — read-only: only a posting writes a ledger
     documents/            queries.ts — submit / cancel for every document, and what a posting invalidates
     stock-entries/  stock-reconciliations/                queries.ts  schema.ts — list, one by id, save, delete
+    pos-profiles/         queries.ts  schema.ts — a register's settings and its three child tables
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
@@ -89,9 +90,10 @@ src/
     print-formats/        index.tsx  print-format-form.tsx (a Setup-stack page)  receipt-sample.tsx
     letter-heads/         index.tsx  letter-head-form.tsx
     print-settings/       index.tsx
+    pos-profiles/         index.tsx  pos-profile-form.tsx (a Setup-stack page)
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of

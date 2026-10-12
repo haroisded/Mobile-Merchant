@@ -15,7 +15,7 @@ import { fitsPaymentType, modeOfPaymentSchema, PAYMENT_TYPES } from '../../featu
 import type { ModeOfPaymentValues, PaymentType } from '../../features/modes-of-payment/schema';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Props = { merchantId: string; modeId?: string; onDismiss: () => void };
 
@@ -94,7 +94,8 @@ function Form({ merchantId, abbr, accounts, existing, onDismiss }: FormProps) {
       body: 'It leaves the list of ways a sale can be paid. Disable it instead to keep it for later.',
       confirmLabel: 'Delete',
       run: () => remove.mutateAsync(mode.id),
-      failure: () => failureMessage("Couldn't delete this mode of payment. Try again."),
+      // A POS Profile that offers it is the first thing to still name a mode.
+      failure: (cause) => usedElsewhere(cause) ?? failureMessage("Couldn't delete this mode of payment. Try again."),
       onDone: closesForm(wide, onDismiss),
     });
 

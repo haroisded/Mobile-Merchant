@@ -26,6 +26,7 @@ type SetupRoute =
   | 'item-groups'
   | 'stock-settings'
   | 'selling-settings'
+  | 'pos-profiles'
   | 'users'
   | 'roles'
   | 'role-profiles'
@@ -125,6 +126,13 @@ const SECTIONS: IndexSection<SetupRoute>[] = [
         doctype: 'Selling Settings',
         route: 'selling-settings',
       },
+    ],
+  },
+  {
+    title: 'Point of Sale',
+    hint: 'The registers a cashier sells from',
+    entries: [
+      { label: 'POS Profiles', hint: 'A register: warehouse, payment methods, users, accounts', doctype: 'POS Profile', route: 'pos-profiles' },
     ],
   },
   {

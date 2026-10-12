@@ -1512,6 +1512,320 @@ export type Database = {
           },
         ]
       }
+      pos_profile_item_groups: {
+        Row: {
+          id: string
+          idx: number
+          item_group_id: string
+          merchant_id: string
+          pos_profile_id: string
+        }
+        Insert: {
+          id?: string
+          idx: number
+          item_group_id: string
+          merchant_id: string
+          pos_profile_id: string
+        }
+        Update: {
+          id?: string
+          idx?: number
+          item_group_id?: string
+          merchant_id?: string
+          pos_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_profile_item_groups_group_fk"
+            columns: ["item_group_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profile_item_groups_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_profile_item_groups_profile_fk"
+            columns: ["pos_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_profile_payments: {
+        Row: {
+          allow_in_returns: boolean
+          id: string
+          idx: number
+          is_default: boolean
+          merchant_id: string
+          mode_of_payment_id: string
+          pos_profile_id: string
+        }
+        Insert: {
+          allow_in_returns?: boolean
+          id?: string
+          idx: number
+          is_default?: boolean
+          merchant_id: string
+          mode_of_payment_id: string
+          pos_profile_id: string
+        }
+        Update: {
+          allow_in_returns?: boolean
+          id?: string
+          idx?: number
+          is_default?: boolean
+          merchant_id?: string
+          mode_of_payment_id?: string
+          pos_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_profile_payments_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_profile_payments_mode_fk"
+            columns: ["mode_of_payment_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "modes_of_payment"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profile_payments_profile_fk"
+            columns: ["pos_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_profile_users: {
+        Row: {
+          id: string
+          idx: number
+          is_default: boolean
+          member_id: string
+          merchant_id: string
+          pos_profile_id: string
+        }
+        Insert: {
+          id?: string
+          idx: number
+          is_default?: boolean
+          member_id: string
+          merchant_id: string
+          pos_profile_id: string
+        }
+        Update: {
+          id?: string
+          idx?: number
+          is_default?: boolean
+          member_id?: string
+          merchant_id?: string
+          pos_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_profile_users_member_fk"
+            columns: ["member_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchant_members"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profile_users_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_profile_users_profile_fk"
+            columns: ["pos_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_profiles: {
+        Row: {
+          account_for_change_amount: string | null
+          allow_rate_change: boolean
+          cost_center: string | null
+          created_at: string
+          disabled: boolean
+          expense_account: string | null
+          hide_unavailable_items: boolean
+          id: string
+          income_account: string | null
+          letter_head: string | null
+          merchant_id: string
+          pos_profile_name: string
+          print_format: string | null
+          print_receipt_on_order_complete: boolean
+          selling_price_list: string | null
+          set_grand_total_to_default_mop: boolean
+          tax_category: string | null
+          taxes_and_charges: string | null
+          warehouse: string
+          write_off_account: string | null
+          write_off_cost_center: string | null
+          write_off_limit: number
+        }
+        Insert: {
+          account_for_change_amount?: string | null
+          allow_rate_change?: boolean
+          cost_center?: string | null
+          created_at?: string
+          disabled?: boolean
+          expense_account?: string | null
+          hide_unavailable_items?: boolean
+          id?: string
+          income_account?: string | null
+          letter_head?: string | null
+          merchant_id: string
+          pos_profile_name: string
+          print_format?: string | null
+          print_receipt_on_order_complete?: boolean
+          selling_price_list?: string | null
+          set_grand_total_to_default_mop?: boolean
+          tax_category?: string | null
+          taxes_and_charges?: string | null
+          warehouse: string
+          write_off_account?: string | null
+          write_off_cost_center?: string | null
+          write_off_limit?: number
+        }
+        Update: {
+          account_for_change_amount?: string | null
+          allow_rate_change?: boolean
+          cost_center?: string | null
+          created_at?: string
+          disabled?: boolean
+          expense_account?: string | null
+          hide_unavailable_items?: boolean
+          id?: string
+          income_account?: string | null
+          letter_head?: string | null
+          merchant_id?: string
+          pos_profile_name?: string
+          print_format?: string | null
+          print_receipt_on_order_complete?: boolean
+          selling_price_list?: string | null
+          set_grand_total_to_default_mop?: boolean
+          tax_category?: string | null
+          taxes_and_charges?: string | null
+          warehouse?: string
+          write_off_account?: string | null
+          write_off_cost_center?: string | null
+          write_off_limit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_profiles_change_account_fk"
+            columns: ["account_for_change_amount", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_cost_center_fk"
+            columns: ["cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_expense_account_fk"
+            columns: ["expense_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_income_account_fk"
+            columns: ["income_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_letter_head_fk"
+            columns: ["letter_head", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "letter_heads"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_price_list_fk"
+            columns: ["selling_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_print_format_fk"
+            columns: ["print_format", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "print_formats"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_tax_category_fk"
+            columns: ["tax_category", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "tax_categories"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_template_fk"
+            columns: ["taxes_and_charges", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "sales_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_warehouse_fk"
+            columns: ["warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_write_off_account_fk"
+            columns: ["write_off_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_profiles_write_off_cost_center_fk"
+            columns: ["write_off_cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       price_lists: {
         Row: {
           created_at: string
@@ -2803,6 +3117,7 @@ export type Database = {
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
       save_item_with_opening_stock: { Args: { payload: Json }; Returns: string }
       save_member: { Args: { payload: Json }; Returns: string }
+      save_pos_profile: { Args: { payload: Json }; Returns: string }
       save_role_permissions: {
         Args: { p_doctype: string; p_merchant: string; p_rows: Json }
         Returns: undefined
