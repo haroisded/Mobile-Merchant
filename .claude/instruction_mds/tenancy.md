@@ -133,6 +133,13 @@ only then post or reverse. A ledger is written by that engine alone, which is wh
 Read and nothing else. The Role Permissions Manager offers each kind the columns that mean something for
 it: all seven for a document, Read for a ledger, Read and Write for a single.
 
+**A session is its cashier's.** A POS Opening Entry carries `user_id`, and the posters hold the line the
+policies cannot: `private.submit_pos_invoices()` sells only inside the caller's own open session, and
+`private.submit_pos_closing_entries()` lets the cashier close it — or whoever holds **Cancel** on POS Opening
+Entry, for a session left open. A POS Profile that lists users is usable by them and the owner only
+(`private.pos_profile_usable`). Rejected: a policy per cashier — every other member with Read still needs to
+see the sessions and the sales.
+
 Scoped `to authenticated`, each call wrapped in `select` so it runs once as an InitPlan, and every
 `update` policy carrying both `using` and `with check` — without the second, a row can be moved to
 another merchant. Child tables (`role_profile_roles`, `member_roles`) take their parent's doctype.

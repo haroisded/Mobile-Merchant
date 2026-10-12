@@ -1512,6 +1512,611 @@ export type Database = {
           },
         ]
       }
+      pos_closing_entries: {
+        Row: {
+          created_at: string
+          docstatus: number
+          grand_total: number
+          id: string
+          merchant_id: string
+          name: string
+          net_total: number
+          period_end: string
+          pos_opening_entry_id: string
+          posting_date: string
+          total_quantity: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          docstatus?: number
+          grand_total?: number
+          id?: string
+          merchant_id: string
+          name: string
+          net_total?: number
+          period_end?: string
+          pos_opening_entry_id: string
+          posting_date: string
+          total_quantity?: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          docstatus?: number
+          grand_total?: number
+          id?: string
+          merchant_id?: string
+          name?: string
+          net_total?: number
+          period_end?: string
+          pos_opening_entry_id?: string
+          posting_date?: string
+          total_quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_closing_entries_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_closing_entries_session_fk"
+            columns: ["pos_opening_entry_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_opening_entries"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_closing_entry_payments: {
+        Row: {
+          closing_amount: number
+          difference: number
+          expected_amount: number
+          id: string
+          idx: number
+          merchant_id: string
+          mode_of_payment_id: string
+          opening_amount: number
+          pos_closing_entry_id: string
+        }
+        Insert: {
+          closing_amount?: number
+          difference?: number
+          expected_amount?: number
+          id?: string
+          idx: number
+          merchant_id: string
+          mode_of_payment_id: string
+          opening_amount?: number
+          pos_closing_entry_id: string
+        }
+        Update: {
+          closing_amount?: number
+          difference?: number
+          expected_amount?: number
+          id?: string
+          idx?: number
+          merchant_id?: string
+          mode_of_payment_id?: string
+          opening_amount?: number
+          pos_closing_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_closing_entry_payments_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_closing_entry_payments_mode_fk"
+            columns: ["mode_of_payment_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "modes_of_payment"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_closing_entry_payments_parent_fk"
+            columns: ["pos_closing_entry_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_closing_entries"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_invoice_items: {
+        Row: {
+          amount: number
+          conversion_factor: number
+          cost_center: string | null
+          expense_account: string | null
+          id: string
+          idx: number
+          income_account: string | null
+          item_id: string
+          item_name: string | null
+          item_tax_template_id: string | null
+          merchant_id: string
+          net_amount: number
+          net_rate: number
+          pos_invoice_id: string
+          price_list_rate: number
+          qty: number
+          rate: number
+          stock_qty: number
+          uom_id: string
+          valuation_rate: number | null
+        }
+        Insert: {
+          amount: number
+          conversion_factor?: number
+          cost_center?: string | null
+          expense_account?: string | null
+          id?: string
+          idx: number
+          income_account?: string | null
+          item_id: string
+          item_name?: string | null
+          item_tax_template_id?: string | null
+          merchant_id: string
+          net_amount: number
+          net_rate: number
+          pos_invoice_id: string
+          price_list_rate?: number
+          qty: number
+          rate: number
+          stock_qty: number
+          uom_id: string
+          valuation_rate?: number | null
+        }
+        Update: {
+          amount?: number
+          conversion_factor?: number
+          cost_center?: string | null
+          expense_account?: string | null
+          id?: string
+          idx?: number
+          income_account?: string | null
+          item_id?: string
+          item_name?: string | null
+          item_tax_template_id?: string | null
+          merchant_id?: string
+          net_amount?: number
+          net_rate?: number
+          pos_invoice_id?: string
+          price_list_rate?: number
+          qty?: number
+          rate?: number
+          stock_qty?: number
+          uom_id?: string
+          valuation_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_invoice_items_cost_center_fk"
+            columns: ["cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_expense_fk"
+            columns: ["expense_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_income_fk"
+            columns: ["income_account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_item_fk"
+            columns: ["item_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_parent_fk"
+            columns: ["pos_invoice_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_invoices"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_template_fk"
+            columns: ["item_tax_template_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "item_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_items_uom_fk"
+            columns: ["uom_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "uoms"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_invoice_payments: {
+        Row: {
+          account: string | null
+          amount: number
+          id: string
+          idx: number
+          merchant_id: string
+          mode_of_payment_id: string
+          pos_invoice_id: string
+        }
+        Insert: {
+          account?: string | null
+          amount: number
+          id?: string
+          idx: number
+          merchant_id: string
+          mode_of_payment_id: string
+          pos_invoice_id: string
+        }
+        Update: {
+          account?: string | null
+          amount?: number
+          id?: string
+          idx?: number
+          merchant_id?: string
+          mode_of_payment_id?: string
+          pos_invoice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_invoice_payments_account_fk"
+            columns: ["account", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_payments_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_payments_mode_fk"
+            columns: ["mode_of_payment_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "modes_of_payment"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_payments_parent_fk"
+            columns: ["pos_invoice_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_invoices"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_invoice_taxes: {
+        Row: {
+          account_head: string
+          charge_type: string
+          cost_center: string | null
+          description: string
+          id: string
+          idx: number
+          included_in_print_rate: boolean
+          merchant_id: string
+          pos_invoice_id: string
+          rate: number
+          row_id: number | null
+          tax_amount: number
+          total: number
+        }
+        Insert: {
+          account_head: string
+          charge_type: string
+          cost_center?: string | null
+          description: string
+          id?: string
+          idx: number
+          included_in_print_rate?: boolean
+          merchant_id: string
+          pos_invoice_id: string
+          rate?: number
+          row_id?: number | null
+          tax_amount?: number
+          total?: number
+        }
+        Update: {
+          account_head?: string
+          charge_type?: string
+          cost_center?: string | null
+          description?: string
+          id?: string
+          idx?: number
+          included_in_print_rate?: boolean
+          merchant_id?: string
+          pos_invoice_id?: string
+          rate?: number
+          row_id?: number | null
+          tax_amount?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_invoice_taxes_account_fk"
+            columns: ["account_head", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_taxes_cost_center_fk"
+            columns: ["cost_center", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_taxes_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_invoice_taxes_parent_fk"
+            columns: ["pos_invoice_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_invoices"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_invoices: {
+        Row: {
+          change_amount: number
+          created_at: string
+          docstatus: number
+          grand_total: number
+          id: string
+          merchant_id: string
+          name: string
+          net_total: number
+          paid_amount: number
+          pos_opening_entry_id: string
+          pos_profile_id: string
+          posting_date: string
+          rounded_total: number
+          rounding_adjustment: number
+          selling_price_list: string | null
+          tax_category: string | null
+          taxes_and_charges: string | null
+          total_taxes_and_charges: number
+          user_id: string
+          warehouse: string | null
+          write_off_amount: number
+        }
+        Insert: {
+          change_amount?: number
+          created_at?: string
+          docstatus?: number
+          grand_total?: number
+          id?: string
+          merchant_id: string
+          name: string
+          net_total?: number
+          paid_amount?: number
+          pos_opening_entry_id: string
+          pos_profile_id: string
+          posting_date: string
+          rounded_total?: number
+          rounding_adjustment?: number
+          selling_price_list?: string | null
+          tax_category?: string | null
+          taxes_and_charges?: string | null
+          total_taxes_and_charges?: number
+          user_id?: string
+          warehouse?: string | null
+          write_off_amount?: number
+        }
+        Update: {
+          change_amount?: number
+          created_at?: string
+          docstatus?: number
+          grand_total?: number
+          id?: string
+          merchant_id?: string
+          name?: string
+          net_total?: number
+          paid_amount?: number
+          pos_opening_entry_id?: string
+          pos_profile_id?: string
+          posting_date?: string
+          rounded_total?: number
+          rounding_adjustment?: number
+          selling_price_list?: string | null
+          tax_category?: string | null
+          taxes_and_charges?: string | null
+          total_taxes_and_charges?: number
+          user_id?: string
+          warehouse?: string | null
+          write_off_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_invoices_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_price_list_fk"
+            columns: ["selling_price_list", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_profile_fk"
+            columns: ["pos_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_session_fk"
+            columns: ["pos_opening_entry_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_opening_entries"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_tax_category_fk"
+            columns: ["tax_category", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "tax_categories"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_template_fk"
+            columns: ["taxes_and_charges", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "sales_tax_templates"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_invoices_warehouse_fk"
+            columns: ["warehouse", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_opening_entries: {
+        Row: {
+          created_at: string
+          docstatus: number
+          id: string
+          merchant_id: string
+          name: string
+          period_start: string
+          pos_profile_id: string
+          posting_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          docstatus?: number
+          id?: string
+          merchant_id: string
+          name: string
+          period_start?: string
+          pos_profile_id: string
+          posting_date: string
+          status?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          docstatus?: number
+          id?: string
+          merchant_id?: string
+          name?: string
+          period_start?: string
+          pos_profile_id?: string
+          posting_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_opening_entries_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_opening_entries_profile_fk"
+            columns: ["pos_profile_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_profiles"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
+      pos_opening_entry_balances: {
+        Row: {
+          id: string
+          idx: number
+          merchant_id: string
+          mode_of_payment_id: string
+          opening_amount: number
+          pos_opening_entry_id: string
+        }
+        Insert: {
+          id?: string
+          idx: number
+          merchant_id: string
+          mode_of_payment_id: string
+          opening_amount?: number
+          pos_opening_entry_id: string
+        }
+        Update: {
+          id?: string
+          idx?: number
+          merchant_id?: string
+          mode_of_payment_id?: string
+          opening_amount?: number
+          pos_opening_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_opening_entry_balances_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_opening_entry_balances_mode_fk"
+            columns: ["mode_of_payment_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "modes_of_payment"
+            referencedColumns: ["id", "merchant_id"]
+          },
+          {
+            foreignKeyName: "pos_opening_entry_balances_parent_fk"
+            columns: ["pos_opening_entry_id", "merchant_id"]
+            isOneToOne: false
+            referencedRelation: "pos_opening_entries"
+            referencedColumns: ["id", "merchant_id"]
+          },
+        ]
+      }
       pos_profile_item_groups: {
         Row: {
           id: string
@@ -3100,6 +3705,7 @@ export type Database = {
         Args: { p_doctype: string; p_id: string }
         Returns: undefined
       }
+      close_pos_session: { Args: { payload: Json }; Returns: string }
       delete_current_user: { Args: never; Returns: undefined }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
       naming_series_preview: {
@@ -3112,6 +3718,8 @@ export type Database = {
           series: string
         }[]
       }
+      open_pos_session: { Args: { payload: Json }; Returns: string }
+      pos_checkout: { Args: { payload: Json }; Returns: string }
       save_item: { Args: { payload: Json }; Returns: string }
       save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }

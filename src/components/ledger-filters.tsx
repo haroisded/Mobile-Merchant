@@ -207,7 +207,8 @@ export function LedgerFiltersPanel({ merchantId, report, onDismiss }: PanelProps
 }
 
 // The page of each document a ledger row can name, by its doctype (public.doctypes.name).
-const DOCUMENT_ROUTES = new Map<string, 'stock-entry' | 'stock-reconciliation'>([
+const DOCUMENT_ROUTES = new Map<string, 'stock-entry' | 'stock-reconciliation' | 'pos-invoice'>([
+  ['POS Invoice', 'pos-invoice'],
   ['Stock Entry', 'stock-entry'],
   ['Stock Reconciliation', 'stock-reconciliation'],
 ]);
@@ -215,12 +216,14 @@ const DOCUMENT_ROUTES = new Map<string, 'stock-entry' | 'stock-reconciliation'>(
 /**
  * From a ledger row to its document, and from a document to its entries — in the stack of the rail
  * destination the reader is in, so Back returns to where they were. Each destination therefore has both the
- * document pages and the reports: src/app/(app)/systems/[id]/accounts/ re-exports stock/'s, and the reverse.
+ * document pages and the reports: src/app/(app)/systems/[id]/accounts/ re-exports stock/'s, and the reverse;
+ * sell/ holds the POS Invoice and re-exports the rest.
  * Rejected: pushing into the other destination's stack — Back would pop that stack instead of returning.
  */
 export function useVoucherRoutes(merchantId: string) {
   // "/systems/<id>/accounts/general-ledger": the destination is the third part.
-  const destination = usePathname().split('/')[3] === 'accounts' ? 'accounts' : 'stock';
+  const part = usePathname().split('/')[3];
+  const destination = part === 'accounts' || part === 'sell' ? part : 'stock';
 
   return {
     /** A ledger row's source document. Nothing happens for a voucher type that has no page yet. */

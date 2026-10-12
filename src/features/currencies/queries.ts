@@ -4,6 +4,7 @@ import type { Tables } from '../../lib/database.types';
 import { asRoundingMethod, formatMoney } from '../../lib/money';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
+import { useGlobalDefaultsQuery } from '../global-defaults/queries';
 import type { Merchant } from '../merchants/queries';
 import { useSystemSettingsQuery } from '../system-settings/queries';
 import type { CurrencyValues } from './schema';
@@ -57,6 +58,19 @@ export function useMoney(merchant: Pick<Merchant, 'id' | 'default_currency'>) {
 
   return (value: number) =>
     currency && settings ? formatMoney(value, currency, settings.currency_precision, asRoundingMethod(settings.rounding_method)) : String(value);
+}
+
+/**
+ * What a total is rounded and worded by: Global Defaults' rounded total and amount in words, System Settings'
+ * precision and method, and the base currency with its smallest coin — a receipt's and a sale's alike.
+ * Undefined until all three have loaded.
+ */
+export function useTotalsSettings(merchant: Pick<Merchant, 'id' | 'default_currency'>) {
+  const globals = useGlobalDefaultsQuery({ merchantId: merchant.id }).data;
+  const system = useSystemSettingsQuery({ merchantId: merchant.id }).data;
+  const currency = useCurrencyQuery({ merchantId: merchant.id, code: merchant.default_currency }).data;
+
+  return globals && system && currency ? { globals, system, currency } : undefined;
 }
 
 /** The row a form's strings become: blanks to null, numbers parsed. */

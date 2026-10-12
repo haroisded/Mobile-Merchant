@@ -11,13 +11,14 @@ import { HelperText } from './helper-text';
 import { NoteCallout } from './note-callout';
 
 /**
- * A full-page form's bottom bar, under PageForm: the save or offline notice above the buttons.
+ * A full-page form's bottom bar, under PageForm: the save or offline notice above the buttons. The Register's
+ * bar to its cart is one too (src/screens/register/index.tsx).
  *
  * SafeAreaView, not View: the Android build is edge-to-edge (android/gradle.properties), so a bar pinned
  * to the bottom draws behind the system navigation bar. `additive` adds the inset to the bar's own
  * padding.
  */
-function FormFooter({ notice, children }: { notice: Notice | null; children: ReactNode }) {
+export function FormFooter({ notice, children }: { notice: Notice | null; children: ReactNode }) {
   const { colors } = useAppTheme();
   return (
     <SafeAreaView edges={['bottom']} style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
@@ -42,6 +43,8 @@ type PageFormProps = {
   /** Nothing to save until something changed. */
   dirty: boolean;
   onSave: () => void;
+  /** The button's own words where the write is not a save: "Complete Order", "Open Session". */
+  saveLabel?: string;
   children: ReactNode;
 };
 
@@ -53,7 +56,7 @@ type PageFormProps = {
  * (adaptive-dialog.tsx), and React Native only reports the keyboard (ReactRootView.java) — nothing makes
  * room for it. Without it the keyboard lies over the end of the fields and over Save.
  */
-export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, children }: PageFormProps) {
+export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, saveLabel = 'Save', children }: PageFormProps) {
   const wide = useShellWide();
 
   return (
@@ -73,7 +76,7 @@ export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, 
             style={wide ? styles.hug : undefined}
             contentStyle={styles.leading}
           >
-            Save
+            {saveLabel}
           </Button>
         </FormFooter>
       ) : null}

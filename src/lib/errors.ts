@@ -51,6 +51,14 @@ const USED_BY = new Map([
   ['pos_profiles', 'A POS Profile uses it. Change it on that profile first.'],
   ['pos_profile_payments', "It's one of a POS Profile's payment methods. Remove that row first."],
   ['pos_profile_item_groups', "It's one of a POS Profile's item groups. Remove that row first."],
+  // A session or a sale names it, and neither is ever edited to let it go.
+  ['pos_opening_entries', 'A session was opened on it, so it stays. Disable it instead.'],
+  ['pos_opening_entry_balances', 'A session opened with it, so it stays. Disable it instead.'],
+  ['pos_invoices', 'A sale names it, so it stays. Disable it instead.'],
+  ['pos_invoice_items', 'It has been sold, so it stays. Disable it instead.'],
+  ['pos_invoice_taxes', 'A sale was taxed to it, so it stays. Disable it instead.'],
+  ['pos_invoice_payments', 'A sale was paid with it, so it stays. Disable it instead.'],
+  ['pos_closing_entry_payments', 'A closed session counted it, so it stays. Disable it instead.'],
   // A ledger or a document names it, and neither is ever edited to let it go.
   ['gl_entries', 'It has ledger entries, so it stays. Disable it instead.'],
   ['stock_ledger_entries', 'It has stock movements, so it stays. Disable it instead.'],
@@ -103,6 +111,17 @@ const POSTING_REFUSALS = new Map([
   ['no_rows', 'Add at least one item first.'],
   ['stock_entry_not_found', "It no longer exists, or your roles can't change it."],
   ['stock_reconciliation_not_found', "It no longer exists, or your roles can't change it."],
+  // The Register (supabase/migrations/20261012004616_pos_shift_and_sale.sql).
+  ['no_open_session', 'Your session is no longer open. Go back to Sell and open one.'],
+  ['session_not_open', 'That session is already closed.'],
+  ['not_your_session', 'A session is closed by its cashier, or by a manager.'],
+  ['pos_profile_unusable', "That POS Profile is disabled, or you aren't one of its users."],
+  ['payment_method_not_offered', "One of the payment methods isn't on the POS Profile any more. Go back and open the page again."],
+  ['uom_not_on_item', "One of the items isn't sold in that unit any more. Pick its unit again."],
+  ['rate_locked', "The POS Profile doesn't allow changing a rate, and a price has changed since. Go back and open the cart again."],
+  ['totals_mismatch', "The totals don't add up against the items, so nothing was sold. Go back and open the cart again."],
+  ['underpaid', 'The payments are less than the total, by more than the POS Profile lets you write off.'],
+  ['not_cancellable', "A session's entries can't be cancelled: close the session instead."],
 ]);
 
 /** The words for a document the database refused to save, submit or cancel — null for any other failure. */

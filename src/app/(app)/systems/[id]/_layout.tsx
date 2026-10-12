@@ -31,10 +31,11 @@ type Destination = { name: string; label: string; icon: IconName; stack?: boolea
 // Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
 // as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Stock is the items,
 // their prices and their stock (./stock/); Accounts is the books every document posts to (./accounts/);
-// Setup is the company's foundation records (./setup/) — each a stack of its own. Dashboard and Sell arrive
-// with their steps, between Home and Stock.
+// Setup is the company's foundation records (./setup/) — each a stack of its own. Sell is the Register and
+// its sessions (./sell/). Dashboard arrives with its step, between Home and Sell.
 const DESTINATIONS: Destination[] = [
   { name: 'index', label: 'Home', icon: 'home' },
+  { name: 'sell', label: 'Sell', icon: 'sell', stack: true },
   { name: 'stock', label: 'Stock', icon: 'stock', stack: true },
   { name: 'accounts', label: 'Accounts', icon: 'accounts', stack: true },
   { name: 'setup', label: 'Setup', icon: 'settings', stack: true },

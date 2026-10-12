@@ -323,7 +323,11 @@ Then the posting engine and the first documents that post through it: `202610111
 `submit_stock_entries()`, which `submit_document` dispatches to by table name). Then the register:
 `20261011233916_pos_profiles.sql` (`pos_profiles` with `pos_profile_users`, `pos_profile_payments` and
 `pos_profile_item_groups`; `private.validate_pos_profile()`, the deferred
-`private.validate_pos_profile_payments()`, the invoker RPC `save_pos_profile`).
+`private.validate_pos_profile_payments()`, the invoker RPC `save_pos_profile`) and
+`20261012004616_pos_shift_and_sale.sql` (`pos_opening_entries`, `pos_invoices`, `pos_closing_entries` and their
+rows; `private.pos_profile_usable()`, `private.keep_pos_entry()`, the posters `private.submit_pos_opening_entries()`
+/ `submit_pos_invoices()` / `submit_pos_closing_entries()`; the invoker RPCs `open_pos_session`, `pos_checkout`
+and `close_pos_session`).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
@@ -417,7 +421,7 @@ hand per table — the shape drifts, and a rule edited in the Manager would not 
 
 Two kinds post, and each has one rule that must hold:
 
-- **A `document`** (Stock Entry, Stock Reconciliation) carries `name` and `docstatus` (0 draft, 1 submitted,
+- **A `document`** (Stock Entry, Stock Reconciliation, POS Opening Entry, POS Invoice, POS Closing Entry) carries `name` and `docstatus` (0 draft, 1 submitted,
   2 cancelled). `apply_doctype_policies` adds `private.guard_docstatus()` to it — and
   `guard_docstatus_child()` to its rows — so a signed-in role writes drafts only. `docstatus` moves through
   `public.submit_document(doctype, id)` and `public.cancel_document(doctype, id)` and nowhere else; a new

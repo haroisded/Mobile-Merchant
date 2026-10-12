@@ -1,0 +1,33 @@
+import { create } from 'zustand';
+
+import type { CartLine } from '../features/pos-invoices/cart';
+
+/**
+ * The Register's cart. The Register and the Cart are two pages of the Sell stack, so the lines live here
+ * rather than in either page's state — as src/Store/ledger-filters.ts holds a report's filters. Client state,
+ * nothing fetched (.claude/instruction_mds/data-layer.md rule 9); it is gone when the app restarts.
+ */
+const useCartStore = create<{ sessionId: string; lines: CartLine[] }>(() => ({ sessionId: '', lines: [] }));
+
+const NO_LINES: CartLine[] = [];
+
+// A cart belongs to one session (a POS Opening Entry), so another session starts from none.
+const change = (sessionId: string, update: (lines: CartLine[]) => CartLine[]) =>
+  useCartStore.setState((state) => ({ sessionId, lines: update(state.sessionId === sessionId ? state.lines : NO_LINES) }));
+
+export const useCart = (sessionId: string) => useCartStore((state) => (state.sessionId === sessionId ? state.lines : NO_LINES));
+
+/** One more of an item: onto its line in that unit, or a new line at the price list's rate. */
+export const addToCart = (sessionId: string, itemId: string, uomId: string) =>
+  change(sessionId, (lines) =>
+    lines.some((line) => line.itemId === itemId && line.uomId === uomId)
+      ? lines.map((line) => (line.itemId === itemId && line.uomId === uomId ? { ...line, qty: line.qty + 1 } : line))
+      : [...lines, { itemId, uomId, qty: 1, rate: null }]
+  );
+
+export const updateCartLine = (sessionId: string, index: number, patch: Partial<CartLine>) =>
+  change(sessionId, (lines) => lines.map((line, at) => (at === index ? { ...line, ...patch } : line)));
+
+export const removeCartLine = (sessionId: string, index: number) => change(sessionId, (lines) => lines.filter((_line, at) => at !== index));
+
+export const clearCart = (sessionId: string) => change(sessionId, () => NO_LINES);

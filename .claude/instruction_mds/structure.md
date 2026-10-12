@@ -32,7 +32,7 @@ Which directories exist under `src/`, and what goes in each. What goes *inside* 
 src/
   app/                    routes and layouts only
   lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts  …
-  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts)
+  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts, cart.ts)
   features/
     merchants/            queries.ts  schema.ts — merchants is the Company
     countries/            queries.ts — read-only reference data
@@ -60,6 +60,9 @@ src/
     documents/            queries.ts — submit / cancel for every document, and what a posting invalidates
     stock-entries/  stock-reconciliations/                queries.ts  schema.ts — list, one by id, save, delete
     pos-profiles/         queries.ts  schema.ts — a register's settings and its three child tables
+    pos-opening-entries/  queries.ts  schema.ts — a session: the list, the open one, open_pos_session
+    pos-invoices/         queries.ts  cart.ts (the sale a cart becomes, import-free)  setup.ts (the records it reads)
+    pos-closing-entries/  queries.ts — the list, one by id, close_pos_session
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  …
@@ -91,9 +94,14 @@ src/
     letter-heads/         index.tsx  letter-head-form.tsx
     print-settings/       index.tsx
     pos-profiles/         index.tsx  pos-profile-form.tsx (a Setup-stack page)
+    sell/                 index.tsx — the Sell destination's index, with the session box
+    register/             index.tsx  cart.tsx  cart-line.tsx — the items, then the cart and its payment
+    pos-orders/           index.tsx  pos-invoice.tsx — the sales, and one sale's receipt
+    pos-opening-entries/  index.tsx  open-session.tsx
+    pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
@@ -150,6 +158,9 @@ Anything with no table, schema or query key behind it.
 ```
 src/app/(app)/systems/[id]/_layout.tsx   the shell — expo-router Drawer, permanent when wide
 src/app/(app)/systems/[id]/index.tsx     Home
+src/app/(app)/systems/[id]/sell/         Sell — its own Stack: index.tsx, open-session.tsx, register.tsx, cart.tsx,
+                                         pos-invoices.tsx, pos-invoice.tsx, pos-opening-entries.tsx,
+                                         pos-closing-entries.tsx, close-session.tsx, pos-closing-entry.tsx
 src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, items.tsx, item.tsx, item-prices.tsx,
                                          stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
                                          stock-reconciliation.tsx, stock-balance.tsx, stock-ledger.tsx
@@ -158,7 +169,9 @@ src/app/(app)/systems/[id]/accounts/     Accounts — its own Stack: index.tsx, 
 A ledger row opens its document, and a document its entries, **inside the stack the reader is in**, so Back
 returns there. So a page reached from another destination is re-exported into it, one line a file:
 `accounts/stock-entry.tsx`, `accounts/stock-reconciliation.tsx`, `accounts/stock-ledger.tsx` and
-`stock/general-ledger.tsx` (`useVoucherRoutes`, `src/components/ledger-filters.tsx`). A document's page takes
+`stock/general-ledger.tsx`; a sale's page lives in `sell/pos-invoice.tsx` and is re-exported as
+`stock/pos-invoice.tsx` and `accounts/pos-invoice.tsx`, while `sell/` re-exports both reports and the two stock
+documents (`useVoucherRoutes`, `src/components/ledger-filters.tsx`). A document's page takes
 `docId`, whatever its type. Rejected: pushing into the other destination's stack — Back pops that stack.
 src/app/(app)/systems/[id]/setup/        Setup — its own Stack: index.tsx, then one route per record (company.tsx, fiscal-years.tsx)
 ```

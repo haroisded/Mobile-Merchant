@@ -56,6 +56,14 @@ answer with the document's id, which the mutation returns: a new document's page
 (`save.data`) and becomes the saved one without leaving. `public.save_item_with_opening_stock` wraps
 `save_item`, so an item and its Opening Stock are one transaction too.
 
+A document that is never a draft — a session's opening, a sale, a session's closing — goes through one RPC
+that inserts it with its rows and submits it in the same transaction: `public.open_pos_session`,
+`pos_checkout`, `close_pos_session`, security invoker over `public.submit_document`. A refusal leaves no row
+and uses no number, and the database sets the date. The answer is the document's id; a screen that goes on
+with it sends through `sendOnce` (`src/components/adaptive-dialog.tsx`), `saveOnce`'s guard with the answer
+passed on. What a sale sends is calculated on the device (`src/features/pos-invoices/cart.ts`) and checked by
+the poster — never calculated twice.
+
 **A document is submitted and cancelled through two RPCs, whatever its type.** `useDocumentActionMutation({
 doctype, action, invalidate })` (`src/features/documents/queries.ts`) calls `public.submit_document` or
 `public.cancel_document` — security **definer**, because posting writes ledgers no role may write; they check

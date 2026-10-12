@@ -237,6 +237,19 @@ export function saveOnce<V>(
   };
 }
 
+/**
+ * saveOnce for a write whose answer the caller goes on with — the id of the sale a checkout made, of the
+ * closing entry a closed session left. The same guard, for the same reason.
+ */
+export function sendOnce<V, D>(mutation: { isPending: boolean; mutate: (values: V, options: { onSuccess: (data: D) => void }) => void }, onDone: (data: D) => void) {
+  let sent = false;
+  return (values: V) => {
+    if (sent || mutation.isPending) return;
+    sent = true;
+    mutation.mutate(values, { onSuccess: onDone });
+  };
+}
+
 type ActionsProps = {
   /** The form's write: Cancel locks while it is genuinely out, Save while it is pending at all. */
   mutation: { isPending: boolean; isPaused: boolean };

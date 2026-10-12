@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
+import { buildSale, checkoutPayload, offeredItems, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
@@ -185,5 +186,89 @@ const WHOLESALE = { id: 'wholesale', price_not_uom_dependent: true };
 assert.deepEqual(resolvePrice([price(55, { price_list_id: 'wholesale' })], line({ fallback: WHOLESALE })), { rate: 55, priceListId: 'wholesale' });
 assert.equal(rateOf([price(55, { price_list_id: 'wholesale' })], { ...SACK, fallback: WHOLESALE }), 1375);
 assert.equal(rateOf([price(60), price(55, { price_list_id: 'wholesale' })], { fallback: WHOLESALE }), 60);
+
+// src/features/pos-invoices/cart.ts — the sale a cart becomes. The Philippine case the database probe posted:
+// 2 at 80 with VAT 12 % on top is 160 + 19.20.
+const VAT_ROW = { charge_type: 'On Net Total', account: 'vat', rate: 12, tax_amount: 0, row_id: null, included_in_print_rate: false, description: 'VAT @ 12', cost_center: null };
+const ENGINES = {
+  resolvePrice,
+  resolveTaxRule,
+  calculateTaxes,
+  round: (value, places) => roundTo(value, places, BANKERS),
+  cashRound: (value) => cashRound(value, 0.25, 2, BANKERS),
+};
+const coffee = { id: 'coffee', item_name: 'Coffee', item_group_id: 'drinks', stock_uom: 'nos', item_uoms: [{ uom_id: 'box', conversion_factor: 12 }], item_taxes: [] };
+const cake = { id: 'cake', item_name: 'Cake', item_group_id: 'food', stock_uom: 'nos', item_uoms: [], item_taxes: [{ item_tax_template_id: 'zero', tax_category_id: null, valid_from: null }] };
+const GROUPS = { drinks: ['drinks', 'products', 'all'], food: ['food', 'products', 'all'] };
+const setupOf = (over = {}) => ({
+  date: '2026-10-12',
+  items: new Map([coffee, cake].map((item) => [item.id, item])),
+  prices: [
+    { item_id: 'coffee', price_list_id: 'retail', uom_id: 'nos', price_list_rate: 80, valid_from: null, valid_upto: null },
+    { item_id: 'cake', price_list_id: 'retail', uom_id: 'nos', price_list_rate: 100, valid_from: null, valid_upto: null },
+  ],
+  priceList: { id: 'retail', price_not_uom_dependent: true },
+  fallback: null,
+  groupPath: (groupId) => GROUPS[groupId] ?? [],
+  groupTaxes: new Map(),
+  itemTaxRates: new Map([['zero', new Map([['vat', 0]])], ['sin', new Map([['sin-tax', 5]])]]),
+  templates: [{ id: 'ph', rows: [VAT_ROW] }, { id: 'none', rows: [] }],
+  profileTemplateId: 'ph',
+  defaultTemplateId: null,
+  taxCategoryId: null,
+  rules: [],
+  addTaxesFromItemTemplates: false,
+  accountName: (accountId) => `Account ${accountId}`,
+  precision: 2,
+  roundedTotalDisabled: true,
+  ...over,
+});
+const cartOf = (...lines) => lines.map(([itemId, qty, uomId = 'nos', rate = null]) => ({ itemId, qty, uomId, rate }));
+const saleOf = (cart, over) => buildSale(cart, setupOf(over), ENGINES);
+
+const twoCoffees = saleOf(cartOf(['coffee', 2]));
+assert.deepEqual([twoCoffees.netTotal, twoCoffees.totalTaxes, twoCoffees.grandTotal, twoCoffees.roundedTotal, twoCoffees.roundingAdjustment], [160, 19.2, 179.2, 179.2, 0]);
+assert.deepEqual(twoCoffees.taxes.map((tax) => [tax.description, tax.tax_amount, tax.total]), [['VAT @ 12', 19.2, 179.2]]);
+// Global Defaults keeps the Rounded Total: the grand total at the smallest coin, the difference recorded.
+assert.deepEqual((({ roundedTotal, roundingAdjustment }) => [roundedTotal, roundingAdjustment])(saleOf(cartOf(['coffee', 2]), { roundedTotalDisabled: false })), [179.25, 0.05]);
+// A box of 12 on a Price Not UOM Dependent list: 12 times the unit's price, and 12 stock units a box.
+assert.deepEqual((({ rate, stockQty, amount }) => [rate, stockQty, amount])(saleOf(cartOf(['coffee', 2, 'box'])).lines[0]), [960, 24, 1920]);
+// The item's own Item Tax Template zero-rates it; the line beside it is still taxed.
+assert.deepEqual((({ netTotal, totalTaxes }) => [netTotal, totalTaxes])(saleOf(cartOf(['coffee', 1], ['cake', 1]))), [180, 9.6]);
+// With none on the item, its Item Group's row applies — the nearest group first.
+assert.equal(saleOf(cartOf(['coffee', 1]), { groupTaxes: new Map([['products', [{ item_tax_template_id: 'zero', tax_category_id: null, valid_from: null }]]]) }).totalTaxes, 0);
+// A row for another tax category, or not yet valid, is passed over.
+assert.equal(saleOf(cartOf(['coffee', 1]), { groupTaxes: new Map([['drinks', [{ item_tax_template_id: 'zero', tax_category_id: 'export', valid_from: null }, { item_tax_template_id: 'zero', tax_category_id: null, valid_from: '2027-01-01' }]]]) }).totalTaxes, 9.6);
+// Taxes from Item Tax Templates: the account the sale lacks is added, and taxes only the items that name it.
+const sin = saleOf(cartOf(['coffee', 1], ['cake', 1]), { addTaxesFromItemTemplates: true, groupTaxes: new Map([['drinks', [{ item_tax_template_id: 'sin', tax_category_id: null, valid_from: null }]]]) });
+assert.deepEqual(sin.taxes.map((tax) => [tax.description, tax.tax_amount]), [['VAT @ 12', 9.6], ['Account sin-tax', 4]]);
+// No profile template: the Tax Rule for a group every line is under, else the default; a disabled rule's template picks none.
+const RULE = { sales_tax_template_id: 'none', tax_category_id: null, item_group_id: 'drinks', from_date: null, to_date: null, priority: 1 };
+assert.equal(saleOf(cartOf(['coffee', 1]), { profileTemplateId: null, defaultTemplateId: 'ph', rules: [RULE] }).templateId, 'none');
+assert.equal(saleOf(cartOf(['coffee', 1], ['cake', 1]), { profileTemplateId: null, defaultTemplateId: 'ph', rules: [RULE] }).templateId, 'ph');
+assert.equal(saleOf(cartOf(['coffee', 1]), { profileTemplateId: null, rules: [{ ...RULE, sales_tax_template_id: 'gone' }] }).templateId, null);
+// A typed rate wins over the price list's; an item no list prices is unpriced until one is typed.
+assert.deepEqual((({ rate, priceListRate, priced }) => [rate, priceListRate, priced])(saleOf(cartOf(['coffee', 1, 'nos', 70])).lines[0]), [70, 80, true]);
+assert.equal(saleOf(cartOf(['coffee', 1]), { prices: [] }).lines[0].priced, false);
+// What the Register offers: the profile's item groups (a parent group covers its children), on hand when it
+// hides the rest, the search by name or code; a disabled item never.
+const SHELF = [{ ...coffee, item_code: 'COF', disabled: false, is_stock_item: true }, { ...cake, item_code: 'CAK', disabled: false, is_stock_item: true }, { ...cake, id: 'tip', item_name: 'Service', item_code: 'SVC', disabled: false, is_stock_item: false }, { ...coffee, id: 'old', item_code: 'OLD', disabled: true, is_stock_item: true }];
+const offer = (over) => offeredItems(SHELF, setupOf(), { groupIds: [], hideUnavailable: false, onHand: new Map([['coffee', 3]]), search: '', ...over }).map((item) => item.item_code);
+assert.deepEqual(offer({}), ['COF', 'CAK', 'SVC']);
+assert.deepEqual(offer({ groupIds: ['drinks'] }), ['COF']);
+assert.deepEqual(offer({ groupIds: ['products'] }), ['COF', 'CAK', 'SVC']);
+assert.deepEqual(offer({ hideUnavailable: true }), ['COF', 'SVC']);
+assert.deepEqual([offer({ search: ' cak ' }), offer({ search: 'coff' })], [['CAK'], ['COF']]);
+// Paid, change, and the shortfall a write-off would cover.
+const cents = (value) => roundTo(value, 2, BANKERS);
+assert.deepEqual(settle(179.2, [200], cents), { paid: 200, change: 20.8, shortfall: 0 });
+assert.deepEqual(settle(179.2, [100, 79], cents), { paid: 179, change: 0, shortfall: 0.2 });
+// The default method starts at the total until it is typed over — a blank then means nothing was handed over.
+const METHODS = [{ mode_of_payment_id: 'cash', is_default: true }, { mode_of_payment_id: 'card', is_default: false }];
+assert.deepEqual(tenderedAmounts(METHODS, {}, 179.2).map((row) => [row.shown, row.amount]), [[179.2, 179.2], [null, 0]]);
+assert.deepEqual(tenderedAmounts(METHODS, { cash: null, card: 50 }, 179.2).map((row) => [row.shown, row.amount]), [[null, 0], [50, 50]]);
+assert.deepEqual(tenderedAmounts(METHODS, {}, null).map((row) => row.amount), [0, 0]);
+const sent = checkoutPayload(twoCoffees, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 200 }, { mode_of_payment_id: 'card', amount: 0 }], settle(179.2, [200], cents));
+assert.deepEqual([sent.paid_amount, sent.change_amount, sent.payments.length, sent.items[0].stock_qty, sent.taxes[0].account_head], [200, 20.8, 1, 2, 'vat']);
 
 console.log('check:logic — all assertions passed.');

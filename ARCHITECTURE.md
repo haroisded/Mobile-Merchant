@@ -40,6 +40,7 @@ src/Store/StoreUser.ts     the session handler — one onAuthStateChange subscri
 src/Store/picker.ts        the open searchable picker's options and callback, for the sheets/pick route
 src/Store/confirm.ts       the open confirm's text and action, for the sheets/confirm route
 src/Store/ledger-filters.ts what each ledger report is narrowed to, for the forms/ledger-filters route
+src/Store/cart.ts          the Register's cart, one per session — shared by the Register and Cart pages
 src/themes.js              MD3 light/dark palettes + Merchant keys, roundness, spacing and radius
                            scales, the type scale
 src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years,
@@ -53,7 +54,9 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            takes), stock-settings; naming-series, print-formats (+ receipt.ts, what a
                            receipt prints), letter-heads, print-settings; items, item-prices
                            (+ resolve.ts, the rate a sale line takes); pos-profiles (a register's
-                           settings and its child tables); documents (submit and cancel
+                           settings and its child tables); pos-opening-entries, pos-invoices (+ cart.ts,
+                           the sale a cart becomes, and setup.ts, the records it reads) and
+                           pos-closing-entries; documents (submit and cancel
                            for every document), stock-entries, stock-reconciliations; the ledgers
                            only a posting writes — gl-entries, stock-ledger-entries, bins; read-only
                            countries, currency-presets, doctypes
@@ -73,7 +76,10 @@ src/screens/<screen>/      UI by screen — home (the systems list and the creat
                            stock-settings, document-naming-settings (the list, a document's series,
                            Update Series), print-formats (list, a full-page format with its sample
                            receipt), letter-heads, print-settings, pos-profiles (list, a full-page
-                           profile with its users, payment methods and item groups), profile, sign-in
+                           profile with its users, payment methods and item groups), sell (the Sell index
+                           and the session box), pos-opening-entries (the list, Open Session), register
+                           (the items, the cart and its payment), pos-orders (the list, a sale's receipt),
+                           pos-closing-entries (the list, Close Session, one entry), profile, sign-in
 src/components/            one re-export per Paper primitive in use (text.tsx is the Text wrapper:
                            per-variant font-scale cap and iOS ramp), plus what more than one screen or a
                            sheet route draws: adaptive-dialog (+ FormActions, saveOnce),
@@ -91,7 +97,10 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            Cancel / Delete and its form), stock-document (what the two stock
                            documents share), ledger-filters (a report's filter bar and panel, and
                            the way between a ledger row and its document), chip, record-page-header
-                           (a record page's header and its confirmed Delete) —
+                           (a record page's header and its confirmed Delete), receipt (the receipt on
+                           screen: a format's sample and a sale's), pos-session (the cashier's open session,
+                           and a session page before it), session-amounts-form (an amount per payment
+                           method: Open Session and Close Session) —
                            and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
@@ -99,8 +108,9 @@ src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the s
                            formSheet: confirms, the picker) and the forms/ routes (a small form: a
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
 src/app/(app)/(tabs)/      home, notifications, settings, account + the NativeTabs bar
-src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and three Stacks
-                           of their own: stock/ (the index, items, item, item-prices, the stock
+src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, and four Stacks
+                           of their own: sell/ (the index, open-session, register, cart, pos-invoices,
+                           pos-invoice, the two entries' lists, close-session, pos-closing-entry), stock/ (the index, items, item, item-prices, the stock
                            documents and reports), accounts/ (the index, general-ledger; each re-exports
                            the other's document and report pages, so Back returns) and setup/ (the
                            index and one route per Setup page; chart-of-accounts, cost-centers,
@@ -120,7 +130,7 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261010064803_naming_series.sql, 20261010065138_printing.sql; then the
                            second batch: 20261011134250_items.sql, 20261011134357_item_prices.sql,
                            20261011165554_ledgers.sql, 20261011170112_stock_in_and_adjustments.sql,
-                           20261011233916_pos_profiles.sql
+                           20261011233916_pos_profiles.sql, 20261012004616_pos_shift_and_sale.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -854,6 +864,57 @@ one transaction. A mode of payment, warehouse, price list, template or ledger a 
 no POS Profile. Left for Step 20: Apply Discount On, Allow User to Edit Discount, Ignore Pricing Rule, the
 Discount Account. Out of scope: Company and Currency, Customer, Print Heading, Hide Images, Validate Stock on
 Save, Allow Partial Payment.
+
+### Step 18, Shift & Sale — `20261012004616_pos_shift_and_sale.sql`
+
+docs.frappe.io/erpnext/pos-opening-entry, point-of-sale, pos-closing-entry. Three documents, none of them ever
+a draft in the app: each is inserted and submitted in one transaction, so a refusal leaves nothing behind and
+uses no number.
+
+| Table | Holds |
+| --- | --- |
+| `pos_opening_entries` + `pos_opening_entry_balances` | a session: its POS Profile, its cashier (`user_id default auth.uid()`), `status` Open / Closed, and an opening amount per payment method. One submitted Open entry per profile and cashier (a partial unique index, `23505`) |
+| `pos_invoices` | a sale: its session and profile, the warehouse, price list and template it was sold under, net total, total taxes, grand total, rounding adjustment, rounded total, paid, change, write off |
+| `pos_invoice_items` | item, the name it was sold under, qty, UOM, conversion factor, stock qty, price list rate, rate, amount, net rate, net amount, item tax template — and, filled on submit, the income and expense accounts, the cost center and the valuation rate it left at |
+| `pos_invoice_taxes` | the template's row as it was applied: type, account head, description, rate, row id, included, cost center, amount, running total |
+| `pos_invoice_payments` | mode and amount; the account is filled on submit |
+| `pos_closing_entries` + `pos_closing_entry_payments` | one per session: per payment method the opening, expected, counted (`closing_amount`) and difference, and what the session sold |
+
+**App calculates, the database checks** (the human's decision of 2026-10-11). `src/features/pos-invoices/cart.ts`
+— import-free, asserted in `tools/check-logic.mjs` — turns a cart into the sale: each line's price
+(`item-prices/resolve.ts`), the Sales Taxes and Charges Template (the profile's; else the Tax Rule for the
+profile's tax category, a rule with an Item Group applying when every line is under that group; else the
+default), each item's Item Tax Template (the Item's rows, then its Item Group's and each group above), Accounts
+Settings' Taxes from Item Tax Templates, `calculateTaxes`, the Rounded Total, and paid / change / write-off.
+`private.submit_pos_invoices()` checks what it can without a second engine — the caller's own open session on
+that profile (`no_open_session`), enabled items in a unit the item has (`item_unusable`, `uom_not_on_item`),
+amount = qty × rate, the rate equal to the price list's unless the profile allows a change (`rate_locked`), the
+totals adding up (`totals_mismatch`), only the profile's payment methods (`payment_method_not_offered`), paid
+covering the rounded total with change as the excess and a shortfall within the Write Off Limit (`underpaid`)
+— then posts: `post_sle` out of the profile's warehouse per stock item, and one `post_gl` (each mode's account
+debited, change credited to Account for Change Amount → the Company's cash, the write-off, income per line,
+each tax row, the rounding to Round Off, and with Perpetual Inventory Cost of Goods Sold against the
+warehouse's account). Accounts resolve POS Profile → Item → Item Group → Brand → Company. Known ceiling
+(`ponytail:` in the SQL): the tax amounts are the app's.
+
+`private.submit_pos_opening_entries()` takes only the caller's own entry on a profile they may use
+(`private.pos_profile_usable`) with the profile's payment methods. `private.submit_pos_closing_entries()` is
+run by the session's cashier, or by whoever may **Cancel** a POS Opening Entry (a manager, for a session left
+open); it fills each method's opening, expected (opening + the session's payments − change, the change coming
+off the sale's first Cash-type payment) and difference, the totals, and marks the session Closed. Neither
+entry can be cancelled (`private.keep_pos_entry`, `not_cancellable`). The app's three calls are security
+**invoker** wrappers over `submit_document` — `public.open_pos_session`, `pos_checkout`, `close_pos_session`
+— and the database dates each document (`private.merchant_today`). Rejected: a definer RPC per document.
+A cashier is a **Sales User** (Read, Write, Create, Submit on the three); Sales Manager has all seven;
+Accounts Manager all seven on POS Invoice; Accounts User reads POS Invoice; `All` now reads Accounts Settings.
+
+The client: Sell is a rail destination with its own Stack. Its index shows the cashier's session
+(`src/components/pos-session.tsx`) over the Orders and the two entries' lists. The Register lists what the
+profile offers (`offeredItems`: its item groups, Hide Unavailable Items against `bins`, a search) in a
+FlashList; the cart is client state per session (`src/Store/cart.ts`) and its page is the payment too. A sale
+opens its receipt where the profile says so — `src/components/receipt.tsx`, which the Print Format's sample
+also draws — and Orders reopens it; that is the reprint. Left for Step 19: returns and voids. Out of scope:
+Customer, held sales, partial payment, loyalty, barcode, a printer.
 
 ---
 

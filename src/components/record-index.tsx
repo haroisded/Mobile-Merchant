@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { can, usePermissions } from '../features/role-permissions/queries';
@@ -37,6 +38,8 @@ type Props<R extends string> = {
   failure: string;
   /** What shows when the person's roles leave no row. */
   empty: string;
+  /** What the destination shows above its sections — Sell's session. */
+  children?: ReactNode;
 };
 
 // ponytail: tune on a real tablet. A section card's narrowest width; the column count falls out of it.
@@ -46,7 +49,7 @@ const SECTION_CARD = 320;
  * The index of records a rail destination opens on — Setup, Stock: sections in columns, each a box of rows
  * (.claude/instruction_mds/frontend.md §5, "Index of records").
  */
-export function RecordIndex<R extends string>({ merchantId, kicker, title, meta, isOwner, sections, onOpen, offline, failure, empty }: Props<R>) {
+export function RecordIndex<R extends string>({ merchantId, kicker, title, meta, isOwner, sections, onOpen, offline, failure, empty, children }: Props<R>) {
   const { columns, onLayout } = useColumns(SECTION_CARD);
   const permissions = usePermissions({ merchantId });
   // A row shows only to whom may read it; a section with none left goes. The owner may read everything,
@@ -65,6 +68,7 @@ export function RecordIndex<R extends string>({ merchantId, kicker, title, meta,
     <View style={styles.fill}>
       <PageHeader kicker={kicker} title={title} meta={meta} />
       <ScrollView contentContainerStyle={styles.body}>
+        {children}
         {isOwner || permissions.data ? null : (
           <View style={styles.state}>
             <QueryState query={permissions} offline={offline} failure={failure} />
