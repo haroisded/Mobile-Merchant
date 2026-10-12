@@ -8,7 +8,7 @@ type StockRoute = 'items' | 'item-prices' | 'stock-entries' | 'stock-reconciliat
 
 // What is sold and what is on hand, grouped as .claude/erpnext-docs/POS-System-Added-Features.md groups it. A
 // section appears once its first screen exists.
-const SECTIONS: IndexSection<StockRoute>[] = [
+export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
   {
     title: 'Items & Pricing',
     hint: 'What is sold, and what it sells for',
@@ -44,7 +44,7 @@ export function StockIndex({ merchantId, merchantName, isOwner }: { merchantId: 
       title="Stock"
       meta="The items you sell, their prices and their stock"
       isOwner={isOwner}
-      sections={SECTIONS}
+      sections={STOCK_SECTIONS}
       onOpen={(route) => router.push(`/systems/${merchantId}/stock/${route}`)}
       offline="You're offline. Stock will load when you reconnect."
       failure="Couldn't load Stock. Try again."

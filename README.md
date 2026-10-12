@@ -33,11 +33,13 @@ together and explained inline.
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
 - **A systems list and a merchant shell** — create a system (a company: name, abbreviation, country,
-  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with four
-  destinations: Home, Stock, Accounts and Setup
+  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with five
+  destinations — Home, Sell, Stock, Accounts and Setup — each listed only for someone whose roles can read
+  something in it
 - **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Users & Access
   (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
-  Manager and User Permissions, all enforced by RLS); Global Defaults, System Settings and the Currency
+  Manager and User Permissions — holding a person to one warehouse, item group, account or cost center, and
+  to the sales, stock and ledger rows that link to it — all enforced by RLS); Global Defaults, System Settings and the Currency
   (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
   folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment;
   Taxes — Tax Categories, Sales Taxes and Charges Templates (rows on the net total, on an earlier row, fixed
@@ -185,7 +187,8 @@ Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `po
 `pos_invoices` and `pos_closing_entries` with their rows; Step 19 adds no table — a return is a POS Invoice
 (`is_return`, `return_against`), and `public.delete_document` removes a cancelled document; Step 20
 `pricing_rules` with its `pricing_rule_targets`, and the discount columns on `merchants`, `items`,
-`pos_profiles`, `pos_invoices` and `pos_invoice_items`. Triggers named
+`pos_profiles`, `pos_invoices` and `pos_invoice_items`; Step 21 the read-only `doctype_links` — which
+document types follow a User Permission on the record they link to. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

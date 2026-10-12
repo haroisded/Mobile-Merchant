@@ -16,9 +16,10 @@ them; do not rebuild them.
    `auth.uid() = <row>.user_id`. The tenant root is the exception — `public.merchants` keys on its
    own `owner_id` for insert and delete, and on membership and Company write for select and update.
 4. Access is resolved by `security definer` functions in `private`, and every business table's policy
-   calls them: `private.permitted_merchant_ids(doctype, ptype)`, plus `restricted_merchant_ids` /
-   `allowed_record_ids` on a restrictable doctype. These are the seam: what they read may change,
-   their signatures and call sites may not.
+   calls them: `private.permitted_merchant_ids(doctype, ptype)`, plus `restricted_merchant_ids(allow,
+   doctype)` / `allowed_record_ids(allow, doctype)` on a restrictable doctype and on every table that
+   links to one (rule 12). These are the seam: what they read may change, their signatures and call
+   sites may not — §4 records the one time they did.
 5. Never add a second merchant table. The owner is `merchants.owner_id` — ERPNext's Administrator,
    who holds every permission, is never restricted and is never a member row. Everyone else is a row of
    `public.merchant_members`.
@@ -39,6 +40,11 @@ them; do not rebuild them.
     backfills the merchants that exist.
 11. The UI hides what a person may not do — `usePermissions` + `can()` — but never decides it. The
     policies are the boundary; a hidden button is a courtesy.
+12. A document type that links to a restrictable doctype says so in `public.doctype_links` (doctype,
+    link doctype, column), in its own migration, before `apply_doctype_policies` runs: that row is what
+    makes a User Permission on the linked record filter it. Only a document's or a ledger's own link, and
+    the one record a master belongs to (an Item's Item Group, a POS Profile's Warehouse). A *default* on
+    a master is never a link (§5).
 
 ---
 
@@ -94,10 +100,22 @@ has one, else their own `member_roles`, plus the implicit `All`, minus disabled 
 `private.permitted_merchant_ids(doctype, ptype)` — the owner's merchants always; otherwise the merchants
 where an effective role's `role_permissions` row grants `ptype` on `doctype`.
 
-`private.restricted_merchant_ids(doctype)` / `private.allowed_record_ids(doctype)` — the merchants where
-a User Permission restricts the caller on `doctype` (Apply To All, or Applicable For that doctype), and
-the record ids they may still see: each User Permission's `for_value`, plus every record under it in a
-tree unless Hide Descendants.
+`private.restricted_merchant_ids(allow, doctype)` / `private.allowed_record_ids(allow, doctype)` — the
+merchants where a User Permission on `allow` restricts the caller under `doctype` (Apply To All, or
+Applicable For that doctype), and the record ids of `allow` they may still see: each User Permission's
+`for_value`, plus every record under it in a tree unless Hide Descendants. A restrictable master asks with
+its own name twice (`'Warehouse', 'Warehouse'`); a linking table asks with the linked doctype and its own
+(`'Warehouse', 'POS Invoice'`).
+
+`public.doctype_links` — global and read-only like `doctypes`: which document types link to a restrictable
+doctype, and through which column. `apply_doctype_policies` reads it, `private.validate_user_permission()`
+holds an Applicable For to it, and the User Permission form lists from it.
+
+**The seam's signature changed once** (Step 21, `20261012131350_access_for_documents.sql`, 2026-10-12): the
+two restriction functions gained the document type, and `apply_doctype_policies` rewrote every call site in
+that same migration — the five masters and each linking table. Applicable For cannot be answered without
+knowing which document is being read. Rejected: a two-argument overload beside the one-argument functions
+— two answers to one question, and a policy left on the old one would ignore Applicable For without failing.
 
 All are in `private` so PostgREST never publishes them at `/rest/v1/rpc/`, have `search_path` pinned with
 fully-qualified bodies, and read `(select auth.uid())` themselves. `stable` lets the planner call each
@@ -117,8 +135,14 @@ Written by `select private.apply_doctype_policies('<table>', '<Doctype>')`, from
 create policy fiscal_years_select on public.fiscal_years
   for select to authenticated
   using (merchant_id in (select private.permitted_merchant_ids('Fiscal Year', 'select'))
-         and (merchant_id not in (select private.restricted_merchant_ids('Fiscal Year'))
-              or id in (select private.allowed_record_ids('Fiscal Year'))));
+         and (merchant_id not in (select private.restricted_merchant_ids('Fiscal Year', 'Fiscal Year'))
+              or id in (select private.allowed_record_ids('Fiscal Year', 'Fiscal Year'))));
+-- a linking table (doctype_links): one more clause per link column, on insert's with check too
+--   and (merchant_id not in (select private.restricted_merchant_ids('Warehouse', 'POS Invoice'))
+--        or warehouse is null
+--        or warehouse in (select private.allowed_record_ids('Warehouse', 'POS Invoice')))
+-- a linking doctype's rows (child): only those of a parent the caller may see
+--   and exists (select 1 from public.pos_invoices p where p.id = pos_invoice_items.pos_invoice_id)
 -- single (one row per merchant): select and update only
 -- document: the record's four, plus the trigger private.guard_docstatus() — a signed-in role writes
 --           drafts only (on a child table: guard_docstatus_child(), which reads its parent's docstatus)
@@ -152,6 +176,14 @@ Entry, for a session left open. A POS Profile that lists users is usable by them
 (`private.pos_profile_usable`). Rejected: a policy per cashier — every other member with Read still needs to
 see the sessions and the sales.
 
+**What a User Permission's link restricts** (the human's decision, 2026-10-12): a document or a ledger by
+its own link — a POS Invoice, a Stock Entry, the Stock Ledger and the Stock Balance by Warehouse; the
+General Ledger by Account and Cost Center — and the two masters that belong to one record, an Item by its
+Item Group and a POS Profile by its Warehouse. An empty link passes. A default on a master (an Item's
+Default Warehouse, a Tax Rule's Item Group, the Company's accounts) restricts nothing: ERPNext's "Ignore
+User Permissions" on a field. Rejected: every table with any link — a cashier held to one warehouse would
+lose the Tax Rules, Pricing Rules and Items the Register prices a sale with.
+
 Scoped `to authenticated`, each call wrapped in `select` so it runs once as an InitPlan, and every
 `update` policy carrying both `using` and `with check` — without the second, a row can be moved to
 another merchant. Child tables (`role_profile_roles`, `member_roles`) take their parent's doctype.
@@ -181,5 +213,10 @@ Rejected, with reasons:
 - **Which system a request is for** is the route's `[id]` — every query key carries `merchantId`, and
   a person in two systems sees both on the **Home** tab. An active-system store is not needed until
   something outside the shell needs it.
-- **Applicable For** is stored and validated but filters nothing yet: it limits a restriction to the
-  documents that link to the restricted doctype, and the first linking document (POS Invoice) is ahead.
+- **A helper held to one Item Group cannot read the groups above it**, so the Register's walk up the tree
+  for an Item Group's Item Tax rows (`src/features/pos-invoices/setup.ts`) stops at their own group. It
+  predates Step 21, which only made such a helper practical by filtering Items; named, not fixed.
+- **A Stock Reconciliation follows no link**: its warehouses are on its rows, not on the document, and only
+  a Stock Manager holds it.
+- **The rows of a restrictable master** (an Item Group's Item Tax rows) are readable by whoever may read
+  the doctype, whichever records they are held to — only a *linking* doctype's rows follow their parent.

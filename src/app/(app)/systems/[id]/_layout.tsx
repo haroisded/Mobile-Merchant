@@ -10,13 +10,21 @@ import { Appbar } from '../../../../components/appbar';
 import { Avatar } from '../../../../components/avatar';
 import { Button } from '../../../../components/button';
 import { Icon } from '../../../../components/icon';
+import { readsAny } from '../../../../components/record-index';
+import type { IndexSection } from '../../../../components/record-index';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
+import { usePermissions } from '../../../../features/role-permissions/queries';
 import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import type { IconName } from '../../../../lib/icons';
 import { useAppTheme } from '../../../../lib/theme';
+import { ACCOUNTS_SECTIONS } from '../../../../screens/accounts';
+import { SELL_SECTIONS } from '../../../../screens/sell';
+import { SETUP_SECTIONS } from '../../../../screens/setup';
+import { STOCK_SECTIONS } from '../../../../screens/stock';
+import { useSession } from '../../../../Store/StoreUser';
 import { radius, spacing } from '../../../../themes';
 
 // The merchant shell: a header over an M3 NavigationRail on a wide window, or over an off-canvas
@@ -26,7 +34,9 @@ import { radius, spacing } from '../../../../themes';
 // One expo-router Drawer serves both widths — drawerType 'permanent' is the rail, 'front' is the
 // drawer — so the two share one route table and one destination list (.claude/instruction_mds/frontend.md §4.4).
 
-type Destination = { name: string; label: string; icon: IconName; stack?: boolean };
+// `sections` is the destination's index (the same list its screen draws): the item shows only to someone
+// who may read one of its rows. Without it — Home — the item always shows.
+type Destination = { name: string; label: string; icon: IconName; stack?: boolean; sections?: IndexSection<string>[] };
 
 // Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
 // as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Stock is the items,
@@ -35,10 +45,10 @@ type Destination = { name: string; label: string; icon: IconName; stack?: boolea
 // its sessions (./sell/). Dashboard arrives with its step, between Home and Sell.
 const DESTINATIONS: Destination[] = [
   { name: 'index', label: 'Home', icon: 'home' },
-  { name: 'sell', label: 'Sell', icon: 'sell', stack: true },
-  { name: 'stock', label: 'Stock', icon: 'stock', stack: true },
-  { name: 'accounts', label: 'Accounts', icon: 'accounts', stack: true },
-  { name: 'setup', label: 'Setup', icon: 'settings', stack: true },
+  { name: 'sell', label: 'Sell', icon: 'sell', stack: true, sections: SELL_SECTIONS },
+  { name: 'stock', label: 'Stock', icon: 'stock', stack: true, sections: STOCK_SECTIONS },
+  { name: 'accounts', label: 'Accounts', icon: 'accounts', stack: true, sections: ACCOUNTS_SECTIONS },
+  { name: 'setup', label: 'Setup', icon: 'settings', stack: true, sections: SETUP_SECTIONS },
 ];
 
 /** "Cafe 67" → "C6": the first letter of up to two words, for the system badge. */
@@ -68,8 +78,17 @@ export default function SystemLayout() {
   const wide = useShellWide();
   // Only the rail collapses. The narrow drawer's open state belongs to the navigator instead.
   const [expanded, setExpanded] = useState(true);
+  const userId = useSession()?.user.id;
+  // The same query every index reads, so this adds no request of its own.
+  const permissions = usePermissions({ merchantId: id });
 
   if (!merchant) return <MissingMerchant merchants={merchants} />;
+
+  // What the rail and the drawer list: a destination the person can read something in. The owner may read
+  // everything and needs no my_permissions; a member sees Home until theirs arrive. Hidden is not refused —
+  // every screen stays registered below, RLS decides, and an index says so when it has nothing to show.
+  const isOwner = merchant.owner_id === userId;
+  const shown = DESTINATIONS.filter((entry) => !entry.sections || isOwner || readsAny(entry.sections, permissions.data));
 
   // The expanded rail grows with the font scale so its labels stay whole (fontScaled).
   const drawerWidth = wide ? (expanded ? fontScaled(RAIL_EXPANDED) : RAIL_COLLAPSED) : DRAWER_WIDTH;
@@ -94,7 +113,9 @@ export default function SystemLayout() {
             <View style={styles.fill}>{children}</View>
           </View>
         )}
-        drawerContent={(props) => <SystemNav {...props} id={id} name={merchant.name} wide={wide} expanded={expanded} />}
+        drawerContent={(props) => (
+          <SystemNav {...props} id={id} name={merchant.name} wide={wide} expanded={expanded} destinations={shown} />
+        )}
         screenOptions={{
           headerShown: false,
           drawerType: wide ? 'permanent' : 'front',
@@ -196,11 +217,12 @@ type NavProps = DrawerContentComponentProps & {
   name: string;
   wide: boolean;
   expanded: boolean;
+  destinations: Destination[];
 };
 
 // Components B and C: the same header, divider and destinations, laid out as a rail when wide and as
 // drawer rows when narrow. No system switcher — the way out of a system is the header's Your systems.
-function SystemNav({ state, navigation, id, name, wide, expanded }: NavProps) {
+function SystemNav({ state, navigation, id, name, wide, expanded, destinations }: NavProps) {
   const { colors } = useAppTheme();
   const active = state.routes[state.index]?.name;
   // The drawer always shows labels; the rail shows them only while expanded.
@@ -227,7 +249,7 @@ function SystemNav({ state, navigation, id, name, wide, expanded }: NavProps) {
       <View style={[styles.divider, { backgroundColor: colors.onPrimary }]} />
 
       <View style={styles.items}>
-        {DESTINATIONS.map((entry) => (
+        {destinations.map((entry) => (
           <NavItem
             key={entry.name}
             label={entry.label}

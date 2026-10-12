@@ -341,7 +341,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | --- | --- |
 | Header | `Appbar.Header` on `primary`: menu `Appbar.Action`, `Appbar.Content`, bell + Your systems (`grid`) actions. Your systems is the way out of a system: on iOS the left-edge swipe opens the drawer, so there is no back gesture |
 | Rail / drawer | expo-router `Drawer`, `drawerType` `'permanent'` wide, `'front'` narrow. `drawerStyle` zeroes the hairline border, front-drawer corners `radius.xl`. Rail square + flush |
-| Rail / drawer item | `Pressable`: `Icon` + `labelLarge`. Active: `primaryHighlight` ground, 4px `accent` bar left |
+| Rail / drawer item | `Pressable`: `Icon` + `labelLarge`. Active: `primaryHighlight` ground, 4px `accent` bar left. Listed only for someone who may read a row of the destination's index (`readsAny`, `src/components/record-index.tsx`, over the sections that index exports): Home always, the owner everything, a member Home alone until their permissions load. Rejected: not registering the screen — a deep link must still land, and the index already says when it has nothing to show |
 | Group row | opens / closes its screens, not a destination (none now: Home, Stock and Setup are the destinations) |
 | Destination with a stack | Stock and Setup (`systems/[id]/stock/`, `systems/[id]/setup/`, each its own `Stack`): a tap on one always lands on its index, as a rail item should |
 | Collapse to icons | menu action toggles `RAIL_EXPANDED` / `RAIL_COLLAPSED` |

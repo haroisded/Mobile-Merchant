@@ -16,7 +16,7 @@ import { radius, spacing } from '../../themes';
 type SellRoute = 'register' | 'open-session' | 'close-session' | 'pos-invoices' | 'pos-opening-entries' | 'pos-closing-entries';
 
 // What was sold and when, as .claude/erpnext-docs/POS-System-Added-Features.md Step 18 groups it.
-const SECTIONS: IndexSection<SellRoute>[] = [
+export const SELL_SECTIONS: IndexSection<SellRoute>[] = [
   {
     title: 'Orders & Sessions',
     hint: 'What was sold, and each session it was sold in',
@@ -39,7 +39,7 @@ export function SellIndex({ merchantId, merchantName, isOwner }: { merchantId: s
       title="Sell"
       meta="Open a session, sell at the Register, close the session"
       isOwner={isOwner}
-      sections={SECTIONS}
+      sections={SELL_SECTIONS}
       onOpen={open}
       offline="You're offline. Sell will load when you reconnect."
       failure="Couldn't load Sell. Try again."

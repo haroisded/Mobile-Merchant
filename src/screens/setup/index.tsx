@@ -40,7 +40,7 @@ type SetupRoute =
 
 // The foundation a POS needs before its first item, grouped as .claude/erpnext-docs/POS-System-Only-Features.md
 // groups it. A section appears once its first screen exists; the rest arrive step by step.
-const SECTIONS: IndexSection<SetupRoute>[] = [
+export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   {
     title: 'Company & Calendar',
     hint: 'Who the books belong to, and the years they are kept in',
@@ -179,7 +179,7 @@ export function SetupIndex({ merchantId, merchantName, isOwner }: { merchantId: 
       title="Setup"
       meta="Set these up before the first item is sold"
       isOwner={isOwner}
-      sections={SECTIONS}
+      sections={SETUP_SECTIONS}
       onOpen={(route) => router.push(`/systems/${merchantId}/setup/${route}`)}
       offline="You're offline. Setup will load when you reconnect."
       failure="Couldn't load Setup. Try again."

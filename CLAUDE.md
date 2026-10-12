@@ -338,7 +338,12 @@ for every discount account; `private.seed_discounts_for()` behind `merchants_see
 `pricing_rules` with `pricing_rule_targets`, the invoker RPC `save_pricing_rule`; `save_item` and
 `save_pos_profile` re-created) and `20261012085548_pos_invoice_discounts.sql` (the discount columns on
 `pos_invoices` and `pos_invoice_items`; `pos_checkout` and `private.submit_pos_invoices()` re-created with
-the discount checks and Discount Accounting).
+the discount checks and Discount Accounting). Then access for those documents:
+`20261012131350_access_for_documents.sql` (`public.doctype_links`, which document types link to a
+restrictable doctype and through which column; `private.restricted_merchant_ids()` and
+`private.allowed_record_ids()` taking the document type asked for; `private.apply_doctype_policies()`
+re-created with the link clause and a linking document's rows held to their parent, and re-applied;
+`private.validate_user_permission()` holding Applicable For to a doctype that links).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
@@ -422,8 +427,10 @@ inside `migrations/`, where `supabase db push` would apply it. The rules and the
 
 A new business table is registered, not hand-policied: in its migration, insert its `public.doctypes`
 row (kind `record`, `single`, `tree`, `document` or `ledger`; `restrictable` when a User Permission may hold
-someone to its records), its `standard_role_permissions` rows (ERPNext's matrix for it), then `select
-private.sync_standard_permissions()` and `select private.apply_doctype_policies('<table>', '<Doctype>')`
+someone to its records), its `standard_role_permissions` rows (ERPNext's matrix for it), a
+`public.doctype_links` row for each of its columns that links it to a restrictable doctype
+(`.claude/instruction_mds/tenancy.md` rule 12 — what makes a User Permission on a Warehouse filter it), then
+`select private.sync_standard_permissions()` and `select private.apply_doctype_policies('<table>', '<Doctype>')`
 (`true` as a third argument for a child table that follows its parent's doctype). That is what makes
 the Role Permissions Manager and User Permissions govern it. Seeding goes in a
 `merchants_seed_NN_<area>` trigger plus a backfill for existing systems. Rejected: policies written by

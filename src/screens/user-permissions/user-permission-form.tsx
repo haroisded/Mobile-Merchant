@@ -6,8 +6,8 @@ import { AdaptiveDialog, FormActions, saveOnce } from '../../components/adaptive
 import { closesForm, useConfirm } from '../../components/confirm-dialog';
 import { ControlledSwitch, FieldGrid } from '../../components/form-fields';
 import { ControlledSelect } from '../../components/search-select';
-import { useDoctypesQuery } from '../../features/doctypes/queries';
-import type { Doctype } from '../../features/doctypes/queries';
+import { useDoctypeLinksQuery, useDoctypesQuery } from '../../features/doctypes/queries';
+import type { Doctype, DoctypeLink } from '../../features/doctypes/queries';
 import { useMembersQuery } from '../../features/members/queries';
 import type { Member } from '../../features/members/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
@@ -26,11 +26,20 @@ export function UserPermissionForm({ merchantId, userPermissionId, memberId, onD
   const list = useUserPermissionsQuery({ merchantId });
   const members = useMembersQuery({ merchantId });
   const doctypes = useDoctypesQuery();
-  if (!list.data || !members.data || !doctypes.data) return null;
+  const links = useDoctypeLinksQuery();
+  if (!list.data || !members.data || !doctypes.data || !links.data) return null;
   const existing = userPermissionId ? list.data.find((permission) => permission.id === userPermissionId) : undefined;
 
   return (
-    <Form merchantId={merchantId} existing={existing} memberId={memberId} members={members.data} doctypes={doctypes.data} onDismiss={onDismiss} />
+    <Form
+      merchantId={merchantId}
+      existing={existing}
+      memberId={memberId}
+      members={members.data}
+      doctypes={doctypes.data}
+      links={links.data}
+      onDismiss={onDismiss}
+    />
   );
 }
 
@@ -40,6 +49,7 @@ type FormProps = {
   memberId: string | undefined;
   members: Member[];
   doctypes: Doctype[];
+  links: DoctypeLink[];
   onDismiss: () => void;
 };
 
@@ -71,7 +81,7 @@ function defaults(existing: UserPermission | undefined, memberId: string | undef
   };
 }
 
-function Form({ merchantId, existing, memberId, members, doctypes, onDismiss }: FormProps) {
+function Form({ merchantId, existing, memberId, members, doctypes, links, onDismiss }: FormProps) {
   const wide = useShellWide();
   const save = useSaveUserPermissionMutation({ merchantId, userPermissionId: existing?.id });
   const remove = useDeleteUserPermissionMutation();
@@ -129,10 +139,13 @@ function Form({ merchantId, existing, memberId, members, doctypes, onDismiss }: 
             required
             title="Allow"
             options={restrictable.map((doctype) => ({ value: doctype.name, label: doctype.name }))}
-            // A value of the old type means nothing under the new one.
-            onPicked={() => setValue('for_value', '')}
+            // A value of the old type means nothing under the new one, and neither does where it applied.
+            onPicked={() => {
+              setValue('for_value', '');
+              setValue('applicable_for', '');
+            }}
           />
-          <Scope merchantId={merchantId} control={control} doctypes={doctypes} />
+          <Scope merchantId={merchantId} control={control} doctypes={doctypes} links={links} />
         </FieldGrid>
       </AdaptiveDialog>
       {confirm.dialog}
@@ -140,14 +153,17 @@ function Form({ merchantId, existing, memberId, members, doctypes, onDismiss }: 
   );
 }
 
-type ScopeProps = { merchantId: string; control: Control<UserPermissionValues>; doctypes: Doctype[] };
+type ScopeProps = { merchantId: string; control: Control<UserPermissionValues>; doctypes: Doctype[]; links: DoctypeLink[] };
 
 /** For Value and the switches that decide where the restriction holds. */
-function Scope({ merchantId, control, doctypes }: ScopeProps) {
+function Scope({ merchantId, control, doctypes, links }: ScopeProps) {
   const records = useRestrictableRecords({ merchantId });
   const allow = useWatch({ control, name: 'allow' });
   const applyToAll = useWatch({ control, name: 'apply_to_all_doctypes' });
   const tree = doctypes.find((doctype) => doctype.name === allow)?.kind === 'tree';
+  // Where a restriction on `allow` can hold: its own records, and the document types that link to it. A
+  // document type with two such columns (a Stock Entry's two warehouses) is listed once.
+  const applicable = [...new Set([allow, ...links.filter((link) => link.link_doctype === allow).map((link) => link.doctype)])];
 
   return (
     <>
@@ -169,7 +185,7 @@ function Scope({ merchantId, control, doctypes }: ScopeProps) {
           required
           title="Applicable For"
           span="full"
-          options={doctypes.map((doctype) => ({ value: doctype.name, label: doctype.name }))}
+          options={applicable.map((name) => ({ value: name, label: name }))}
         />
       )}
       {tree ? (

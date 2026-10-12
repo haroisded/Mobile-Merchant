@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { can, usePermissions } from '../features/role-permissions/queries';
+import type { Permissions } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
@@ -20,6 +21,10 @@ export type IndexEntry<R extends string> = {
 };
 
 export type IndexSection<R extends string> = { title: string; hint: string; entries: IndexEntry<R>[] };
+
+/** Whether these roles may read any row of an index — what decides if its destination shows in the shell. */
+export const readsAny = (sections: IndexSection<string>[], permissions: Permissions | null | undefined) =>
+  sections.some((section) => section.entries.some((entry) => can(permissions, entry.doctype, 'read')));
 
 type Props<R extends string> = {
   merchantId: string;
