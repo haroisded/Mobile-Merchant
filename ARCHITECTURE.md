@@ -1159,7 +1159,8 @@ log shows that order under the `BridgelessReact` tag: `onHostPause(activity)`, `
 text-size change).
 `patches/expo-modules-core+57.0.20.patch` makes `onHostResume()` register the contracts again whenever it
 resumes with another Activity. Run on the emulator after a rebuild, 2026-10-13: the log still shows the late
-destroy, and both pickers open after a text-size and after a display-size change, in the same process.
+destroy, and both pickers open after a text-size, a display-size and a language change (English to Filipino
+and back), in the same process.
 `expo` 57.0.28 and `expo-modules-core` 57.0.22 carry the same code, so an
 update does not replace the patch. Rejected: running the wrapper's `onDestroy` inline — the origin, but it
 reorders Activity teardown for the whole app; a patch to `expo-file-system` — linked as a prebuilt AAR, its

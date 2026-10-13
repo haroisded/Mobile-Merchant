@@ -100,8 +100,8 @@ Without it, a relaunch (text size, display size or language changed in Settings)
 `ReactActivityDelegateWrapper` posts `onDestroy`, the new Activity resumes first, and React Native's
 `ReactHostImpl.onHostDestroy(activity)` drops the late destroy. Read in `node_modules` and seen in the
 emulator's log (`BridgelessReact`, 2026-10-13); `ARCHITECTURE.md` Step 23 has the trace. With the patch
-built in, both pickers opened after a text-size and a display-size change (phone emulator, same day).
-Unverified: a physical phone, and a language change.
+built in, both pickers opened after a text-size, a display-size and a language change (phone emulator,
+same day). Unverified: a physical phone.
 
 - It is Kotlin: it reaches the app only through a rebuild, which is the human's
   (`.claude/instruction_mds/expo.md` rule 4).
