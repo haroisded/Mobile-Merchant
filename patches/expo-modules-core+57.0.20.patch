@@ -1,0 +1,33 @@
+diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt
+index 7bb61c6..d7c4f9b 100644
+--- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt
++++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt
+@@ -68,6 +68,9 @@ class AppContext(
+ 
+   private var hostWasDestroyed = false
+ 
++  // The Activity the activity contracts were last registered for, see [onHostResume].
++  private var contractsActivity: WeakReference<Activity>? = null
++
+   private val modulesQueueDispatcher = HandlerThread("expo.modules.AsyncFunctionQueue")
+     .apply { start() }
+     .looper.let { Handler(it) }
+@@ -308,10 +311,17 @@ class AppContext(
+     }
+ 
+     // We need to re-register activity contracts when reusing AppContext with new Activity after host destruction.
+-    if (hostWasDestroyed) {
++    // Also when the host resumes with another Activity and no destroy reached us in between: on a relaunch
++    // (a configuration change the manifest does not handle) `expo.modules.ReactActivityDelegateWrapper` posts
++    // the old Activity's `onDestroy`, the new Activity resumes first, and React Native then drops the late
++    // destroy (`ReactHostImpl.onHostDestroy(activity)`), so [hostWasDestroyed] is never set — while the
++    // launchers were already unregistered with the old Activity (`AppContextActivityResultRegistry`).
++    val registeredFor = contractsActivity
++    if (hostWasDestroyed || (registeredFor != null && registeredFor.get() !== activity)) {
+       hostWasDestroyed = false
+       registry.registerActivityContracts()
+     }
++    contractsActivity = WeakReference<Activity>(activity)
+ 
+     activityResultsManager.onHostResume(activity)
+     registry.post(EventName.ACTIVITY_ENTERS_FOREGROUND)

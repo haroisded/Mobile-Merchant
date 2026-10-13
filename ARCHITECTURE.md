@@ -1146,11 +1146,26 @@ The files are the phone's own pickers, `src/lib/files.ts` over `expo-file-system
 Template asks for a folder; Android refuses the Downloads folder itself. What the Item form and this page
 both say for a refused item is `itemRefusal` (`src/lib/errors.ts`).
 
-**Known limit, Android.** Once the system has rebuilt the app's window while the app was open — the text
-size changed in Settings — the module's picker launcher is not registered again, and a pick rejects until
-the app is restarted (`Attempting to launch an unregistered ActivityResultLauncher`, seen on the emulator,
-2026-10-13). `src/lib/files.ts` calls the picker in the form that rejects rather than answering `canceled`,
-and the page says to close the app and open it again. The fix itself is native, so it needs a rebuild.
+**The pickers after Android rebuilds the window.** Once the system has rebuilt the app's window while the
+app was open — the text size, display size or language changed in Settings — a pick rejected until the app
+was restarted (`Attempting to launch an unregistered ActivityResultLauncher`, seen on the emulator,
+2026-10-13). Three pieces, each right alone: `expo-modules-core`'s `AppContextActivityResultRegistry`
+unregisters a launcher when its Activity is destroyed; `AppContext.onHostResume()` registered the contracts
+again only when `AppContext.onHostDestroy()` had run; and `expo`'s `ReactActivityDelegateWrapper` posts
+`onDestroy` while `onResume` runs inline, so on a relaunch the new Activity resumes first and React Native's
+`ReactHostImpl.onHostDestroy(activity)` drops the late destroy as not its current Activity. The emulator's
+log shows that order under the `BridgelessReact` tag: `onHostPause(activity)`, `onHostResume(activity)`, then
+`onHostDestroy(activity)` with no `ReactContext.onHostDestroy()` after it (2026-10-13, both directions of a
+text-size change).
+`patches/expo-modules-core+57.0.20.patch` makes `onHostResume()` register the contracts again whenever it
+resumes with another Activity. Run on the emulator after a rebuild, 2026-10-13: the log still shows the late
+destroy, and both pickers open after a text-size and after a display-size change, in the same process.
+`expo` 57.0.28 and `expo-modules-core` 57.0.22 carry the same code, so an
+update does not replace the patch. Rejected: running the wrapper's `onDestroy` inline — the origin, but it
+reorders Activity teardown for the whole app; a patch to `expo-file-system` — linked as a prebuilt AAR, its
+source is not compiled. `src/lib/files.ts` still calls the picker in the form that rejects rather than
+answering `canceled`, and the page still says to close the app and open it again — for a build made without
+the patch. Still lost: the one pick in flight when the Activity is destroyed under an open picker.
 Unverified: iOS — the pickers were run on Android only. Out of scope: updating existing items, importing
 any other record, a saved import log, files other than comma-separated.
 

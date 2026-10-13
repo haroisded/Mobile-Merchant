@@ -80,7 +80,7 @@ together and explained inline.
   every item — up to 500 a file — with its price and its opening stock, and lists what was made. The phone's
   own file pickers, through `expo-file-system`: no extra native package
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
-- **Patched dependency** via `patch-package`, applied automatically on install
+- **Patched dependencies** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
 
 Exact versions are in `package.json`.
@@ -123,13 +123,32 @@ flex: flattenedStyles.height || !container && (flattenedStyles.flex || flattened
 Both builds carry the change: `lib/module/components/Surface.js` (line 102) and
 `lib/commonjs/components/Surface.js` (line 110).
 
+`patches/expo-modules-core+57.0.20.patch` fixes the phone's file pickers on Android. When the system
+rebuilds the app's window while the app is open — the text size, display size or language changed in
+Settings — a module's picker launcher is unregistered with the old window and was never registered
+for the new one, so **Download Template** and **Choose File** on Import Items rejected until the app
+was restarted. `AppContext.onHostResume()` now registers the launchers again whenever it resumes with
+another Activity. The mechanism is in [`ARCHITECTURE.md`](./ARCHITECTURE.md), Step 23.
+
+This one is Kotlin, so it reaches the app only through a new development build
+(`npm run android`) — a reload does not carry it.
+
 `npm install` applies every patch through the `postinstall` hook, so a fresh clone needs nothing
 manual. To change or add one: edit the files under `node_modules/<package>/`, regenerate, and
 commit the result.
 
 ```bash
 npx patch-package react-native-paper   # writes patches/react-native-paper+5.15.3.patch
+
+# a package that has been built on this machine: name the changed file, or its android/build/
+# output lands in the patch. Keep the pattern free of path separators and backslashes — on Windows
+# (Git Bash) the two patterns tried with them matched nothing, and no patch was written.
+npx patch-package expo-modules-core --include 'AppContext[.]kt$'
 ```
+
+A patch is named for one version. After an Expo update moves `expo-modules-core`, make the patch
+again for the new version — or drop it, once Expo's own `ReactActivityDelegateWrapper` no longer
+posts `onDestroy`.
 
 ---
 

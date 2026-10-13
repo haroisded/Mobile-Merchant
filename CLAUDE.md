@@ -91,6 +91,33 @@ are enforced nowhere in the version installed here.
 Use `https://docs.expo.dev/versions/v57.0.0/`. `versions/latest` drifts to SDK 58 and stops
 describing this project.
 
+### One Expo package is patched in native code
+
+`patches/expo-modules-core+57.0.20.patch` changes `AppContext.onHostResume()`: activity contracts are
+registered again whenever the host resumes with another Activity, not only after a delivered destroy.
+Without it, a relaunch (text size, display size or language changed in Settings) leaves
+`expo-file-system`'s picker launcher unregistered until the app restarts — `expo`'s
+`ReactActivityDelegateWrapper` posts `onDestroy`, the new Activity resumes first, and React Native's
+`ReactHostImpl.onHostDestroy(activity)` drops the late destroy. Read in `node_modules` and seen in the
+emulator's log (`BridgelessReact`, 2026-10-13); `ARCHITECTURE.md` Step 23 has the trace. With the patch
+built in, both pickers opened after a text-size and a display-size change (phone emulator, same day).
+Unverified: a physical phone, and a language change.
+
+- It is Kotlin: it reaches the app only through a rebuild, which is the human's
+  (`.claude/instruction_mds/expo.md` rule 4).
+- It is named for one version. Any change to the `expo-modules-core` version — `npx expo install --fix`
+  included — means making it again; check first whether upstream still needs it.
+- Make it with `npx patch-package expo-modules-core --include 'AppContext[.]kt$'`. Without `--include`
+  the package's local `android/build/` output lands in the patch. Keep path separators and backslashes
+  out of the pattern: on Windows (Git Bash) the two patterns tried with them matched nothing
+  ("There don't appear to be any changes", 2026-10-13).
+- A patch to `expo-file-system` would do nothing: it is linked as a prebuilt AAR (`local-maven-repo`),
+  not compiled from its source.
+
+Rejected: running the wrapper's `onDestroy` inline in `expo` — the origin, but it reorders Activity
+teardown for the whole app and the dev launcher; `android:configChanges` — stops only some relaunches;
+`expo-document-picker` and `expo-sharing` — two native packages to route around four lines.
+
 ### Where the documentation lives
 
 Three files at the root, and a change usually touches more than one:

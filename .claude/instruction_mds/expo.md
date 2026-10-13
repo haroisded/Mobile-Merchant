@@ -14,7 +14,8 @@ and where this repo overrides it.
 3. **Install with `npx expo install <pkg>`**, never bare `npm install`.
 4. **Never build, and never plan around Expo Go.** Expo Go cannot run this app — the native Google
    sign-in module is not in it. A change needing a native rebuild (new native dependency, config
-   plugin, `app.json` plugin) is a thing to tell the human, not to run.
+   plugin, `app.json` plugin, a patch to a package's Kotlin or Swift) is a thing to tell the human,
+   not to run.
 5. **These skill rules apply to every screen:** `React.use` over `useContext`;
    `process.env.EXPO_OS` over `Platform.OS`; `expo-router/react-navigation`, never
    `@react-navigation/*` directly; kebab-case files and `src/screens/`. Icons, `NativeTabs` and
@@ -36,8 +37,8 @@ and where this repo overrides it.
 | Motion, gestures, press feedback, keyboard | `expo-animation` | — |
 | Fetching, caching, offline, screen states | `expo-data-fetching` | [`data-layer.md`](./data-layer.md) — it overrides the skill's defaults |
 | Theme tokens, drift audits | `expo-design-system` | [`frontend.md` §1–§2](./frontend.md) — `src/themes.js` is the existing system |
-| Camera, audio, video, files, secure storage | `expo-native-ui` references (`media.md`, `storage.md`) | A file the person picks, or a folder to save into: `src/lib/files.ts` over `expo-file-system` 57.0.7 (`File.pickFileAsync`, `Directory.pickDirectoryAsync`) — already in the development build, so no rebuild. Not `expo-document-picker` or `expo-sharing` (the human, 2026-10-13) |
-| A dev build, or a native dependency added | `expo-dev-client` | rule 4 — the human builds |
+| Camera, audio, video, files, secure storage | `expo-native-ui` references (`media.md`, `storage.md`) | A file the person picks, or a folder to save into: `src/lib/files.ts` over `expo-file-system` 57.0.7 (`File.pickFileAsync`, `Directory.pickDirectoryAsync`) — already in the development build, so no rebuild. Not `expo-document-picker` or `expo-sharing` (the human, 2026-10-13). Its pickers survive a rebuilt Activity only with `patches/expo-modules-core+57.0.20.patch` ([`CLAUDE.md` §2](../../CLAUDE.md)) |
+| A dev build, a native dependency added, or a package's native code patched | `expo-dev-client` | rule 4 — the human builds |
 | Upgrading past SDK 57 | `expo-upgrade` | a pass of its own |
 
 `expo-tailwind-setup` is not installed and this app has no Tailwind — Paper and `src/themes.js` are

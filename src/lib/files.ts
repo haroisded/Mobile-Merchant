@@ -15,7 +15,11 @@ import { Directory, File } from 'expo-file-system';
  * window while the app was open — the text size changed in Settings — the module's picker launcher is no
  * longer registered (expo-modules-core's AppContextActivityResultRegistry.kt unregisters it with the old
  * window), and every pick rejects with "Attempting to launch an unregistered ActivityResultLauncher" until the
- * app is restarted. Nothing in JavaScript can register it again, so the screen says to restart.
+ * app is restarted.
+ *
+ * Fixed where it breaks: patches/expo-modules-core+57.0.20.patch registers the launcher again for the new
+ * window (ARCHITECTURE.md, Step 23). This stays for a build made without that patch — nothing in JavaScript
+ * can register the launcher, so the screen says to restart rather than doing nothing.
  */
 export class PickerUnavailableError extends Error {}
 
