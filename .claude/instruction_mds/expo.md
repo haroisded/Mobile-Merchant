@@ -36,7 +36,7 @@ and where this repo overrides it.
 | Motion, gestures, press feedback, keyboard | `expo-animation` | — |
 | Fetching, caching, offline, screen states | `expo-data-fetching` | [`data-layer.md`](./data-layer.md) — it overrides the skill's defaults |
 | Theme tokens, drift audits | `expo-design-system` | [`frontend.md` §1–§2](./frontend.md) — `src/themes.js` is the existing system |
-| Camera, audio, video, files, secure storage | `expo-native-ui` references (`media.md`, `storage.md`) | — |
+| Camera, audio, video, files, secure storage | `expo-native-ui` references (`media.md`, `storage.md`) | A file the person picks, or a folder to save into: `src/lib/files.ts` over `expo-file-system` 57.0.7 (`File.pickFileAsync`, `Directory.pickDirectoryAsync`) — already in the development build, so no rebuild. Not `expo-document-picker` or `expo-sharing` (the human, 2026-10-13) |
 | A dev build, or a native dependency added | `expo-dev-client` | rule 4 — the human builds |
 | Upgrading past SDK 57 | `expo-upgrade` | a pass of its own |
 

@@ -147,6 +147,30 @@ export function postingRefusal(cause: Error | null): string | null {
   return POSTING_REFUSALS.get(postgrestError(cause)?.message ?? '') ?? null;
 }
 
+// What the database names when it refuses a new item (supabase/migrations/20261011134250_items.sql,
+// 20261011134357_item_prices.sql, and 20261011170112_stock_in_and_adjustments.sql for the Opening Stock).
+// Here because the Item form and Import Items both create items.
+const ITEM_REFUSALS = new Map([
+  ['valuation_rate_required', 'Opening Stock needs a Valuation Rate, or a Standard Selling Rate to take it from.'],
+  ['no_default_warehouse', 'Opening Stock needs a warehouse: give the item a Default Warehouse, or set one in Stock Settings.'],
+  ['item_group_is_group', 'Pick an item group that is not a group: items go in the groups under it.'],
+  ['default_invalid', "The unit or one of the defaults can't be used any more — pick it again."],
+  ['no_default_price_list', 'Selling Settings has no Default Price List for the Standard Selling Rate. Set one there, or clear the rate.'],
+  ['price_list_disabled', "Selling Settings' Default Price List is disabled, so the Standard Selling Rate has nowhere to go. Clear the rate, or enable the list."],
+  ['no_item_series', 'Document Naming Settings has no series for Item. Add one there first.'],
+  ['no_fiscal_year', "No fiscal year covers today, so the Item series can't number this item."],
+]);
+
+/**
+ * The words for an item the database refused to create — a code already taken, a default it can't use, or
+ * what posting its Opening Stock met (postingRefusal) — null for any other failure.
+ */
+export function itemRefusal(cause: Error | null): string | null {
+  const error = postgrestError(cause);
+  if (error?.code === '23505') return 'There is already an item with this code.';
+  return ITEM_REFUSALS.get(error?.message ?? '') ?? postingRefusal(cause);
+}
+
 /** The line under a form or confirm: an offline wait, or what went wrong. */
 export type Notice = { type: 'error' | 'info'; text: string };
 

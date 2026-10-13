@@ -346,6 +346,9 @@ re-created with the link clause and a linking document's rows held to their pare
 `private.validate_user_permission()` holding Applicable For to a doctype that links). Then the Dashboard,
 with no table: `20261012200010_dashboard.sql` (the invoker report functions `public.dashboard_cards`,
 `sales_by_day`, `top_selling` and `stock_alerts` — the caller's own policies decide every row they add up).
+Then Bulk Import, with no table either: `20261012204315_import_items.sql` (the invoker RPC
+`public.import_items` — `save_item` for each row of a file and one Opening Stock reconciliation for them all,
+every row or none; a refusal is re-raised with the row it met in `hint`).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
 policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

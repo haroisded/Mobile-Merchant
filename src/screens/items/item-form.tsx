@@ -36,7 +36,7 @@ import type { StockSettings } from '../../features/stock-settings/queries';
 import { uomOptions, useUomsQuery } from '../../features/uoms/queries';
 import type { Uom } from '../../features/uoms/queries';
 import { warehouseLabel } from '../../features/warehouses/queries';
-import { failureMessage, mutationNotice, postgrestError, postingRefusal, usedElsewhere } from '../../lib/errors';
+import { failureMessage, itemRefusal, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 
 type Records = {
   groups: ItemGroup[];
@@ -141,25 +141,8 @@ const saved = (item: Item): ItemValues => ({
   taxes: item.item_taxes.map((row) => ({ item_tax_template_id: row.item_tax_template_id, tax_category_id: text(row.tax_category_id), valid_from: text(row.valid_from) })),
 });
 
-// Each refusal the database names (supabase/migrations/20261011134250_items.sql, 20261011134357_item_prices.sql,
-// and 20261011170112_stock_in_and_adjustments.sql for the Opening Stock). What posting the Opening Stock can
-// meet beyond these is postingRefusal's (src/lib/errors.ts).
-const REFUSALS = new Map([
-  ['valuation_rate_required', 'Opening Stock needs a Valuation Rate, or a Standard Selling Rate to take it from.'],
-  ['no_default_warehouse', 'Opening Stock needs a warehouse: pick a Default Warehouse below, or set one in Stock Settings.'],
-  ['item_group_is_group', 'Pick an item group that is not a group: items go in the groups under it.'],
-  ['default_invalid', "The unit or one of the defaults can't be used any more — pick it again."],
-  ['no_default_price_list', 'Selling Settings has no Default Price List for the Standard Selling Rate. Set one there, or clear the rate.'],
-  ['price_list_disabled', "Selling Settings' Default Price List is disabled, so the Standard Selling Rate has nowhere to go. Clear the rate, or enable the list."],
-  ['no_item_series', 'Document Naming Settings has no series for Item. Add one there first.'],
-  ['no_fiscal_year', "No fiscal year covers today, so the Item series can't number this item."],
-]);
-
-const saveFailure = (error: Error | null) => {
-  const cause = postgrestError(error);
-  if (cause?.code === '23505') return 'There is already an item with this code.';
-  return REFUSALS.get(cause?.message ?? '') ?? postingRefusal(error) ?? failureMessage("Couldn't save this item. Try again.");
-};
+// Each refusal the database names for a new item is itemRefusal's (src/lib/errors.ts), shared with Import Items.
+const saveFailure = (error: Error | null) => itemRefusal(error) ?? failureMessage("Couldn't save this item. Try again.");
 
 const deleteFailure = (cause: Error | null) =>
   usedElsewhere(cause) ??

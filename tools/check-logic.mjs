@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
+import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
 import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { pickPricingRule, ruleRate } from '../src/features/pricing-rules/apply.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
@@ -400,5 +401,66 @@ assert.deepEqual(periodRange('month', '2026-11-01'), { from: '2026-11-01', to: '
 // One bar is no chart: Today draws the last seven days; the other periods draw their own.
 assert.deepEqual(chartRange('today', '2026-10-13'), periodRange('week', '2026-10-13'));
 assert.deepEqual(chartRange('month', '2026-10-13'), periodRange('month', '2026-10-13'));
+
+// src/features/items/csv.ts — the Item import's parser and checks (POS-System-Added-Features.md 23.1).
+assert.deepEqual(parseCsv('a,b\r\n1,2\r\n'), [['a', 'b'], ['1', '2']]);
+// Quotes hold commas, line breaks and doubled quotes; LF, CR and a missing last line break each end a row; the
+// byte order mark a spreadsheet writes first is dropped.
+assert.deepEqual(parseCsv('﻿a,"b,1"\n"line 1\nline 2","say ""hi"""\rlast,'), [['a', 'b,1'], ['line 1\nline 2', 'say "hi"'], ['last', '']]);
+// A blank line keeps its place, so a row's number is the spreadsheet's.
+assert.deepEqual(parseCsv('a\n\nb'), [['a'], [''], ['b']]);
+const LOOKUPS = {
+  itemCodes: ['COFFEE'],
+  groups: [{ id: 'all', item_group_name: 'All Item Groups', is_group: true }, { id: 'products', item_group_name: 'Products', is_group: false }, { id: 'services', item_group_name: 'Services', is_group: false }],
+  uoms: [{ id: 'nos', uom_name: 'Nos', enabled: true, must_be_whole_number: true }, { id: 'kg', uom_name: 'Kg', enabled: true, must_be_whole_number: false }, { id: 'old', uom_name: 'Dozen', enabled: false, must_be_whole_number: true }],
+  brands: [{ id: 'acme', brand: 'Acme' }],
+  codeFromSeries: false,
+  defaultGroup: 'products',
+  defaultUom: 'nos',
+  hasWarehouse: true,
+  hasPriceList: true,
+  mayPrice: true,
+  mayStock: true,
+};
+const readLines = (lines, lookups = LOOKUPS) => readItemsCsv([ITEM_CSV_COLUMNS.join(','), ...lines].join('\n'), lookups);
+// What a file gets wrong, as "row column" in the order found.
+const wrong = (lines, lookups) => readLines(lines, lookups).errors.map((error) => `${error.row} ${error.column}`.trim());
+// The template as downloaded: no items, and nothing wrong.
+assert.deepEqual(readItemsCsv(itemsTemplate(), LOOKUPS), { rows: [], errors: [] });
+// A good file. Blank group and unit are Stock Settings'; a blank yes/no is the form's start; the header is row 1,
+// and a blank line still counts as a row.
+const good = readLines(['TEA,Green Tea,,,"Loose, 50 g",Acme,,,120,10,45', '', ' SVC , Delivery ,Services,Kg,,,NO,no,,,']);
+assert.deepEqual(good.errors, []);
+assert.deepEqual(good.rows, [
+  { row: 2, item: { item_code: 'TEA', item_name: 'Green Tea', item_group_id: 'products', stock_uom: 'nos', description: 'Loose, 50 g', brand_id: 'acme', disabled: false, is_stock_item: true, standard_rate: '120', opening_stock: '10', valuation_rate: '45' } },
+  { row: 4, item: { item_code: 'SVC', item_name: 'Delivery', item_group_id: 'services', stock_uom: 'kg', description: '', brand_id: '', disabled: false, is_stock_item: false, standard_rate: '', opening_stock: '', valuation_rate: '' } },
+]);
+// The code: missing, one an item already has, one an earlier row has — and too long, with the name.
+assert.deepEqual(wrong([',No code', 'COFFEE', 'TEA', 'TEA', `${'X'.repeat(141)},${'N'.repeat(141)}`]), ['2 Item Code', '3 Item Code', '5 Item Code', '6 Item Code', '6 Item Name']);
+assert.equal(readLines(['TEA', 'TEA']).errors[0].message, 'Row 2 has the same code.');
+// Under the Item series the code is not read at all, and is left for the series to give.
+assert.deepEqual([wrong([',Tea', ',Cake'], { ...LOOKUPS, codeFromSeries: true }), readLines(['TYPED'], { ...LOOKUPS, codeFromSeries: true }).rows[0].item.item_code], [[], '']);
+// A name not in the system is a mistake, never a new record; a group that is a group and a disabled unit too.
+assert.deepEqual(wrong(['A,,Drinks', 'B,,All Item Groups', 'C,,,Bottle', 'D,,,Dozen', 'E,,,,,Nestle', 'F,,products']), ['2 Item Group', '3 Item Group', '4 Default Unit of Measure', '5 Default Unit of Measure', '6 Brand', '7 Item Group']);
+assert.deepEqual(wrong(['A'], { ...LOOKUPS, defaultGroup: null, defaultUom: null }), ['2 Item Group', '2 Default Unit of Measure']);
+// yes/no is 1/0, yes/no or true/false in any case; a number is digits with a decimal point, 0 or more.
+assert.deepEqual(readLines(['A,,,,,,TRUE,0', 'B,,,,,,No,Yes']).rows.map(({ item }) => [item.disabled, item.is_stock_item]), [[true, false], [false, true]]);
+assert.deepEqual(wrong(['A,,,,,,maybe,x', 'B,,,,,,,,"1,200"', 'C,,,,,,,,-5', 'D,,,,,,,,,₱10', 'E,,,,,,,,,,abc']), ['2 Disabled', '2 Maintain Stock', '3 Standard Selling Rate', '4 Standard Selling Rate', '5 Opening Stock', '6 Valuation Rate']);
+// Opening Stock: on a service; a fraction of a unit that can't be divided; with no rate to value it — a blank
+// Valuation Rate takes the Standard Selling Rate, a typed 0 does not.
+assert.deepEqual(wrong(['A,,,,,,,no,,5,10', 'B,,,,,,,,,2.5,10', 'C,,,Kg,,,,,,2.5,10', 'D,,,,,,,,,5', 'E,,,,,,,,80,5', 'F,,,,,,,,80,5,0']), ['2 Opening Stock', '3 Opening Stock', '5 Valuation Rate', '7 Valuation Rate']);
+// What the settings and the importer's roles do not allow is said before the database is asked.
+assert.deepEqual(wrong(['A,,,,,,,,80,5,10'], { ...LOOKUPS, hasPriceList: false, hasWarehouse: false }), ['2 Standard Selling Rate', '2 Opening Stock']);
+assert.deepEqual(wrong(['A,,,,,,,,80,5,10'], { ...LOOKUPS, mayPrice: false, mayStock: false }), ['2 Standard Selling Rate', '2 Opening Stock']);
+assert.deepEqual(wrong(['A,,,,,,,,0,0'], { ...LOOKUPS, hasPriceList: false, hasWarehouse: false, mayPrice: false, mayStock: false }), []);
+// Not the template: another header, semicolons, an extra column, an extra cell in a row, nothing at all.
+assert.deepEqual(readItemsCsv('Code,Name\nA,B', LOOKUPS), { rows: [], errors: [{ row: 1, column: '', message: 'Column 1 should be "Item Code", and the file has "Code". Download the template and fill that in.' }] });
+assert.match(readItemsCsv(`${ITEM_CSV_COLUMNS.join(';')}\nA;B`, LOOKUPS).errors[0].message, /semicolons/);
+assert.match(readItemsCsv(`${ITEM_CSV_COLUMNS.join(',')},Barcode\nA`, LOOKUPS).errors[0].message, /more columns/);
+assert.deepEqual(wrong([`A${','.repeat(11)}extra`]), ['2']);
+assert.deepEqual(readItemsCsv('\n \n', LOOKUPS).errors.map((error) => error.row), [0]);
+// 500 items a file: the 501st makes one mistake of the whole file, first in the list.
+const many = (count) => readLines(Array.from({ length: count }, (_, index) => `BULK-${index}`));
+assert.deepEqual([many(500).errors.length, many(501).errors.map((error) => error.row)], [0, [0]]);
 
 console.log('check:logic — all assertions passed.');

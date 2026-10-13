@@ -4,6 +4,17 @@
 -- DESTROYS DATA. Every revert, newest first, which takes the schema back to nothing. A migration
 -- marked `-- no-revert:` has no block here.
 
+-- ===== 20261012204315_import_items.sql =====
+
+-- Revert of supabase/migrations/20261012204315_import_items.sql. Run newest first
+-- (.claude/instruction_mds/migrations.md rule 6).
+--
+-- Destroys no data: one function and nothing else — the items, prices and opening stock an import already
+-- made stay. Regenerate src/lib/database.types.ts afterwards — Import Items calls it.
+
+drop function if exists public.import_items(uuid, jsonb);
+
+
 -- ===== 20261012200010_dashboard.sql =====
 
 -- Revert of supabase/migrations/20261012200010_dashboard.sql. Run newest first

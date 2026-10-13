@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { can, usePermissions } from '../features/role-permissions/queries';
-import type { Permissions } from '../features/role-permissions/queries';
+import type { Permissions, Ptype } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
@@ -14,17 +14,22 @@ import { Text } from './text';
 export type IndexEntry<R extends string> = {
   label: string;
   hint: string;
-  /** The doctype whose Read permission shows this row (private.permitted_merchant_ids). */
+  /** The doctype whose permission shows this row (private.permitted_merchant_ids). */
   doctype: string;
+  /** Which permission on it: Read unless the row is an action — Import Items needs Item create. */
+  ptype?: Ptype;
   /** The page under the destination's directory in src/app/(app)/systems/[id]/. */
   route: R;
 };
 
 export type IndexSection<R extends string> = { title: string; hint: string; entries: IndexEntry<R>[] };
 
-/** Whether these roles may read any row of an index — what decides if its destination shows in the shell. */
+/** Whether these roles may open `entry`'s page. */
+const opens = (entry: IndexEntry<string>, permissions: Permissions | null | undefined) => can(permissions, entry.doctype, entry.ptype ?? 'read');
+
+/** Whether these roles may open any row of an index — what decides if its destination shows in the shell. */
 export const readsAny = (sections: IndexSection<string>[], permissions: Permissions | null | undefined) =>
-  sections.some((section) => section.entries.some((entry) => can(permissions, entry.doctype, 'read')));
+  sections.some((section) => section.entries.some((entry) => opens(entry, permissions)));
 
 type Props<R extends string> = {
   merchantId: string;
@@ -57,13 +62,13 @@ const SECTION_CARD = 320;
 export function RecordIndex<R extends string>({ merchantId, kicker, title, meta, isOwner, sections, onOpen, offline, failure, empty, children }: Props<R>) {
   const { columns, onLayout } = useColumns(SECTION_CARD);
   const permissions = usePermissions({ merchantId });
-  // A row shows only to whom may read it; a section with none left goes. The owner may read everything,
+  // A row shows only to whom may open it; a section with none left goes. The owner may read everything,
   // and the systems list already says who that is — so the owner's rows need no my_permissions, which a
   // fresh start in airplane mode has not fetched.
   const shown = sections
     .map((section) => ({
       ...section,
-      entries: section.entries.filter((entry) => isOwner || can(permissions.data, entry.doctype, 'read')),
+      entries: section.entries.filter((entry) => isOwner || opens(entry, permissions.data)),
     }))
     .filter((section) => section.entries.length > 0);
   // Rows of `columns` sections, the last one padded with empty cells so every card keeps the same width.

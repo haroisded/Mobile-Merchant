@@ -4015,6 +4015,13 @@ export type Database = {
         Args: { p_doctype: string; p_id: string }
         Returns: undefined
       }
+      import_items: {
+        Args: { p_merchant: string; p_rows: Json }
+        Returns: {
+          item_code: string
+          item_name: string
+        }[]
+      }
       my_permissions: { Args: { p_merchant: string }; Returns: Json }
       naming_series_preview: {
         Args: { p_merchant: string }

@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
+import { BoxRow, RowBox } from '../../components/row-box';
 import { SectionHeading } from '../../components/section-heading';
 import { SegmentedButtons } from '../../components/segmented-buttons';
 import { Text } from '../../components/text';
@@ -237,9 +237,9 @@ function TopSelling({ merchant, range }: { merchant: Merchant; range: Range }) {
       <SegmentedButtons value={by} onValueChange={setBy} buttons={TOP_BY} />
       <SegmentedButtons value={grouping} onValueChange={setGrouping} buttons={GROUPINGS} />
       {top.data ? (
-        <Rows empty="No sales in this period.">
+        <RowBox empty="No sales in this period.">
           {top.data.map((row, index) => (
-            <Row
+            <BoxRow
               key={row.id}
               first={index === 0}
               // A group has a name alone; an item its code with it.
@@ -248,7 +248,7 @@ function TopSelling({ merchant, range }: { merchant: Merchant; range: Range }) {
               figure={by === 'qty' ? String(row.qty) : money(row.amount)}
             />
           ))}
-        </Rows>
+        </RowBox>
       ) : (
         <QueryState query={top} offline={OFFLINE} failure={FAILURE} />
       )}
@@ -265,9 +265,9 @@ function StockAlerts({ merchant }: { merchant: Merchant }) {
     <View style={styles.block}>
       <SectionHeading title="Stock Alerts" hint="Out of stock, or at or below the re-order level" />
       {alerts.data ? (
-        <Rows empty="Nothing is out of stock or low.">
+        <RowBox empty="Nothing is out of stock or low.">
           {alerts.data.map((alert, index) => (
-            <Row
+            <BoxRow
               key={`${alert.item_id}:${alert.warehouse_id}`}
               first={index === 0}
               title={itemLabel(alert)}
@@ -275,7 +275,7 @@ function StockAlerts({ merchant }: { merchant: Merchant }) {
               alert={alert.actual_qty <= 0 ? 'Out of stock' : `${alert.actual_qty} left · re-order at ${alert.reorder_level}`}
             />
           ))}
-        </Rows>
+        </RowBox>
       ) : (
         <QueryState query={alerts} offline={OFFLINE} failure={FAILURE} />
       )}
@@ -284,40 +284,6 @@ function StockAlerts({ merchant }: { merchant: Merchant }) {
           Showing the first {ALERTS_SHOWN}. Stock Balance has the rest.
         </Text>
       ) : null}
-    </View>
-  );
-}
-
-/** A 1px box of rows, or the line an empty one shows. */
-function Rows({ empty, children }: { empty: string; children: ReactNode[] }) {
-  const { colors } = useAppTheme();
-
-  if (children.length === 0) return <Text variant="bodyMedium">{empty}</Text>;
-  return <View style={[styles.box, { borderColor: colors.outlineVariant }]}>{children}</View>;
-}
-
-/**
- * One row: a name over a muted line, then either a figure at the end (a best seller's) or a status under them
- * (an alert's, in `error` — .claude/instruction_mds/frontend.md §2.4). A 1px surfaceVariant hairline above every
- * row but the first.
- */
-function Row({ first, title, sub, figure, alert }: { first: boolean; title: string; sub: string; figure?: string; alert?: string }) {
-  const { colors } = useAppTheme();
-
-  return (
-    <View style={[styles.row, first ? null : { borderTopWidth: 1, borderTopColor: colors.surfaceVariant }]}>
-      <View style={styles.rowText}>
-        <Text variant="titleMedium">{title}</Text>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-          {sub}
-        </Text>
-        {alert ? (
-          <Text variant="labelMedium" style={{ color: colors.error }}>
-            {alert}
-          </Text>
-        ) : null}
-      </View>
-      {figure ? <Text variant="titleMedium">{figure}</Text> : null}
     </View>
   );
 }
@@ -331,7 +297,4 @@ const styles = StyleSheet.create({
   gridRow: { flexDirection: 'row', gap: spacing.ms },
   card: { flex: 1, borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', padding: spacing.ms, gap: spacing.xs },
   block: { gap: spacing.sm },
-  box: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, padding: spacing.ms },
-  rowText: { flex: 1, gap: spacing.xs },
 });

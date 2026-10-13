@@ -4,7 +4,7 @@ import { RecordIndex } from '../../components/record-index';
 import type { IndexSection } from '../../components/record-index';
 
 /** The pages under src/app/(app)/systems/[id]/stock/ this index opens. */
-type StockRoute = 'items' | 'item-prices' | 'stock-entries' | 'stock-reconciliations' | 'stock-balance' | 'stock-ledger';
+type StockRoute = 'items' | 'item-prices' | 'import-items' | 'stock-entries' | 'stock-reconciliations' | 'stock-balance' | 'stock-ledger';
 
 // What is sold and what is on hand, grouped as .claude/erpnext-docs/POS-System-Added-Features.md groups it. A
 // section appears once its first screen exists.
@@ -15,6 +15,8 @@ export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
     entries: [
       { label: 'Items', hint: 'Products and services: units, defaults, tax', doctype: 'Item', route: 'items' },
       { label: 'Item Prices', hint: 'The rate of an item in a price list', doctype: 'Item Price', route: 'item-prices' },
+      // An action, not a list: it shows to whoever may create an Item (POS-System-Added-Features.md 23.1).
+      { label: 'Import Items', hint: 'Add many items at once from a CSV file', doctype: 'Item', ptype: 'create', route: 'import-items' },
     ],
   },
   {

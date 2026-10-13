@@ -75,6 +75,10 @@ together and explained inline.
   invoice count, Gross Profit, Open Registers with the cash they should hold, Low Stock); sales per day as a
   bar chart; the best sellers by quantity or amount, by item or item group; and the items out of stock or at
   their re-order level. Each figure is added up from the rows the reader's own roles let them read
+- **Import Items** — under Stock, for whoever may create an Item: save the CSV template to a folder, fill it
+  in, choose it, and read every mistake by row and column before anything is saved; then one tap imports
+  every item — up to 500 a file — with its price and its opening stock, and lists what was made. The phone's
+  own file pickers, through `expo-file-system`: no extra native package
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependency** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -193,7 +197,8 @@ Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `po
 `pricing_rules` with its `pricing_rule_targets`, and the discount columns on `merchants`, `items`,
 `pos_profiles`, `pos_invoices` and `pos_invoice_items`; Step 21 the read-only `doctype_links` — which
 document types follow a User Permission on the record they link to; Step 22 adds no table — four read-only
-report functions the Dashboard calls, each run under the caller's own policies. Triggers named
+report functions the Dashboard calls, each run under the caller's own policies; Step 23 adds none either —
+`public.import_items`, which saves a file's items through the same functions one item's form uses. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

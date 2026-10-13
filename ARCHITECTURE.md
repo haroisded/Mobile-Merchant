@@ -33,6 +33,8 @@ src/lib/money.ts           ERPNext's money: Banker's / Commercial rounding, cash
                            smallest coin, the number formats, the amount in words
 src/lib/tree.ts            the tree masters' walks: children (a restricted branch shows at the top),
                            the path to a node, a node's subtree
+src/lib/files.ts           the device's file pickers (expo-file-system): the text of a picked file,
+                           and a text file saved into a picked folder
 src/lib/theme.ts           useAppTheme() for the Merchant colour keys
 src/lib/icons.tsx          the icon name map ({ ios, android } symbols) and Paper's icon renderer
 src/lib/database.types.ts  generated from the schema; regenerate whenever a migration lands
@@ -52,7 +54,8 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            (inventoryAccount), uoms, uom-conversion-factors, price-lists, brands;
                            item-groups, selling-settings, tax-rules (+ resolve.ts, the rule a sale
                            takes), stock-settings; naming-series, print-formats (+ receipt.ts, what a
-                           receipt prints), letter-heads, print-settings; items, item-prices
+                           receipt prints), letter-heads, print-settings; items (+ csv.ts, what a CSV file
+                           of items holds and what is wrong with it), item-prices
                            (+ resolve.ts, the rate a sale line takes); pricing-rules (+ apply.ts, the
                            rule a cart line takes and its rate); pos-profiles (a register's
                            settings and its child tables); pos-opening-entries, pos-invoices (+ cart.ts,
@@ -84,7 +87,8 @@ src/screens/<screen>/      UI by screen — home (the systems list and the creat
                            (the items, the cart and its payment), pos-orders (the list, a sale's receipt,
                            its return),
                            pos-closing-entries (the list, Close Session, one entry), dashboard (the period
-                           switch, the number cards, sales per day, best sellers, stock alerts), profile, sign-in
+                           switch, the number cards, sales per day, best sellers, stock alerts),
+                           import-items (the template, a file's mistakes, the import and its log), profile, sign-in
 src/components/            one re-export per Paper primitive in use (text.tsx is the Text wrapper:
                            per-variant font-scale cap and iOS ramp), plus what more than one screen or a
                            sheet route draws: adaptive-dialog (+ FormActions, saveOnce),
@@ -105,7 +109,8 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            (a record page's header and its confirmed Delete), receipt (the receipt on
                            screen: a format's sample and a sale's), pos-session (the cashier's open session,
                            and a session page before it), session-amounts-form (an amount per payment
-                           method: Open Session and Close Session) —
+                           method: Open Session and Close Session), row-box (a box of rows: the
+                           Dashboard's lists, an import's mistakes and its log) —
                            and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
@@ -115,7 +120,7 @@ src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the s
 src/app/(app)/(tabs)/      home, notifications, settings, account + the NativeTabs bar
 src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, dashboard.tsx, and four Stacks
                            of their own: sell/ (the index, open-session, register, cart, pos-invoices,
-                           pos-invoice, pos-return, the two entries' lists, close-session, pos-closing-entry), stock/ (the index, items, item, item-prices, the stock
+                           pos-invoice, pos-return, the two entries' lists, close-session, pos-closing-entry), stock/ (the index, items, item, item-prices, import-items, the stock
                            documents and reports), accounts/ (the index, general-ledger; each re-exports
                            the other's document and report pages, so Back returns) and setup/ (the
                            index and one route per Setup page; chart-of-accounts, cost-centers,
@@ -138,7 +143,8 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261011233916_pos_profiles.sql, 20261012004616_pos_shift_and_sale.sql,
                            20261012080419_pos_returns_and_voids.sql, 20261012085121_discounts.sql,
                            20261012085548_pos_invoice_discounts.sql,
-                           20261012131350_access_for_documents.sql, 20261012200010_dashboard.sql
+                           20261012131350_access_for_documents.sql, 20261012200010_dashboard.sql,
+                           20261012204315_import_items.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -157,7 +163,8 @@ tools/fallow-verdict.mjs       runs fallow's review gate and prints a compact ve
 tools/check-logic.mjs          npm run check:logic — asserts the pure date math against Postgres' own,
                                the money module and the tax calculation against ERPNext's results,
                                the tree walks, the Tax Rule a sale takes, what a receipt prints,
-                               the Item Price a sale line takes, and the Dashboard's periods
+                               the Item Price a sale line takes, the Dashboard's periods, and what a CSV
+                               file of items holds
 ```
 
 ---
@@ -1096,6 +1103,56 @@ drawer keeps the screen mounted, so `invalidateDashboard` follows every posting 
 (`invalidateLedgers`, `invalidatePosOpeningEntries`), and a `useFocusEffect` asks again for what went stale
 while another screen was in front. Out of scope: custom dashboards, saved charts, targets, projected
 quantity.
+
+### Step 23, Bulk Import (Items) — `20261012204315_import_items.sql`
+
+docs.frappe.io/erpnext/data-import, /opening-stock. Insert new Items from a CSV file: save the template,
+choose the filled file, see every row and column mistake before anything is saved, import, read the log. One
+file loads items, their first prices and their opening stock. No table, so no doctype, seed or backfill.
+
+**The file is read on the device.** `src/features/items/csv.ts` (import-free, asserted in
+`tools/check-logic.mjs`) holds the template's eleven columns — the Item's 13.1 fields, then Standard Selling
+Rate, Opening Stock and Valuation Rate — a parser (quoted cells, doubled quotes, CRLF, a byte order mark),
+and `readItemsCsv`, which turns each row into the payload `public.save_item` takes or into a mistake named by
+the spreadsheet's row (the header is row 1) and the column's heading. A mistake is: a header that is not the
+template's; a missing code, one an item already has, or one twice in the file; an Item Group, unit or Brand
+not in the system — **never created** — a group that is a group, a disabled unit; a yes/no cell that is
+neither; a number that is not one or is below zero; Opening Stock on an item that keeps no stock, as a
+fraction of a unit that can't be divided, with no rate to value it, with no Default Warehouse in Stock
+Settings, or without the roles to post it; a rate with no Default Price List, or without Item Price create;
+more than 500 rows. A blank Item Group or unit takes Stock Settings' default, as a new item's form starts
+with; names match as typed. Under the Item naming series the code column is not read.
+
+**The write is one function.** `public.import_items(p_merchant, p_rows)` is security **invoker**, so it needs
+what the form needs: Item create, Item Price create for a row with a rate, Stock Reconciliation create and
+submit for a row with opening stock. It calls `public.save_item` for each row — `private.prepare_item`,
+`validate_defaults`, the naming series and the rate's Item Price all run as for one item — with `id` and
+`merchant_id` set by the function and the Default Warehouse Stock Settings'; then **one** Opening Stock
+reconciliation for every row that carries stock, saved and submitted through `save_stock_reconciliation` and
+`submit_document`. Every row or none: a refusal is re-raised with its own SQLSTATE and message and
+`hint = 'row N'` — the Nth row sent, which the screen turns back into the file's row — or `'opening stock'`
+once the rows are in. It answers the created codes and names in the file's order. Rejected: a reconciliation
+per item; a definer function with permission checks of its own. Known ceiling (`ponytail:` in the SQL): 500
+rows a call, the whole file being one statement under the `authenticated` role's 8 s `statement_timeout` —
+500 rows, each with a price and opening stock, took 3.8 s.
+
+The client: **Import Items** is a row of the Stock index, shown with Item **create** — `IndexEntry` gained
+`ptype`, Read unless the row is an action — and a page of the Stock stack
+(`src/screens/import-items/index.tsx`): **Download Template**, **Choose File**, the file's mistakes or "n
+items ready", **Import** through `sendOnce`, then the log with **Import Another File** and **Go to Items**.
+The files are the phone's own pickers, `src/lib/files.ts` over `expo-file-system` 57.0.7, which ships with
+`expo` and was already in the development build — no new native package and no rebuild (the human,
+2026-10-13; rejected: `expo-document-picker` and `expo-sharing`). The module has no "save as", so Download
+Template asks for a folder; Android refuses the Downloads folder itself. What the Item form and this page
+both say for a refused item is `itemRefusal` (`src/lib/errors.ts`).
+
+**Known limit, Android.** Once the system has rebuilt the app's window while the app was open — the text
+size changed in Settings — the module's picker launcher is not registered again, and a pick rejects until
+the app is restarted (`Attempting to launch an unregistered ActivityResultLauncher`, seen on the emulator,
+2026-10-13). `src/lib/files.ts` calls the picker in the form that rejects rather than answering `canceled`,
+and the page says to close the app and open it again. The fix itself is native, so it needs a rebuild.
+Unverified: iOS — the pickers were run on Android only. Out of scope: updating existing items, importing
+any other record, a saved import log, files other than comma-separated.
 
 ---
 

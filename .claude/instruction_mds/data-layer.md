@@ -66,6 +66,21 @@ the poster — never calculated twice. A return goes through the same `pos_check
 the **stored** sale by quantity — its lines, and each tax row's `item_wise_tax_detail` — and never runs the
 price or tax engines again. Rejected: recalculating a return, wrong once a template changes after the sale.
 
+**Many records from one file are one invoker RPC, and the file is read on the device.**
+`public.import_items(p_merchant, p_rows)` (`useImportItemsMutation`, `src/features/items/queries.ts`) is
+security **invoker** over the RPCs one item's form uses — `save_item` per row, then **one** Opening Stock
+reconciliation for the whole file, saved and submitted — so every row or none is saved, under the importer's
+own policies. `src/features/items/csv.ts` parses the file and checks it first: import-free, asserted in
+`tools/check-logic.mjs`, handed the records to look names up in, and answering each mistake by the
+spreadsheet's row and the column's heading. It checks what the screen can know (a name not in the system,
+a number that is not one, what the importer's roles and the settings allow); the database still decides, and
+a refusal comes back as it was raised with `hint = 'row N'` — the Nth row sent — or `'opening stock'`, which
+the screen turns into the file's own row number. Not Zod: a file is not a form, and its messages need a row
+and a column. Rejected: a `.insert` of all rows — it skips `save_item`'s price; `save_item_with_opening_stock`
+in a loop — a reconciliation an item; a definer function with its own permission checks. Ceiling: 500 rows a
+file, one statement under the `authenticated` role's 8 s `statement_timeout` (500 rows with a price and
+opening stock each took 3.8 s, 2026-10-13).
+
 **A choice among records that prices or taxes a sale is an import-free module beside its `queries.ts`** —
 `item-prices/resolve.ts`, `tax-rules/resolve.ts`, `pricing-rules/apply.ts` — handed to `cart.ts` as an
 engine and asserted in `tools/check-logic.mjs`. The poster checks the outcome a sale claims (the rule covers

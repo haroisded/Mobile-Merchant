@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { invalidateLedgers } from '../documents/queries';
 import { invalidateItemPrices } from '../item-prices/queries';
 import { invalidateStockReconciliations } from '../stock-reconciliations/queries';
+import type { ItemCsvRow } from './csv';
 import type { ItemValues } from './schema';
 
 // The only file that knows the tables are called `items`, `item_uoms` and `item_taxes`
@@ -53,6 +55,16 @@ export const itemLabel = (item: Pick<Item, 'item_code' | 'item_name'>) =>
 export const stockItemOptions = (items: Item[], keep?: string) =>
   items.filter((item) => item.id === keep || (item.is_stock_item && !item.disabled)).map((item) => ({ value: item.id, label: itemLabel(item) }));
 
+// What a new item can write besides itself: its first price, and an Opening Stock reconciliation with the
+// ledgers and the stock balance that posts to.
+const invalidateSavedItems = (queryClient: QueryClient) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: itemsKey.lists() }),
+    invalidateItemPrices(queryClient),
+    invalidateLedgers(queryClient),
+    invalidateStockReconciliations(queryClient),
+  ]);
+
 /**
  * Save an item and its rows in one transaction (public.save_item_with_opening_stock, security invoker: it
  * calls public.save_item). A new stock item's Opening Stock is posted with it, as a submitted Opening Stock
@@ -65,14 +77,25 @@ export function useSaveItemMutation({ merchantId, itemId }: { merchantId: string
     mutationFn: async (values: ItemValues) => {
       await supabase.rpc('save_item_with_opening_stock', { payload: { id: itemId ?? '', merchant_id: merchantId, ...values } }).throwOnError();
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: itemsKey.lists() }),
-        invalidateItemPrices(queryClient),
-        invalidateLedgers(queryClient),
-        invalidateStockReconciliations(queryClient),
-      ]);
+    onSuccess: () => invalidateSavedItems(queryClient),
+  });
+}
+
+/**
+ * Create every item of a read CSV file in one transaction — all of them or none (public.import_items,
+ * security invoker over public.save_item): each row's Standard Selling Rate as its first price, and one
+ * submitted Opening Stock reconciliation for the rows that carry stock. Answers the created codes and names in
+ * the file's order. The rows come checked from readItemsCsv (./csv.ts); a refusal names its row in `hint`.
+ */
+export function useImportItemsMutation({ merchantId }: { merchantId: string }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rows: ItemCsvRow[]) => {
+      const { data } = await supabase.rpc('import_items', { p_merchant: merchantId, p_rows: rows.map((row) => row.item) }).throwOnError();
+      return data;
     },
+    onSuccess: () => invalidateSavedItems(queryClient),
   });
 }
 

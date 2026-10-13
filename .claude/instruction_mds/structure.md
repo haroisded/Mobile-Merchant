@@ -31,7 +31,7 @@ Which directories exist under `src/`, and what goes in each. What goes *inside* 
 ```
 src/
   app/                    routes and layouts only
-  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts  …
+  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts, files.ts (the device's file pickers)  …
   Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts, cart.ts)
   features/
     merchants/            queries.ts  schema.ts — merchants is the Company
@@ -54,7 +54,7 @@ src/
     print-formats/        queries.ts  schema.ts  receipt.ts — what a receipt prints, import-free
     letter-heads/         queries.ts  schema.ts
     print-settings/       queries.ts
-    items/                queries.ts  schema.ts
+    items/                queries.ts  schema.ts  csv.ts — what a CSV file of items holds and what is wrong with it, import-free
     item-prices/          queries.ts  schema.ts  resolve.ts — the rate a sale line takes, import-free
     gl-entries/  stock-ledger-entries/  bins/             queries.ts — read-only: only a posting writes a ledger
     documents/            queries.ts — submit / cancel for every document, and what a posting invalidates
@@ -72,6 +72,7 @@ src/
     stock/                index.tsx — the Stock destination's index
     items/                index.tsx  item-form.tsx (a Stock-stack page)
     item-prices/          index.tsx  item-price-form.tsx
+    import-items/         index.tsx — a Stock-stack page: the template, a file's mistakes, the import and its log
     accounts/             index.tsx — the Accounts destination's index
     general-ledger/  stock-ledger/  stock-balance/        index.tsx — the ledger reports
     stock-entries/        index.tsx  stock-entry-form.tsx (a document's page)
@@ -105,7 +106,7 @@ src/
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
@@ -139,6 +140,7 @@ Never create a feature folder named after a page.
 | Profile read | `src/features/profiles/`; screen in `src/screens/profile/` |
 | A dialog that also opens as a sheet route (RemoveSystemDialog, DeleteAccountDialog) | `src/components/` — the route is its second host |
 | Column-count hook | `src/lib/columns.ts` |
+| Reading a CSV file of items; picking the file | `src/features/items/csv.ts` — data, and import-free so `tools/check-logic.mjs` runs it; `src/lib/files.ts` — the device wrapper (rule 6). Rejected: a `features/import/` folder — a page, not a resource (rule 2) |
 | The Dashboard's reports — four functions that each add up several resources | `src/features/dashboard/` — the one folder named as its page is, because the reports are: `public.dashboard_cards` belongs to no single table. Rejected: a hook in each of `pos-invoices/`, `bins/` and `pos-opening-entries/` — one card reads all three |
 
 ## 3. Screen folder size
@@ -168,7 +170,7 @@ src/app/(app)/systems/[id]/sell/         Sell — its own Stack: index.tsx, open
                                          pos-invoices.tsx, pos-invoice.tsx, pos-return.tsx, pos-opening-entries.tsx,
                                          pos-closing-entries.tsx, close-session.tsx, pos-closing-entry.tsx
 src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, items.tsx, item.tsx, item-prices.tsx,
-                                         stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
+                                         import-items.tsx, stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
                                          stock-reconciliation.tsx, stock-balance.tsx, stock-ledger.tsx
 src/app/(app)/systems/[id]/accounts/     Accounts — its own Stack: index.tsx, general-ledger.tsx
 
@@ -187,7 +189,8 @@ A new destination is a route file beside `index.tsx` and a row in the shell's `D
 becomes a directory when it grows more than one screen (list, detail, create, edit), with a `Stack`
 `_layout.tsx` and `stack: true` on its row, so a tap on it lands on its index. The shell hands every
 destination the system's `id` as a param — a drawer screen reads only the params it is navigated with — and
-lists it for whoever may read a row of its index (`sections`), or, with no index, one of the doctypes it adds
+lists it for whoever may open a row of its index (`sections`: Read on the row's doctype, or the permission an
+action row names — Import Items, Item create), or, with no index, one of the doctypes it adds
 up (`doctypes`: the Dashboard).
 
 Sheet routes (confirms, pickers) live in `src/app/(app)/sheets/`, and small-form routes (a page narrow,
