@@ -396,6 +396,13 @@ re-applied to every table; the invoker RPCs `public.save_role` and `save_member_
 `private.notify_access_changed()`; the starter roles Cashier, Stock Clerk and Store Manager behind
 `merchants_seed_20_access`; ERPNext's roles, role profiles, member roles, the permission matrix, User Permissions
 and `doctype_links` dropped).
+Then backend performance before deployment, with no table and nothing a person sees:
+`20261014170428_backend_performance.sql` (fillfactor 70 and sooner autovacuum on `bins` and
+`naming_series_counters`; three partial indexes — a system's open sessions, its submitted sales with the figures the
+Dashboard adds up, a person's unread notifications; `public.dashboard_cards` re-created to count Low Stock without
+`stock_alerts()` and to read a session's cash once; the eight `save_*` RPCs re-created to clear child rows only on an
+update. What `supabase/database-improvements.txt` proposed and this did not do is in ARCHITECTURE.md, Backend
+performance).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

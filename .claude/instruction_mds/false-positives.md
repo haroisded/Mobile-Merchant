@@ -147,6 +147,12 @@ dead and correct to delete.
   (`get_advisors`, 2026-10-14): the Employees saves, `public.save_role` and `public.save_member_access`, are
   security **invoker** — `role_grants`' and `member_overrides`' owner-only policies decide them — so they are not
   on that list, and a definer `save_role` or `save_member_access` there would be a real finding.
+- **`unused_index` (INFO) on `pos_opening_entries_open_merchant_idx`, `pos_invoices_submitted_date_idx` and
+  `notifications_unread_idx`** (`get_advisors`, 2026-10-15, straight after
+  `20261014170428_backend_performance.sql`). New indexes have no scans yet; with sequential scans off, the second and
+  third serve the Dashboard's sales and the unread poll (ARCHITECTURE.md, Backend performance). Confirmed false
+  positive while the database holds a few rows. The same INFO on the other indexes is older than this entry and
+  unverified — do not drop one on its word.
 - **`rls_enabled_no_policy` (INFO) on `private.access_code_failures`** (`get_advisors`, 2026-10-14). The
   claim's rate-limit log: only `claim_access_code`, a definer function, reads or writes it, it sits in
   `private` where PostgREST does not reach, and RLS is on so that no grant could ever expose it. No policy
