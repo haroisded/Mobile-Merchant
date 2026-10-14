@@ -1,8 +1,7 @@
-import { PlaceholderScreen } from '../../../components/placeholder-screen';
+import { NotificationsScreen } from '../../../screens/notifications';
 
-// A stub. The Notifications destination is not ticked in Interactives ( Priority ).md, but a tab bar
-// cannot render a tab that does not switch to something — so the destination exists and lands here
-// rather than the bar carrying a dead item.
+// The signed-in person's notifications. A route file only reads its params and renders a screen
+// (.claude/instruction_mds/structure.md rule 4).
 export default function Notifications() {
-  return <PlaceholderScreen title="Notifications" />;
+  return <NotificationsScreen />;
 }

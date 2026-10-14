@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Button } from '../../components/button';
 import { PageHeader } from '../../components/page-header';
 import { RecordList, StatusText } from '../../components/record-list';
-import { useMembersQuery } from '../../features/members/queries';
+import { memberName, useMembersQuery } from '../../features/members/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useUserPermissionsQuery } from '../../features/user-permissions/queries';
 import type { UserPermission } from '../../features/user-permissions/queries';
@@ -41,7 +41,7 @@ export function UserPermissions({ merchantId }: { merchantId: string }) {
       <PageHeader
         kicker="Setup"
         title="User Permissions"
-        meta={member ? member.email : 'Which records each user is restricted to'}
+        meta={member ? memberName(member) : 'Which records each user is restricted to'}
         onBack={() => router.back()}
         actions={
           can(permissions, 'User Permission', 'create') ? (

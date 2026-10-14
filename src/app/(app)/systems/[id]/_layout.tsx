@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from '../../../../components/activity-indicator';
 import { Appbar } from '../../../../components/appbar';
 import { Avatar } from '../../../../components/avatar';
+import { BellAction } from '../../../../components/bell-action';
 import { Button } from '../../../../components/button';
 import { Icon } from '../../../../components/icon';
 import { readsAny } from '../../../../components/record-index';
@@ -193,8 +194,9 @@ function MerchantHeader({ onMenu }: HeaderProps) {
     <Appbar.Header style={{ backgroundColor: colors.primary }}>
       <Appbar.Action icon="menu" color={colors.onPrimary} onPress={onMenu} accessibilityLabel="Menu" />
       <Appbar.Content title="Merchant" color={colors.onPrimary} />
-      {/* Rendered, not wired: there is no notifications screen inside a system yet. */}
-      <Appbar.Action icon="bell" color={colors.onPrimary} accessibilityLabel="Notifications" />
+      {/* Notifications are the person's, not this system's: the bell leaves the system for the tab, as the grid
+          below does for Home. */}
+      <BellAction color={colors.onPrimary} onPress={() => router.dismissTo('/notifications')} />
       {/* The way out of a system. Not left to Back alone: on a phone the front drawer opens from a
           left-edge swipe, the same edge iOS pops a screen from, and iOS has no back button. */}
       <Appbar.Action icon="grid" color={colors.onPrimary} onPress={exitSystem} accessibilityLabel="Your systems" />

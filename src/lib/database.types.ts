@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          label: string | null
+          max_uses: number | null
+          merchant_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          max_uses?: number | null
+          merchant_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          max_uses?: number | null
+          merchant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_codes_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_requests: {
+        Row: {
+          access_code_id: string | null
+          avatar_url: string | null
+          code: string
+          created_at: string
+          decided_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          merchant_id: string
+          merchant_name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          access_code_id?: string | null
+          avatar_url?: string | null
+          code: string
+          created_at?: string
+          decided_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          merchant_id: string
+          merchant_name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          access_code_id?: string | null
+          avatar_url?: string | null
+          code?: string
+          created_at?: string
+          decided_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          merchant_id?: string
+          merchant_name?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_access_code_id_fkey"
+            columns: ["access_code_id"]
+            isOneToOne: false
+            referencedRelation: "access_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           account_name: string
@@ -1244,34 +1342,40 @@ export type Database = {
       }
       merchant_members: {
         Row: {
+          access_code: string | null
+          avatar_url: string | null
           created_at: string
-          email: string
+          email: string | null
           enabled: boolean
           full_name: string | null
           id: string
           merchant_id: string
           role_profile_id: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
+          access_code?: string | null
+          avatar_url?: string | null
           created_at?: string
-          email: string
+          email?: string | null
           enabled?: boolean
           full_name?: string | null
           id?: string
           merchant_id: string
           role_profile_id?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
+          access_code?: string | null
+          avatar_url?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
           enabled?: boolean
           full_name?: string | null
           id?: string
           merchant_id?: string
           role_profile_id?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -1564,6 +1668,57 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          merchant_id: string | null
+          read_at: string | null
+          request_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          merchant_id?: string | null
+          read_at?: string | null
+          request_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          merchant_id?: string | null
+          read_at?: string | null
+          request_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "access_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -3998,7 +4153,33 @@ export type Database = {
         Args: { p_doctype: string; p_id: string }
         Returns: undefined
       }
+      claim_access_code: { Args: { p_code: string }; Returns: Json }
       close_pos_session: { Args: { payload: Json }; Returns: string }
+      create_access_codes: {
+        Args: {
+          p_expires_minutes?: number
+          p_expires_on?: string
+          p_label?: string
+          p_max_uses?: number
+          p_merchant: string
+          p_quantity?: number
+        }
+        Returns: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          label: string | null
+          max_uses: number | null
+          merchant_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "access_codes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       dashboard_cards: {
         Args: { p_from: string; p_merchant: string; p_to: string }
         Returns: {
@@ -4009,6 +4190,10 @@ export type Database = {
           open_registers: number
           sales: number
         }[]
+      }
+      decide_access_request: {
+        Args: { p_approve: boolean; p_request: string }
+        Returns: undefined
       }
       delete_current_user: { Args: never; Returns: undefined }
       delete_document: {

@@ -28,7 +28,8 @@ src/lib/columns.ts         useColumns, the pane widths, ShellWideContext — the
                            useTableFits, a list's table-vs-rows choice
 src/lib/errors.ts          failureMessage — the copy a failed action shows, never the provider's;
                            mutationNotice, the line under a form's buttons; postgrestError, its SQLSTATE
-src/lib/dates.ts           stored dates ("YYYY-MM-DD"): display, today, a fiscal year's full-year end
+src/lib/dates.ts           stored dates ("YYYY-MM-DD"): display, today, a fiscal year's full-year end;
+                           displayDateTime, an instant in the device's words
 src/lib/money.ts           ERPNext's money: Banker's / Commercial rounding, cash rounding to the
                            smallest coin, the number formats, the amount in words
 src/lib/tree.ts            the tree masters' walks: children (a restricted branch shows at the top),
@@ -46,7 +47,10 @@ src/Store/cart.ts          the Register's cart, one per session — shared by th
 src/themes.js              MD3 light/dark palettes + Merchant keys, roundness, spacing and radius
                            scales, the type scale
 src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years,
-                           profiles; members, roles, role-profiles, role-permissions (usePermissions,
+                           profiles; access-codes (+ code.ts: a code's shape, its status, its expiry
+                           and the claim's answers), access-requests, notifications (the unread count,
+                           and what a new one makes the app fetch again); members (+ the owner's
+                           members across systems), roles, role-profiles, role-permissions (usePermissions,
                            can), user-permissions; system-settings, global-defaults, currencies;
                            accounts (ledgerOptions), cost-centers, accounts-settings,
                            modes-of-payment; tax-categories, sales-tax-templates (+ calculate.ts,
@@ -65,7 +69,10 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            for every document), stock-entries, stock-reconciliations; the ledgers
                            only a posting writes — gl-entries, stock-ledger-entries, bins; read-only
                            countries, currency-presets, doctypes
-src/screens/<screen>/      UI by screen — home (the systems list and the create-system form), setup
+src/screens/<screen>/      UI by screen — home (the systems list, its slot cards — Create New System,
+                           Enter Access Code — the requests waiting for approval, and the create-system
+                           form), access-codes (the Codes, Requests and Members panes, a new code, one
+                           code, one request, Enter Access Code), notifications, setup
                            (the Setup index), stock (the Stock index), items (list + search, a
                            full-page item with its UOM and Item Tax rows), item-prices (list +
                            search, form), stock-entries and stock-reconciliations (list + a
@@ -110,14 +117,17 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            screen: a format's sample and a sale's), pos-session (the cashier's open session,
                            and a session page before it), session-amounts-form (an amount per payment
                            method: Open Session and Close Session), row-box (a box of rows: the
-                           Dashboard's lists, an import's mistakes and its log) —
+                           Dashboard's lists, an import's mistakes and its log), filter-chips (a
+                           pick-one row of chips, + PickChip), bell-action (the app bar's bell and its
+                           unread count), badge —
                            and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
 src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the sheets/ routes (native
                            formSheet: confirms, the picker) and the forms/ routes (a small form: a
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
-src/app/(app)/(tabs)/      home, notifications, settings, account + the NativeTabs bar
+src/app/(app)/(tabs)/      home, access-codes, notifications, settings, account + the NativeTabs bar (five:
+                           Android's most) and the Notifications badge
 src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, dashboard.tsx, and four Stacks
                            of their own: sell/ (the index, open-session, register, cart, pos-invoices,
                            pos-invoice, pos-return, the two entries' lists, close-session, pos-closing-entry), stock/ (the index, items, item, item-prices, import-items, the stock
@@ -144,7 +154,7 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261012080419_pos_returns_and_voids.sql, 20261012085121_discounts.sql,
                            20261012085548_pos_invoice_discounts.sql,
                            20261012131350_access_for_documents.sql, 20261012200010_dashboard.sql,
-                           20261012204315_import_items.sql
+                           20261012204315_import_items.sql; then 20261013213537_access_codes.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -163,8 +173,8 @@ tools/fallow-verdict.mjs       runs fallow's review gate and prints a compact ve
 tools/check-logic.mjs          npm run check:logic — asserts the pure date math against Postgres' own,
                                the money module and the tax calculation against ERPNext's results,
                                the tree walks, the Tax Rule a sale takes, what a receipt prints,
-                               the Item Price a sale line takes, the Dashboard's periods, and what a CSV
-                               file of items holds
+                               the Item Price a sale line takes, the Dashboard's periods, what a CSV
+                               file of items holds, and an access code's shape, status and expiry
 ```
 
 ---
@@ -412,10 +422,12 @@ so `auth.uid()` is null and `profiles_insert_own` would reject the row signup ex
 `private.handle_new_user()` creates the profile row on signup, reading `full_name` and `avatar_url`
 out of `raw_user_meta_data` where both providers land them. `public.delete_current_user()` deletes
 the caller's own `auth.users` row, which cascades. `private.current_merchant_ids()` is described
-above; the permission engine, the claim triggers, the tree and user-permission validators and each
-step's `seed_*` trigger function are in the step sections below. `public.my_permissions()` is the one
-definer function besides `delete_current_user()` that PostgREST serves, and it answers only for a
-system the caller belongs to.
+above; the permission engine, the tree and user-permission validators, each step's `seed_*` trigger
+function and the access-code triggers are in the sections below. The definer functions PostgREST
+serves besides `delete_current_user()` are `public.my_permissions()` (it answers only for a system the
+caller belongs to), the document RPCs `submit_document`, `cancel_document` and `delete_document`
+(Steps 15 and 19), and the access-code RPCs `create_access_codes`, `claim_access_code` and
+`decide_access_request` (Access Codes, below) — each checks `(select auth.uid())` itself.
 
 `security definer` means the body runs with the *owner's* privileges, not the caller's — a
 deliberate privilege escalation, which is why all three of these are mandatory every time:
@@ -515,7 +527,7 @@ ERPNext's permission model, enforced by RLS rather than mirrored in the client
 | `standard_role_permissions` | ERPNext's standard matrix: role × doctype × select/read/write/create/delete. Global, read-only; copied into each system |
 | `roles` | per system: the ten standard roles (`All` implicit) and custom ones. `guard_roles` refuses renaming or deleting a standard role, and disabling `All` |
 | `role_profiles`, `role_profile_roles` | a named set of roles given together |
-| `merchant_members`, `member_roles` | a person invited by email (lower-cased, one per system); `user_id` is filled when that confirmed address signs in |
+| `merchant_members`, `member_roles` | a person let into the system — since 2026-10-14 only by an approved access code (Access Codes, below); their name, email and photo are copies from the request |
 | `role_permissions` | the system's own, editable matrix — what the Role Permissions Manager edits |
 | `user_permissions` | a member held to one record of a restrictable doctype: Apply To All or one Applicable For, Is Default, Hide Descendants (trees) |
 
@@ -535,10 +547,10 @@ ERPNext's permission model, enforced by RLS rather than mirrored in the client
 doctype's kind and restrictability, so every table gets the same shape; `sync_standard_permissions()`
 copies new template rows into every system after a migration adds some.
 
-**Invites need no email.** `claim_membership` (on `merchant_members`) and `claim_memberships_for_user`
-(on `auth.users`) match a member's email to a *confirmed* `auth.users` address in either order.
-Inviting the owner's own address is refused (`member_is_owner`), and an active member's email cannot
-change (`member_email_locked`).
+**Invites by email are gone.** Until 2026-10-14 an invite was a `merchant_members` row with an email,
+which `claim_membership` and `claim_memberships_for_user` matched to a confirmed `auth.users` address.
+`20261013213537_access_codes.sql` dropped both triggers and their functions: a member row is now made
+by `decide_access_request` alone (Access Codes, below).
 
 The client reads `public.my_permissions(merchant)` (definer, membership-checked) to hide what RLS would
 refuse anyway; `save_member`, `save_role_profile` and `save_role_permissions` are security *invoker*
@@ -1169,6 +1181,60 @@ answering `canceled`, and the page still says to close the app and open it again
 the patch. Still lost: the one pick in flight when the Activity is destroyed under an open picker.
 Unverified: iOS — the pickers were run on Android only. Out of scope: updating existing items, importing
 any other record, a saved import log, files other than comma-separated.
+
+### Access Codes — `20261013213537_access_codes.sql`
+
+The one way into someone else's system (`.claude/updates-and-revamps/access-codes-references/`). The owner
+makes codes and sends them outside the app; whoever enters one waits until the owner approves them.
+
+| Table | Holds |
+| --- | --- |
+| `access_codes` | per system: `code` — six of `23456789ABCDEFGHJKLMNPQRSTUVWXYZ` (no 0/O, 1/I), unique, shown `ABC-123` — `label` (≤ 40, optional), `expires_at` (null: never), `max_uses` (null: any number of people). Select and delete for the owner; **no insert or update policy** |
+| `access_requests` | a code used: the system's name, the code, the person's name, email and photo — copies, since the requester cannot read the system and the code may be deleted — and `status` (`pending`, `approved`, `declined`). One pending per person and system. Select only: the owner, or the requester |
+| `notifications` | one person's inbox: `kind`, `title`, `body`, `read_at`. Their own rows to read, mark and clear; only triggers write them |
+| `private.access_code_failures` | the claim's rate limit: ten wrong, expired or used-up codes in 15 minutes stop a person |
+
+They are owner-only tables, not doctypes — no role may make a code or let someone in — so their policies are
+written by hand on `private.owned_merchant_ids()` (definer, like `current_merchant_ids()`; tenancy.md rule 13).
+
+**The RPCs** — security definer, in `public` because the app calls them, revoked from everyone, granted to
+`authenticated`, each checking `(select auth.uid())`:
+
+- `create_access_codes(merchant, label, quantity 1–20, expires_minutes | expires_on, max_uses)` — the only way
+  to make a code. An insert policy would let a caller pick a code and read the unique violation as "it
+  exists", around the claim's rate limit. The expiry is decided here: minutes from now, or the end of the
+  picked day in System Settings' time zone (`expiry_in_past` before today). Characters come from
+  `extensions.gen_random_bytes` — 256 is a multiple of 32, so none is likelier — drawn again on a collision.
+- `claim_access_code(code)` — normalises it (upper case, no dash or spaces), locks the code `for update` so two
+  people cannot share a one-person code, and **answers** rather than raising, so a failure's rate-limit row
+  survives: `requested`, `invalid`, `expired`, `used_up`, `own_system`, `already_member`, `already_requested`,
+  `declined`, `too_many_attempts`. The system's name comes back only once the code is real and unspent, so
+  guessing names nothing. A use is a pending or approved request; a decline frees it for someone else, not
+  for the person declined.
+- `decide_access_request(request, approve)` — the owner's; refuses a request already decided
+  (`request_decided`) or not theirs (`request_not_found`). Approving inserts the member, with no role, the
+  copies and the code.
+
+**Members.** `merchant_members.user_id` is not null and goes with the account (it was `set null`, which left
+rows nobody could use); `(merchant_id, user_id)` is unique; the email is a copy and may be null (a Facebook
+account may have none). `merchant_members_require_access_request` refuses every insert from `authenticated`
+or `anon` (`access_code_required`) and any change of a row's person or system (`member_locked`), so the
+definer RPC, running as the table's owner, is the only way in. Revoking is a plain delete under the `User`
+delete policy.
+
+**Notifications** come from three triggers: a request made tells the owner (Access code used); a request
+decided tells the requester (Request approved / Request declined); a member deleted tells them (Access
+removed) — unless the system or either account is being deleted, when there is nobody to tell and the insert
+would fail its foreign keys. Nothing pushes them: the app asks for the unread ones every minute and on coming
+back (`src/features/notifications/queries.ts`), and an unread one it has not seen makes it fetch the systems
+list, requests, codes and members again — how an approved person's system appears, and a revoked one's leaves,
+within a minute (phone emulator, 2026-10-14: seconds and 35 s).
+
+Rejected: invites by email (the claim triggers above) — codes are the only way in; codes the owner types —
+guessable, and an existence oracle; Realtime — a subscription to keep alive for a minute's latency; these
+tables as doctypes — no role may let someone in. Out of scope: push notifications, editing a code (delete it
+and make another). Unverified: two people using a one-person code at the same instant (the row lock is
+standard Postgres; the probes ran in one session).
 
 ---
 

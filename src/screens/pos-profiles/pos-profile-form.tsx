@@ -18,7 +18,7 @@ import { useItemGroupsQuery } from '../../features/item-groups/queries';
 import type { ItemGroup } from '../../features/item-groups/queries';
 import { useLetterHeadsQuery } from '../../features/letter-heads/queries';
 import type { LetterHead } from '../../features/letter-heads/queries';
-import { useMembersQuery } from '../../features/members/queries';
+import { memberName, useMembersQuery } from '../../features/members/queries';
 import type { Member } from '../../features/members/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries';
@@ -224,7 +224,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
 
   const { accounts, costCenters, priceLists, warehouses } = records.sales;
   const abbr = merchant.abbr;
-  const memberOptions = records.members.map((member) => ({ value: member.id, label: member.full_name || member.email, hint: member.full_name ? member.email : undefined }));
+  const memberOptions = records.members.map((member) => ({ value: member.id, label: memberName(member), hint: member.full_name ? (member.email ?? undefined) : undefined }));
   // Every enabled mode is offered, and the saved ones stay listed; one with no account yet says so, and the save names it.
   const savedModes = new Set(existing?.pos_profile_payments.map((row) => row.mode_of_payment_id));
   const modeOptions = records.modes

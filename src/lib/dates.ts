@@ -36,6 +36,10 @@ export function storedDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+/** "14 Oct, 9:30 AM" for an instant (a timestamptz), in the device's own words and time zone. */
+export const displayDateTime = (value: string) =>
+  new Date(value).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+
 /** Today in the device's own time zone, as a stored date. */
 export const todayDate = () => storedDate(new Date());
 

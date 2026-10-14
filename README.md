@@ -36,8 +36,15 @@ together and explained inline.
   currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with six
   destinations — Home, Dashboard, Sell, Stock, Accounts and Setup — each listed only for someone whose roles can read
   something in it
+- **Access Codes, the only way into someone else's system** — a tab beside Home: the owner makes codes (one to
+  twenty at a time; 5 min, 30 min, 1 hour, to the end of a day, or never; one person or many) and sends them from
+  the phone's share sheet. Whoever enters one on Home waits under Waiting for approval; the owner approves or
+  declines them on Requests, and Members lists who got in, each with Revoke. Wrong codes are rate-limited, and a
+  code never names its system until it is valid. **Notifications** (a tab with an unread count, and a bell
+  inside every system) tells each side what happened — no push yet: the count is asked for every minute and
+  whenever the app comes back
 - **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Users & Access
-  (invite people by email, standard and custom roles, role profiles, an editable Role Permissions
+  (the people let in with an access code, standard and custom roles, role profiles, an editable Role Permissions
   Manager and User Permissions — holding a person to one warehouse, item group, account or cost center, and
   to the sales, stock and ledger rows that link to it — all enforced by RLS); Global Defaults, System Settings and the Currency
   (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as

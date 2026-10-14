@@ -68,6 +68,13 @@ export const ICONS = {
 
   // A system, on its card in the systems list.
   storefront: { ios: 'storefront', android: 'storefront' },
+
+  // Access Codes: the tab and Enter Access Code, a code's Share, the Requests and Members tabs. Checked against
+  // both sets on 2026-10-14.
+  key: { ios: 'key', android: 'key' },
+  share: { ios: 'square.and.arrow.up', android: 'share' },
+  inbox: { ios: 'tray', android: 'inbox' },
+  group: { ios: 'person.2', android: 'group' },
 } satisfies Record<string, { ios: SFSymbol; android: AndroidSymbol }>;
 
 export type IconName = keyof typeof ICONS;

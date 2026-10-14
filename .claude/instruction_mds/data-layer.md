@@ -183,6 +183,14 @@ migration seeds and no client can write (countries, currency presets) is `STALE.
 (the naming series preview: it follows the date and the fiscal years, and neither invalidates it) names
 `STALE.ALWAYS` — leaving `staleTime` off takes the five-minute default above, not zero.
 
+**What another person changes** reaches this phone only by asking again — there is no Realtime. The one
+query that polls is the unread notifications (`src/features/notifications/queries.ts`): `refetchInterval`
+`STALE.MINUTES.ONE` and `refetchOnWindowFocus: true`, mounted by the tab bar so it runs on every tab and
+inside a system. Its `queryFn` compares the answer with the cached one, and an unread id it has not seen
+invalidates what notifications are about — merchants, access requests and codes, members — once per new
+row, however many components read the count. Rejected: a `useEffect` on the newest id — it ran on every
+observer's mount (the tab bar, each bell), refetching all four on every entry into a system.
+
 **Wire `onlineManager` and `focusManager`** per the TanStack React Native guide, or queries never
 learn they are offline and never refetch on resume. This is separate from the `AppState` listener in
 `src/lib/supabase.ts`, which starts and stops token refresh. Both exist.

@@ -45,6 +45,12 @@ them; do not rebuild them.
     makes a User Permission on the linked record filter it. Only a document's or a ledger's own link, and
     the one record a master belongs to (an Item's Item Group, a POS Profile's Warehouse). A *default* on
     a master is never a link (§5).
+13. **An access code is the only way in** (§6). A member row is made by `public.decide_access_request`
+    alone; `merchant_members_require_access_request` refuses any other insert and any move of a row to
+    another person or system. The access-code tables (`access_codes`, `access_requests`) are the owner's
+    alone — no role may make a code or let someone in — so they are the one exception to rule 8: not
+    doctypes, hand-written policies on `private.owned_merchant_ids()`. `notifications` is the person's own,
+    keyed on `user_id` like `profiles`.
 
 ---
 
@@ -57,9 +63,11 @@ auth.users ──1:1── public.profiles                            the person
      │        │
      │        ├── roles ── role_permissions (doctype × ptype)  what each role may do
      │        ├── role_profiles ── role_profile_roles
-     │        └── merchant_members (email, user_id) ── member_roles, user_permissions
+     │        ├── access_codes ── access_requests (user_id)      the owner's: codes, and who used them
+     │        └── merchant_members (user_id) ── member_roles, user_permissions
      │
-     └── merchant_members.user_id, filled when a confirmed email signs in
+     ├── merchant_members.user_id, made when the owner approves a request
+     └── notifications (user_id)                               the person's inbox
 
 every business table carries merchant_id; public.doctypes names it
 ```
@@ -93,6 +101,9 @@ fiscal_years, accounts, …                                    ← their policie
 
 `private.current_merchant_ids()` — `security definer`, `stable`, `search_path = ''`: the merchants the
 caller owns, plus those where they are an enabled member whose `user_id` is theirs.
+
+`private.owned_merchant_ids()` — the same shape, the merchants the caller owns and nothing else: what the
+access-code tables' owner-only policies call (rule 13).
 
 `private.effective_role_ids()` — the caller's roles in each merchant: the role profile's when the member
 has one, else their own `member_roles`, plus the implicit `All`, minus disabled roles.
@@ -190,22 +201,29 @@ another merchant. Child tables (`role_profile_roles`, `member_roles`) take their
 
 ## 6. How a member joins
 
-An **invite is a row**, not an email: the owner (or a System Manager) adds the person's address to
-`merchant_members`. `private.claim_membership` fills `user_id` when that address already belongs to a
-confirmed `auth.users` row, and `private.claim_memberships_for_user` fills it when the person signs in
-later. Every OAuth account here arrives with `email_confirmed_at` set, so a claimed address is one the
-person proved they own. Inviting the owner's own address is refused (`member_is_owner`); a claimed
-member's email cannot change (`member_email_locked`).
+With an **access code**, and only so (2026-10-14, `20261013213537_access_codes.sql`; ARCHITECTURE.md,
+Access Codes). The owner makes codes (`public.create_access_codes`) and sends them outside the app; the
+person types one in (`public.claim_access_code`), which leaves a pending `access_requests` row and tells the
+owner; the owner approves or declines (`public.decide_access_request`), and approving inserts the
+`merchant_members` row — with no role, its name, email and photo copied from the request. All three are
+definer RPCs that check `(select auth.uid())` themselves; no client writes `access_codes`,
+`access_requests` or `merchant_members` directly (rule 13).
 
 Disabling a member drops the merchant from their `current_merchant_ids()` at once — every policy
-follows. Removing them deletes their roles and User Permissions with the row.
+follows. Removing them (Revoke, or Remove on the Users page) deletes their roles and User Permissions with
+the row, and tells them.
 
 Rejected, with reasons:
+- **An invite by email** (`merchant_members` holding an address, claimed by `claim_membership` /
+  `claim_memberships_for_user` when that confirmed address signed in — the model until 2026-10-14) —
+  codes are the only way in, and a code needs no address the owner must know.
+- **An insert policy on `access_codes`** — the owner could pick a code and read the unique violation as
+  "this code exists" without the claim's rate limit.
 - **A roles column on the member, no matrix** — the first custom role or changed rule needs a schema
   change; ERPNext's matrix is data.
 - **Per-user policies** (`auth.uid() in (…)` on each table) — the shape the seam exists to prevent.
 - **Invites through an Edge Function with the service key** (creating the account, sending mail) — more
-  moving parts than the claim, and the person signs in with Google or Facebook anyway.
+  moving parts than a code, and the person signs in with Google or Facebook anyway.
 - **Mirroring permissions only in the client** — the publishable key ships in the bundle; only RLS holds.
 
 ## 7. Still open

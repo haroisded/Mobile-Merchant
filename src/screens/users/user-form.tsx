@@ -8,10 +8,9 @@ import { AdaptiveDialog, FormActions, saveOnce } from '../../components/adaptive
 import { Button } from '../../components/button';
 import { closesForm, useConfirm } from '../../components/confirm-dialog';
 import { ControlledChecklist, ControlledSwitch, ControlledText, Field, FieldGrid } from '../../components/form-fields';
-import { NoteCallout } from '../../components/note-callout';
 import { ControlledSelect } from '../../components/search-select';
 import { Text } from '../../components/text';
-import { memberStatus, useDeleteMemberMutation, useMembersQuery, useSaveMemberMutation } from '../../features/members/queries';
+import { memberName, memberStatus, useDeleteMemberMutation, useMembersQuery, useSaveMemberMutation } from '../../features/members/queries';
 import type { Member } from '../../features/members/queries';
 import { memberSchema } from '../../features/members/schema';
 import type { MemberValues } from '../../features/members/schema';
@@ -22,55 +21,41 @@ import type { Permissions } from '../../features/role-permissions/queries';
 import { ALL_ROLE, useRolesQuery } from '../../features/roles/queries';
 import type { Role } from '../../features/roles/queries';
 import { useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
+import { failureMessage, mutationNotice } from '../../lib/errors';
 
-type Props = { merchantId: string; memberId?: string; onDismiss: () => void };
+type Props = { merchantId: string; memberId: string; onDismiss: () => void };
 
-/** Invite or edit a user — the body of src/app/(app)/forms/user.tsx (page narrow, Dialog wide). */
+/**
+ * Edit a user — the body of src/app/(app)/forms/user.tsx (page narrow, Dialog wide). Nobody is invited here: people
+ * join with an access code (src/screens/access-codes/).
+ */
 export function UserForm({ merchantId, memberId, onDismiss }: Props) {
   const members = useMembersQuery({ merchantId });
   const roles = useRolesQuery({ merchantId });
   const profiles = useRoleProfilesQuery({ merchantId });
-  if (!members.data || !roles.data || !profiles.data) return null;
-  const existing = memberId ? members.data.find((member) => member.id === memberId) : undefined;
+  const existing = members.data?.find((member) => member.id === memberId);
+  if (!existing || !roles.data || !profiles.data) return null;
 
   return <Form merchantId={merchantId} existing={existing} roles={roles.data} profiles={profiles.data} onDismiss={onDismiss} />;
 }
 
-type FormProps = { merchantId: string; existing: Member | undefined; roles: Role[]; profiles: RoleProfile[]; onDismiss: () => void };
+type FormProps = { merchantId: string; existing: Member; roles: Role[]; profiles: RoleProfile[]; onDismiss: () => void };
 
-/** The copy for a failed save: the cases the database refuses on purpose get their own. */
-function saveFailure(error: Error | null) {
-  const cause = postgrestError(error);
-  if (cause?.code === '23505') return 'This email is already a user of this system.';
-  if (cause?.message === 'member_is_owner') return "That's the owner's email. The owner already has every permission.";
-  if (cause?.message === 'member_email_locked') return "An active user's email can't change. Remove them and invite the new address.";
-  return failureMessage("Couldn't save this user. Try again.");
-}
-
-const defaults = (existing: Member | undefined): MemberValues => ({
-  email: existing?.email ?? '',
-  full_name: existing?.full_name ?? '',
-  enabled: existing?.enabled ?? true,
-  role_profile_id: existing?.role_profile_id ?? '',
-  role_ids: existing?.member_roles.map((link) => link.role_id) ?? [],
+const defaults = (existing: Member): MemberValues => ({
+  email: existing.email,
+  full_name: existing.full_name ?? '',
+  enabled: existing.enabled,
+  role_profile_id: existing.role_profile_id ?? '',
+  role_ids: existing.member_roles.map((link) => link.role_id),
 });
-
-/** What the note at the top says: how an invite becomes Active. */
-function inviteNote(existing: Member | undefined) {
-  if (!existing) return 'No email is sent. Tell them to sign in to Merchant with this address, and this system appears in their list.';
-  if (!existing.user_id) return 'Invited. This becomes Active the first time they sign in with this email.';
-  return null;
-}
 
 function Form({ merchantId, existing, roles, profiles, onDismiss }: FormProps) {
   const wide = useShellWide();
-  const save = useSaveMemberMutation({ merchantId, memberId: existing?.id });
+  const save = useSaveMemberMutation({ merchantId, memberId: existing.id });
   const remove = useDeleteMemberMutation();
   const permissions = usePermissions({ merchantId }).data;
   const confirm = useConfirm();
-  const notice = mutationNotice(save, saveFailure(save.error));
-  const note = inviteNote(existing);
+  const notice = mutationNotice(save, failureMessage("Couldn't save this user. Try again."));
 
   const { control, handleSubmit } = useForm<MemberValues>({ resolver: zodResolver(memberSchema), defaultValues: defaults(existing), mode: 'onTouched' });
 
@@ -79,8 +64,8 @@ function Form({ merchantId, existing, roles, profiles, onDismiss }: FormProps) {
   const askRemove = (member: Member) =>
     confirm.ask({
       kicker: 'Remove',
-      title: `Remove ${member.email}?`,
-      body: 'They lose this system at once. Their user permissions go with them; invite them again to bring them back.',
+      title: `Remove ${memberName(member)}?`,
+      body: "They lose this system at once and are told so. Their user permissions go with them; they'd need a new access code to come back.",
       confirmLabel: 'Remove',
       run: () => remove.mutateAsync(member.id),
       failure: () => failureMessage("Couldn't remove this user. Try again."),
@@ -99,27 +84,24 @@ function Form({ merchantId, existing, roles, profiles, onDismiss }: FormProps) {
         asPage
         onDismiss={onDismiss}
         dismissable={!(save.isPending && !save.isPaused)}
-        kicker={existing ? memberStatus(existing) : 'Invite'}
-        title={existing ? (existing.full_name ?? existing.email) : 'New user'}
+        kicker={memberStatus(existing)}
+        title={memberName(existing)}
         notice={notice}
         actions={
-          existing ? (
-            <MemberActions
-              save={save}
-              permissions={permissions}
-              onCancel={onDismiss}
-              onSave={submit}
-              onRemove={() => askRemove(existing)}
-              onUserPermissions={() => openUserPermissions(existing)}
-            />
-          ) : (
-            <FormActions mutation={save} onCancel={onDismiss} onSave={submit} saveLabel="Invite" />
-          )
+          <MemberActions
+            save={save}
+            permissions={permissions}
+            onCancel={onDismiss}
+            onSave={submit}
+            onRemove={() => askRemove(existing)}
+            onUserPermissions={() => openUserPermissions(existing)}
+          />
         }
       >
-        {note ? <NoteCallout>{note}</NoteCallout> : null}
         <FieldGrid>
-          <EmailField control={control} claimed={existing?.user_id ? existing.email : null} />
+          <Field label="Email" span="full">
+            <Text variant="bodyMedium">{existing.email ?? 'No email on their account'}</Text>
+          </Field>
           <ControlledText control={control} name="full_name" label="Full Name" span="full" maxLength={120} />
           <ControlledSwitch control={control} name="enabled" label="Enabled" span="full" on="Can sign in to this system" off="Disabled: this system leaves their list" />
           <RolesFields control={control} roles={roles} profiles={profiles} />
@@ -157,18 +139,6 @@ function MemberActions({ save, permissions, onCancel, onSave, onRemove, onUserPe
       }
     />
   );
-}
-
-/** ERPNext: an email is the user's ID, so it is fixed once the invite is claimed. */
-function EmailField({ control, claimed }: { control: Control<MemberValues>; claimed: string | null }) {
-  if (claimed) {
-    return (
-      <Field label="Email" span="full">
-        <Text variant="bodyMedium">{claimed}</Text>
-      </Field>
-    );
-  }
-  return <ControlledText control={control} name="email" label="Email" required span="full" placeholder="name@example.com" autoCapitalize="none" maxLength={254} />;
 }
 
 type RolesProps = { control: Control<MemberValues>; roles: Role[]; profiles: RoleProfile[] };

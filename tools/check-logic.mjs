@@ -4,6 +4,7 @@
 // (.claude/instruction_mds/testing-workflow.md), and this file covers only what arithmetic can settle.
 import assert from 'node:assert/strict';
 
+import { codeStatus, expiryArgs, expiryText, formatCode, normalizeCode } from '../src/features/access-codes/code.ts';
 import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
@@ -462,5 +463,34 @@ assert.deepEqual(readItemsCsv('\n \n', LOOKUPS).errors.map((error) => error.row)
 // 500 items a file: the 501st makes one mistake of the whole file, first in the list.
 const many = (count) => readLines(Array.from({ length: count }, (_, index) => `BULK-${index}`));
 assert.deepEqual([many(500).errors.length, many(501).errors.map((error) => error.row)], [0, [0]]);
+
+// src/features/access-codes/code.ts — a typed code as claim_access_code reads it, and the Codes tab's status:
+// Expired, else Used (the approved fill every use), else Claimed (a pending request holds the last free use),
+// else Active. A declined request frees its use; a code for many people is never used up or claimed.
+assert.equal(normalizeCode(' a4f - 7k2 '), 'A4F7K2');
+assert.equal(formatCode('A4F7K2'), 'A4F-7K2');
+const NOW = new Date('2026-10-14T08:00:00Z');
+const status = (expires_at, max_uses, ...requests) => codeStatus({ expires_at, max_uses }, requests.map((s) => ({ status: s })), NOW);
+assert.deepEqual(
+  [status(null, 1), status(null, 1, 'pending'), status(null, 1, 'approved'), status(null, 1, 'declined'), status(null, 1, 'declined', 'pending')],
+  ['active', 'claimed', 'used', 'active', 'claimed'],
+);
+assert.deepEqual([status(null, 2, 'approved'), status(null, 2, 'approved', 'pending'), status(null, 2, 'approved', 'approved', 'declined')], ['active', 'claimed', 'used']);
+assert.deepEqual([status(null, null), status(null, null, 'approved', 'approved', 'pending')], ['active', 'active']);
+// Expired wins, and at the very second it expires — claim_access_code refuses expires_at <= now().
+assert.deepEqual([status('2026-10-14T07:59:59Z', 1, 'approved'), status('2026-10-14T08:00:00Z', null), status('2026-10-14T08:00:01Z', 1)], ['expired', 'expired', 'active']);
+// The form's expiry as create_access_codes' arguments: minutes from now, the end of a day, or neither — an
+// argument left out is the function's default, none.
+assert.deepEqual(expiryArgs('5', '2026-10-20'), { p_expires_minutes: 5 });
+assert.deepEqual(expiryArgs('60', ''), { p_expires_minutes: 60 });
+assert.deepEqual(expiryArgs('custom', '2026-10-20'), { p_expires_on: '2026-10-20' });
+assert.deepEqual(expiryArgs('never', '2026-10-20'), {});
+// The expiry line: minutes under an hour (rounded up, so the last seconds still say 1 min), hours under a
+// day, then the last day it works — the day before the instant it stops.
+const lastDay = (date) => date.toISOString().slice(0, 10);
+assert.deepEqual(
+  [null, '2026-10-14T07:00:00Z', '2026-10-14T08:00:00Z', '2026-10-14T08:00:20Z', '2026-10-14T08:59:00Z', '2026-10-14T09:00:00Z', '2026-10-15T07:59:00Z', '2026-10-16T00:00:00Z'].map((at) => expiryText(at, NOW, lastDay)),
+  ['No expiry', 'Expired', 'Expired', '1 min left', '59 min left', '1 h left', '23 h left', 'Until 2026-10-15'],
+);
 
 console.log('check:logic — all assertions passed.');

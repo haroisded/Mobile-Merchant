@@ -21,10 +21,10 @@ export const unstable_settings = { anchor: '(tabs)' };
 // top-aligned white screen (a tester's report, 2026-09-19 — commit 5076055).
 const SHEETS = ['sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/pick', 'sheets/remove-system'];
 
-// The small Setup forms: full pages on a phone, a Dialog over the list they were opened from on a tablet
-// (.claude/instruction_mds/frontend.md §4.4). Wide they are transparentModals, so that list stays mounted
-// and shows under the backdrop; the Dialog itself is drawn by AdaptiveDialog `asPage`. The route files
-// are in ./forms/, and the same both-halves rule as SHEETS holds.
+// The small forms, Setup's and Access Codes': full pages on a phone, a Dialog over the list they were opened
+// from on a tablet (.claude/instruction_mds/frontend.md §4.4). Wide they are transparentModals, so that list
+// stays mounted and shows under the backdrop; the Dialog itself is drawn by AdaptiveDialog `asPage`. The route
+// files are in ./forms/, and the same both-halves rule as SHEETS holds.
 const DIALOG_ROUTES = [
   'forms/fiscal-year',
   'forms/role',
@@ -48,6 +48,10 @@ const DIALOG_ROUTES = [
   'forms/letter-head',
   'forms/item-price',
   'forms/ledger-filters',
+  'forms/new-access-code',
+  'forms/access-code',
+  'forms/access-request',
+  'forms/enter-access-code',
 ];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to

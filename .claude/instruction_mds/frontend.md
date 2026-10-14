@@ -120,12 +120,12 @@ Paper types `theme.colors` to MD3 only → read added keys through `useAppTheme(
 
 ### 2.3 Accent — only here
 
-- The + circle on the systems list's Create System card
+- The icon circles on the systems list's slot cards (Create New System, Enter Access Code)
 - Active rail / drawer item: 4px bar. Active form section row: 3px bar
 - Kickers
-- Inline text actions: "Auto-generate", "Scan", "+ Add …", "+ New …", "Clear all"
+- Inline text actions: "Auto-generate", "Scan", "+ Add …", "+ New …", "Clear all", "Mark all as read"
 - Toggle on. Stepper progress bar
-- Note callout left rule. Count badge on a tab or pane switch
+- Note callout left rule. Count badge on a tab, a bell or a pane switch; an unread notification's dot
 - Pack: Open status, remaining bar, **Next pick** badge (`accent` fill, `onAccent` text)
 
 Everything else: ink on white.
@@ -274,8 +274,9 @@ rail is narrower than the window.
 | Confirms, pickers, Filters panel | native `formSheet` route | Paper `Dialog` |
 | Small create/edit forms (a name and a few fields) | full-page route | Paper `Dialog` over the screen it was opened from: the same route as a `transparentModal` (the `forms/` routes) |
 | Profile | the Account tab | the Account tab, reached from the systems list's account icon (the tab bar is hidden) |
+| Access Codes, Notifications | their tabs | the same screens, reached from the systems list's key and bell, with a back arrow home (the tab bar is hidden) |
 | Multi-step flow ending in a review | stepper, Review as the last step | stepper left, Review sidebar right |
-| Systems list | Create button + row cards | grid, Create System card first |
+| Systems list | Create New System and Enter Access Code buttons + row cards | grid, the two slot cards first |
 
 Same at both widths: long forms and create-system (full page), a record with child rows or a sample under
 its fields (a page of the Setup stack), multi-step flows (full-screen route).
@@ -433,7 +434,14 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Number card | a 1px `outlineVariant` box, `radius.lg`: `labelMedium` label in `secondary`, the figure in `amount`, a `bodySmall` muted line. In a `useColumns(fontScaled(<card min>))` grid — two across a phone, one at a large font scale — rows padded with empty cells |
 | Bar chart (sales per day) | `src/screens/dashboard/sales-chart.tsx`, drawn with `View`s — no chart library: a fixed-height plot (a size: it holds no text), one `flex: 1` bar a day in `primary`, its height the day's share of the best day's; a day without a sale a 2px `outlineVariant` foot. Day numbers in `bodySmall` under every bar up to seven, else under the first, middle and last; a `bodySmall` muted "Best day: …" line; each bar's day and amount as its `accessibilityLabel` |
 | Ranked rows, alert rows | `src/components/row-box.tsx` (`RowBox`, `BoxRow`) — a 1px `outlineVariant` box of rows, `surfaceVariant` hairlines between: `titleMedium` name over a `bodySmall` muted line, then a `titleMedium` figure at the end (a best seller) or a `labelMedium` status in `error` under them (an alert: "Out of stock", "8 left · re-order at 9"). The line an empty list shows replaces the box. `plain` makes the second line body text, not a muted fact: a mistake's sentence |
-| Systems list, wide | `headlineMedium` "Your POS Systems", `bodyLarge` line. Grid from `useColumns(SYSTEM_CARD)` (3 across 1180dp). First cell `src/screens/home/create-system-card.tsx`: `Pressable`, 1px dashed `outlineVariant`, `surfaceMuted`, `radius.lg`, centred `accent` + circle, `titleMedium` name, `bodySmall` line; always there, so it is also the empty state. Narrow keeps the Create button |
+| Systems list, wide | `headlineMedium` "Your POS Systems", `bodyLarge` line. Grid from `useColumns(SYSTEM_CARD)` (3 across 1180dp). First two cells `src/screens/home/slot-card.tsx` (Create New System, Enter Access Code): `Pressable`, 1px dashed `outlineVariant`, `surfaceMuted`, `radius.lg`, centred `accent` icon circle, `titleMedium` name, `bodySmall` line; always there, so Create is also the empty state. App bar: key (Access Codes), bell (Notifications), account. Narrow keeps the two buttons — Create contained, Enter Access Code outlined under it |
+| Waiting for approval | `src/screens/home/pending-requests.tsx`: `titleMedium` heading over a `RowBox` — the system, then "Code ABC-123 · asked …". Above Active Systems narrow, under the title wide; nothing at all while none wait |
+| Pane switch (Access Codes) | `SegmentedButtons` Codes · Requests · Members in a horizontal `ScrollView`, `minWidth` 96 + `fontScaled(192)`, held to 560dp wide; the pane is the route's param, so a notification opens Requests. No count in a label — "Requests (3)" is cut off on a phone; the count sits on the Pending chip |
+| Pick-one chips | `src/components/filter-chips.tsx`: `PickChip` — picked: flat, `primary` fill, `onPrimary` text; the rest outlined; no check mark. `FilterChips` is a status filter's row of them sliding sideways (Codes, Requests); the new-code form wraps them for a system or an expiry. Rejected: Paper's own selected flat chip — a 12% tint the phone could not tell from the others (2026-10-14) |
+| Code entry | `src/screens/access-codes/enter-access-code-form.tsx`: six `radius.md` boxes in a row (`headlineSmall`, the next box's border `primary` while focused) drawn over one Paper `TextInput` at opacity 0.01 that takes the typing and a paste; the boxes hidden from screen readers, the field labelled "Access code, six characters" |
+| Created codes | a 1px `outlineVariant` box, `radius.lg`: each code in `amount` with a share `IconButton`, `surfaceVariant` hairlines; Share All when there are several. React Native's `Share` — the platform sheet |
+| Notification row | `Pressable` row, `surfaceVariant` hairline under it: `Avatar.Icon` 40 by kind, `titleMedium` title, `bodyMedium` body, `bodySmall` muted time; unread: `surfaceMuted` ground and a 10dp `accent` `Badge` dot. "Mark all as read" an `accent` text `Button` above the list |
+| Bell with a count | `src/components/bell-action.tsx`: `Appbar.Action` + an 18dp `accent` `Badge` (`onAccent` text, "99+" past 99) on its upper corner — the wide systems list, and a system's header (where it leaves the system for the Notifications tab). The tab's own count is `NativeTabs.Trigger.Badge`, rendered only when there is one (§7) |
 
 ## 6. Icons
 
@@ -473,6 +481,10 @@ Symptom → cause → rule. Entry stays while the stack that caused it stays. Pr
 | `FlatList` throws on rotate / resize | `numColumns` changed, same `key` | `key={columns}` |
 | No gutter between `FlashList` cells | 2.x positions cells absolutely, flex `gap` reaches nothing | gutter on cell |
 | App crash, Android tab bar | native tabs cap at five | shell = `Drawer`, not `NativeTabs` |
+| Tab badge read "0" (2026-10-14) | expo-router's `appendBadgeOptions` sets the badge from truthy children whatever `hidden` says | render `NativeTabs.Trigger.Badge` only when there is a count |
+| A see-through field missing for screen readers (2026-10-14) | Android leaves a view at alpha 0 out of the accessibility tree (`View.isVisibleToUser`) | opacity 0.01, never 0, on a field drawn over by something else |
+| Text drawn though its colour was `transparent`, Android (2026-10-14) | React Native on Android reads colour 0 as unset and uses the default | do not hide text with a transparent colour; hide the view (above) |
+| Picked chip looked like the others (2026-10-14) | Paper's selected flat chip is a 12% tint | `PickChip` (`src/components/filter-chips.tsx`) |
 | `Menu` lands offset in sheet | `Menu` positions from window coords, sheet is partial height | flows holding a `Menu` = full-screen route |
 | Sheet with nested stack fails, Android | Android `formSheet` cannot host a nested stack | sheets = leaf routes of `(app)` Stack |
 | Keyboard covers sheet's save buttons | sheet + keyboard | create / edit forms = full page |

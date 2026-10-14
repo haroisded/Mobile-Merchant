@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { Appbar } from '../../components/appbar';
 import { Avatar } from '../../components/avatar';
+import { BellAction } from '../../components/bell-action';
 import { Button } from '../../components/button';
 import { IconButton } from '../../components/icon-button';
 import { RemoveSystemDialog } from '../../components/remove-system-dialog';
@@ -17,11 +18,14 @@ import { SYSTEM_CARD, useColumns, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
 import { useSession } from '../../Store/StoreUser';
 import { spacing } from '../../themes';
-import { CreateSystemCard } from './create-system-card';
+import { PendingRequests } from './pending-requests';
+import { SlotCard } from './slot-card';
 import { SystemCard } from './system-card';
 
-/** The wide grid's first cell, ahead of the systems. */
+/** The wide grid's first two cells, ahead of the systems. */
 const CREATE = 'create';
+const ENTER = 'enter';
+type Slot = typeof CREATE | typeof ENTER;
 
 export function HomeScreen() {
   const { columns, onLayout } = useColumns(SYSTEM_CARD);
@@ -45,13 +49,15 @@ export function HomeScreen() {
   // card wide. Removing is a formSheet route narrow and a dialog over this screen wide
   // (.claude/instruction_mds/frontend.md §5).
   const create = () => router.push('/create-system');
+  // A code someone sent: the one way into their system. A small form, page narrow and Dialog wide.
+  const enterCode = () => router.push('/forms/enter-access-code');
   const remove = (merchant: Merchant) => {
     if (narrow) router.push({ pathname: '/sheets/remove-system', params: { merchantId: merchant.id } });
     else setRemoving(merchant);
   };
 
   const systems = merchants.data ?? [];
-  const cells: (Merchant | typeof CREATE)[] = narrow ? systems : [CREATE, ...systems];
+  const cells: (Merchant | Slot)[] = narrow ? systems : [CREATE, ENTER, ...systems];
   const status = <LoadStatus merchants={merchants} />;
 
   return (
@@ -76,8 +82,10 @@ export function HomeScreen() {
           <IconButton icon="search" />
         ) : (
           <>
-            <Appbar.Action icon="bell" />
-            <Appbar.Action icon="account-circle" onPress={openAccount} />
+            {/* Wide, the tab bar is hidden: these are the ways to its Access Codes, Notifications and Account. */}
+            <Appbar.Action icon="key" onPress={() => router.navigate('/access-codes')} accessibilityLabel="Access Codes" />
+            <BellAction onPress={() => router.navigate('/notifications')} />
+            <Appbar.Action icon="account-circle" onPress={openAccount} accessibilityLabel="Account" />
           </>
         )}
       </Appbar.Header>
@@ -87,10 +95,10 @@ export function HomeScreen() {
       <View style={styles.body} onLayout={onLayout}>
         <FlashList
           data={cells}
-          keyExtractor={(item) => (item === CREATE ? CREATE : item.id)}
-          // Two recycling pools: the create card never recycles into a system card (vercel-react-native-skills
+          keyExtractor={(item) => (item === CREATE || item === ENTER ? item : item.id)}
+          // Two recycling pools: a slot card never recycles into a system card (vercel-react-native-skills
           // list-performance-item-types).
-          getItemType={(item) => (item === CREATE ? CREATE : 'system')}
+          getItemType={(item) => (item === CREATE || item === ENTER ? 'slot' : 'system')}
           numColumns={numColumns}
           // FlashList recomputes its layout when numColumns changes, so the remount FlatList
           // required (.claude/instruction_mds/frontend.md §4.2) is no longer load-bearing. It is kept because the
@@ -98,7 +106,7 @@ export function HomeScreen() {
           // resize, which is already a full relayout — and it costs nothing the rest of the time.
           key={numColumns}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={<HomeHeader narrow={narrow} onCreate={create} />}
+          ListHeaderComponent={<HomeHeader narrow={narrow} onCreate={create} onEnterCode={enterCode} />}
           // Narrow, the load state stands in for an empty list. Wide, the list is never empty — the
           // create card is always first — so the state goes under it, and the card is the empty state.
           ListEmptyComponent={narrow ? <View style={styles.empty}>{status}</View> : null}
@@ -106,7 +114,9 @@ export function HomeScreen() {
           renderItem={({ item }) => (
             <View style={styles.cell}>
               {item === CREATE ? (
-                <CreateSystemCard onPress={create} />
+                <SlotCard icon="add" title="Create New System" line="Make your own point-of-sale system." onPress={create} />
+              ) : item === ENTER ? (
+                <SlotCard icon="key" title="Enter Access Code" line="Join a system with the code its owner sent you." onPress={enterCode} />
               ) : (
                 <SystemCard
                   merchant={item}
@@ -130,24 +140,32 @@ export function HomeScreen() {
   );
 }
 
+type HeaderProps = { narrow: boolean; onCreate: () => void; onEnterCode: () => void };
+
 /**
- * Narrow: a full-width create button between two headings. Wide: the screen's title and its line; the
- * grid's first card creates. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10);
- * a wider window gets more cards per row instead.
+ * Narrow: full-width Create and Enter Access Code buttons, the requests still waiting, then the systems' heading.
+ * Wide: the screen's title and its line, then the requests waiting; the grid's first two cards create and enter a
+ * code. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10); a wider window gets
+ * more cards per row instead.
  */
-function HomeHeader({ narrow, onCreate }: { narrow: boolean; onCreate: () => void }) {
+function HomeHeader({ narrow, onCreate, onEnterCode }: HeaderProps) {
   return narrow ? (
     <View style={styles.header}>
       <Text variant="titleMedium">Quick Actions</Text>
       <Button mode="contained" icon="add" onPress={onCreate} contentStyle={styles.leading}>
         Create New System
       </Button>
+      <Button mode="outlined" icon="key" onPress={onEnterCode} contentStyle={styles.leading}>
+        Enter Access Code
+      </Button>
+      <PendingRequests />
       <Text variant="titleMedium">Active Systems</Text>
     </View>
   ) : (
     <View style={styles.headerWide}>
       <Text variant="headlineMedium">Your POS Systems</Text>
       <Text variant="bodyLarge">Manage, edit, and monitor your custom point-of-sale system.</Text>
+      <PendingRequests />
     </View>
   );
 }

@@ -10,7 +10,11 @@ const posProfilesKey = {
   all: ['pos-profiles'],
   lists: () => [...posProfilesKey.all, 'list'],
   list: (args: { merchantId: string }) => [...posProfilesKey.lists(), args],
+  users: () => [...posProfilesKey.all, 'users'],
 };
+
+export const invalidatePosProfiles = (queryClient: ReturnType<typeof useQueryClient>) =>
+  queryClient.invalidateQueries({ queryKey: posProfilesKey.all });
 
 /**
  * A system's POS Profiles (docs.frappe.io/erpnext/pos-profile), each with its users, payment methods and item
@@ -36,6 +40,21 @@ export function usePosProfilesQuery({ merchantId }: { merchantId: string }) {
 }
 
 export type PosProfile = NonNullable<ReturnType<typeof usePosProfilesQuery>['data']>[number];
+
+/**
+ * Every profile's user rows the caller can see, with the profile's name — so revoking someone can say which profiles
+ * it leaves with nobody listed, and so open to everyone (private.pos_profile_usable).
+ */
+export function usePosProfileUsersQuery() {
+  return useQuery({
+    queryKey: posProfilesKey.users(),
+    queryFn: async () => {
+      const { data } = await supabase.from('pos_profile_users').select('member_id, pos_profile_id, pos_profiles(pos_profile_name)').throwOnError();
+      return data;
+    },
+    staleTime: STALE.MINUTES.FIVE,
+  });
+}
 
 /** Save a profile and its three child tables in one transaction (public.save_pos_profile, security invoker). */
 export function useSavePosProfileMutation({ merchantId, profileId }: { merchantId: string; profileId?: string }) {

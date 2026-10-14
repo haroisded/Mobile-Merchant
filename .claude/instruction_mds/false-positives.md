@@ -135,6 +135,18 @@ dead and correct to delete.
   functions in `public` that `authenticated` may execute — exactly these five; `anon` cannot execute
   `delete_document`). Any
   *other* `public` definer function in that list is a real finding.
+- **The same finding on `public.create_access_codes`, `public.claim_access_code` and
+  `public.decide_access_request`** (`get_advisors`, 2026-10-14). Signed-in users are meant to call all
+  three, and each checks `(select auth.uid())` inside: making codes and deciding a request refuse anyone
+  but the system's owner; a claim acts only for the caller, is rate-limited, and names a system only once
+  the code is real. They are definer on purpose — `access_codes` has no insert policy, and nobody writes
+  `access_requests` or a member row directly (tenancy.md rule 13). Re-checked the same day by reading
+  `pg_proc` for definer functions in `public` that `authenticated` may execute: these three and the five
+  above, eight in all, none executable by `anon`. Confirmed false positive.
+- **`rls_enabled_no_policy` (INFO) on `private.access_code_failures`** (`get_advisors`, 2026-10-14). The
+  claim's rate-limit log: only `claim_access_code`, a definer function, reads or writes it, it sits in
+  `private` where PostgREST does not reach, and RLS is on so that no grant could ever expose it. No policy
+  is the intended state. Confirmed false positive.
 
 ## 6. Documented exceptions a reviewer may flag
 

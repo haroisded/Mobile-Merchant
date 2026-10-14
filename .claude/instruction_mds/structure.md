@@ -39,6 +39,9 @@ src/
     currency-presets/     queries.ts — read-only reference data
     doctypes/             queries.ts — read-only registry
     fiscal-years/         queries.ts  schema.ts
+    access-codes/         queries.ts  schema.ts  code.ts — a code's shape, status and expiry, the claim's answers, import-free
+    access-requests/      queries.ts — the owner's requests, the caller's own waiting ones, claim, decide
+    notifications/        queries.ts — the list, the unread count, mark read
     members/  roles/  role-profiles/  user-permissions/   queries.ts  schema.ts
     role-permissions/     queries.ts — the matrix, and usePermissions / can for every screen
     system-settings/  currencies/                         queries.ts  schema.ts
@@ -67,7 +70,9 @@ src/
     pos-closing-entries/  queries.ts — the list, one by id, close_pos_session
     profiles/
   screens/
-    home/                 index.tsx  create-system.tsx  system-card.tsx  …
+    home/                 index.tsx  create-system.tsx  system-card.tsx  slot-card.tsx  pending-requests.tsx  …
+    access-codes/         index.tsx (the pane switch)  codes.tsx  requests.tsx  members.tsx  and the four small forms
+    notifications/        index.tsx
     setup/                index.tsx — the Setup destination's index
     stock/                index.tsx — the Stock destination's index
     items/                index.tsx  item-form.tsx (a Stock-stack page)
@@ -106,7 +111,7 @@ src/
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
@@ -142,6 +147,8 @@ Never create a feature folder named after a page.
 | Column-count hook | `src/lib/columns.ts` |
 | Reading a CSV file of items; picking the file | `src/features/items/csv.ts` — data, and import-free so `tools/check-logic.mjs` runs it; `src/lib/files.ts` — the device wrapper (rule 6). Rejected: a `features/import/` folder — a page, not a resource (rule 2) |
 | The Dashboard's reports — four functions that each add up several resources | `src/features/dashboard/` — the one folder named as its page is, because the reports are: `public.dashboard_cards` belongs to no single table. Rejected: a hook in each of `pos-invoices/`, `bins/` and `pos-opening-entries/` — one card reads all three |
+| Access codes, the requests they bring, the inbox | three resources, three folders — `access-codes/`, `access-requests/`, `notifications/` — and one screen, `src/screens/access-codes/`, reading the first two and `members/`. Rejected: a `features/invites/` folder — a page's name, not a table's |
+| The bell with its unread count | `src/components/bell-action.tsx` — the systems list and a system's header both draw it |
 
 ## 3. Screen folder size
 

@@ -376,9 +376,15 @@ with no table: `20261012200010_dashboard.sql` (the invoker report functions `pub
 Then Bulk Import, with no table either: `20261012204315_import_items.sql` (the invoker RPC
 `public.import_items` — `save_item` for each row of a file and one Opening Stock reconciliation for them all,
 every row or none; a refusal is re-raised with the row it met in `hint`).
+Then Access Codes, the only way into someone else's system: `20261013213537_access_codes.sql`
+(`access_codes`, `access_requests` and `notifications` — owner-only and own-row tables with hand-written
+policies on `private.owned_merchant_ids()`, not doctypes; `private.access_code_failures`, the claim's rate
+limit; the definer RPCs `public.create_access_codes`, `claim_access_code` and `decide_access_request`;
+`private.require_access_request()` refusing any other member insert; the notification triggers; the
+email-invite claim triggers dropped).
 `authenticated` keeps `usage` on
-`private` and `execute` on `current_merchant_ids()` and the permission functions so business tables'
-policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
+`private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
+business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
 has a revert in `supabase/reverts/`, or a `-- no-revert:` line when it only drops (§6.6).
 `ARCHITECTURE.md` describes what they do; `.claude/instruction_mds/tenancy.md` covers the tenancy model and what is
 still ahead of it. The rules below are what must not be broken when adding to them.
@@ -467,7 +473,9 @@ someone to its records), its `standard_role_permissions` rows (ERPNext's matrix 
 the Role Permissions Manager and User Permissions govern it. Seeding goes in a
 `merchants_seed_NN_<area>` trigger plus a backfill for existing systems. Rejected: policies written by
 hand per table — the shape drifts, and a rule edited in the Manager would not reach them
-(`.claude/instruction_mds/tenancy.md`).
+(`.claude/instruction_mds/tenancy.md`). The one exception: `access_codes` and `access_requests`, which no
+role may touch — only the owner — so they carry hand-written owner-only policies on
+`private.owned_merchant_ids()` instead (tenancy.md rule 13).
 
 Two kinds post, and each has one rule that must hold:
 

@@ -26,6 +26,9 @@ const merchantsKey = {
   lists: () => [...merchantsKey.all, 'list'],
 };
 
+/** For a change made elsewhere: an owner letting the caller in, or removing them (src/features/notifications/). */
+export const invalidateMerchants = (queryClient: ReturnType<typeof useQueryClient>) => queryClient.invalidateQueries({ queryKey: merchantsKey.all });
+
 export function useMerchantsQuery() {
   return useQuery({
     queryKey: merchantsKey.lists(),

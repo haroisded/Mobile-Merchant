@@ -8,7 +8,7 @@ import { ControlledSwitch, FieldGrid } from '../../components/form-fields';
 import { ControlledSelect } from '../../components/search-select';
 import { useDoctypeLinksQuery, useDoctypesQuery } from '../../features/doctypes/queries';
 import type { Doctype, DoctypeLink } from '../../features/doctypes/queries';
-import { useMembersQuery } from '../../features/members/queries';
+import { memberName, useMembersQuery } from '../../features/members/queries';
 import type { Member } from '../../features/members/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useDeleteUserPermissionMutation, useSaveUserPermissionMutation, useUserPermissionsQuery } from '../../features/user-permissions/queries';
@@ -129,7 +129,7 @@ function Form({ merchantId, existing, memberId, members, doctypes, links, onDism
             required
             title="User"
             span="full"
-            options={members.map((member) => ({ value: member.id, label: member.email, hint: member.full_name ?? undefined }))}
+            options={members.map((member) => ({ value: member.id, label: memberName(member), hint: member.full_name ? (member.email ?? undefined) : undefined }))}
           />
           <ControlledSelect
             control={control}
