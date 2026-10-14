@@ -49,9 +49,11 @@ src/themes.js              MD3 light/dark palettes + Merchant keys, roundness, s
 src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years,
                            profiles; access-codes (+ code.ts: a code's shape, its status, its expiry
                            and the claim's answers), access-requests, notifications (the unread count,
-                           and what a new one makes the app fetch again); members (+ the owner's
-                           members across systems), roles, role-profiles, role-permissions (usePermissions,
-                           can), user-permissions; system-settings, global-defaults, currencies;
+                           and what a new one makes the app fetch again); members (an employee's role
+                           and exceptions, + the owner's members across systems), roles (+ save_role and
+                           the colour palette's keys), permissions (the catalog; access.ts: can, has, a
+                           destination's rule, requirements and exceptions, import-free), role-permissions
+                           (usePermissions, which every screen imports); system-settings, global-defaults, currencies;
                            accounts (ledgerOptions), cost-centers, accounts-settings,
                            modes-of-payment; tax-categories, sales-tax-templates (+ calculate.ts,
                            ERPNext's taxes_and_totals), item-tax-templates; warehouses
@@ -68,7 +70,7 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            period.ts); documents (submit and cancel
                            for every document), stock-entries, stock-reconciliations; the ledgers
                            only a posting writes — gl-entries, stock-ledger-entries, bins; read-only
-                           countries, currency-presets, doctypes
+                           countries, currency-presets
 src/screens/<screen>/      UI by screen — home (the systems list, its slot cards — Create New System,
                            Enter Access Code — the requests waiting for approval, and the create-system
                            form), access-codes (the Codes, Requests and Members panes, a new code, one
@@ -77,8 +79,10 @@ src/screens/<screen>/      UI by screen — home (the systems list, its slot car
                            full-page item with its UOM and Item Tax rows), item-prices (list +
                            search, form), stock-entries and stock-reconciliations (list + a
                            document's page), stock-balance, stock-ledger, accounts (the Accounts
-                           index), general-ledger, company, fiscal-years, users, roles, role-profiles,
-                           role-permissions, user-permissions, global-defaults, system-settings,
+                           index), general-ledger, system-home (a system's first screen: why someone with
+                           no role sees Home only), employees (the list, an employee's permissions, the
+                           roles and a role's page, a tablet's two panes; editor/ holds the role and access
+                           editors they share), company, fiscal-years, global-defaults, system-settings,
                            currency, chart-of-accounts, cost-centers, accounts-settings,
                            modes-of-payment, tax-categories, item-tax-templates, warehouses, uoms,
                            uom-conversion-factors, price-lists, brands (each list + form),
@@ -107,7 +111,7 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            repeatable-rows (a child table inside its form; RepeatableList, the
                            whole table), section-heading, sample-box (a worked sample: receipt
                            total, tax preview, valuation), record-index (a destination's index: the
-                           rows a person's roles let them read), sales-defaults-fields and
+                           rows a person's permissions let them open), sales-defaults-fields and
                            item-tax-fields (the sales defaults and the Item Tax row an Item and an
                            Item Group both have), document-page (a document's header, its Submit /
                            Cancel / Delete and its form), stock-document (what the two stock
@@ -128,11 +132,12 @@ src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the s
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
 src/app/(app)/(tabs)/      home, access-codes, notifications, settings, account + the NativeTabs bar (five:
                            Android's most) and the Notifications badge
-src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, dashboard.tsx, and four Stacks
+src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, dashboard.tsx, and five Stacks
                            of their own: sell/ (the index, open-session, register, cart, pos-invoices,
                            pos-invoice, pos-return, the two entries' lists, close-session, pos-closing-entry), stock/ (the index, items, item, item-prices, import-items, the stock
                            documents and reports), accounts/ (the index, general-ledger; each re-exports
-                           the other's document and report pages, so Back returns) and setup/ (the
+                           the other's document and report pages, so Back returns), employees/ (the
+                           owner's: index, employee, roles, role, permissions) and setup/ (the
                            index and one route per Setup page; chart-of-accounts, cost-centers,
                            warehouses and item-groups push themselves once per folder, `parent`)
 app.config.ts              derives the Google iOS URL scheme from .env
@@ -154,7 +159,8 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261012080419_pos_returns_and_voids.sql, 20261012085121_discounts.sql,
                            20261012085548_pos_invoice_discounts.sql,
                            20261012131350_access_for_documents.sql, 20261012200010_dashboard.sql,
-                           20261012204315_import_items.sql; then 20261013213537_access_codes.sql
+                           20261012204315_import_items.sql; then 20261013213537_access_codes.sql and
+                           20261014034106_employees_and_permissions.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -174,7 +180,9 @@ tools/check-logic.mjs          npm run check:logic — asserts the pure date mat
                                the money module and the tax calculation against ERPNext's results,
                                the tree walks, the Tax Rule a sale takes, what a receipt prints,
                                the Item Price a sale line takes, the Dashboard's periods, what a CSV
-                               file of items holds, and an access code's shape, status and expiry
+                               file of items holds, an access code's shape, status and expiry, and the
+                               permission checks (can, has, a destination's rule, requirements, an
+                               employee's exceptions, a cart without Apply Discounts)
 ```
 
 ---
@@ -360,8 +368,9 @@ auto-enable RLS (not installable on the hosted project — see below), and two m
 drop: leftovers from an unrelated project, and the business schema (below). Then the POS foundation,
 one migration per ERPNext step: the Company and its fiscal years, Users & Access, Defaults & Money,
 the Chart of Accounts with Cost Centers, Accounting Defaults, Modes of Payment, Taxes, the Stock
-Building Blocks, Item Groups with Selling Settings, Tax Rules, Stock Settings, Naming Series, and Printing
-(the last sections).
+Building Blocks, Item Groups with Selling Settings, Tax Rules, Stock Settings, Naming Series, and Printing;
+the second batch (Steps 13–23); Access Codes; and Employees & permissions, which replaced Users & Access's
+ERPNext roles (the last sections).
 
 `public.profiles` has `id` referencing `auth.users` with `on delete cascade`, `display_name`,
 `avatar_url`, `created_at` — plus its policies, a trigger that fills the row on signup, and the
@@ -380,9 +389,9 @@ email, phone and currency columns. The cascade is what lets `delete_current_user
 statement: deleting the `auth.users` row takes the profile and every merchant with it.
 
 **A merchant is a business, not a person**, and each one is what the UI calls a "system" — the cards
-on the home screen are this table. `owner_id` is the owner — ERPNext's Administrator, never restricted
-and never removed; everyone else is a row of `merchant_members` (Users & Access, below), and the model
-is in [.claude/instruction_mds/tenancy.md](./.claude/instruction_mds/tenancy.md).
+on the home screen are this table. `owner_id` is the owner — ERPNext's Administrator, holding every
+permission and never removed; everyone else is a row of `merchant_members` (Access Codes and Employees &
+permissions, below), and the model is in [.claude/instruction_mds/tenancy.md](./.claude/instruction_mds/tenancy.md).
 
 Its policies: select for the owner or a member (`(select auth.uid()) = owner_id or id in (select
 private.current_merchant_ids())` — the owner clause on the row itself, because the function is
@@ -395,13 +404,14 @@ action, not account deletion.
 
 ### `private.current_merchant_ids()` — the seam
 
-`security definer`, `stable`, returning the merchant ids the caller owns plus those where they are an
-enabled, claimed member. `authenticated` keeps `usage` on `private` and `execute` on it and on the
+`security definer`, `stable`, returning the merchant ids the caller owns plus those where they are a
+member. `authenticated` keeps `usage` on `private` and `execute` on it and on the
 permission functions below so policies can call them
 ([.claude/instruction_mds/tenancy.md §4](./.claude/instruction_mds/tenancy.md)).
 It was written before any caller on purpose, and Users & Access proved the point: staff arrived by
 rewriting this body and adding `permitted_merchant_ids()` beside it — no table alterations. Business
-tables now call `permitted_merchant_ids()`, which builds on it (below).
+tables now call `permitted_merchant_ids()`, which builds on it (below), and Employees & permissions proved
+it again: a different permission model behind the same two signatures.
 
 ### The policies
 
@@ -422,12 +432,13 @@ so `auth.uid()` is null and `profiles_insert_own` would reject the row signup ex
 `private.handle_new_user()` creates the profile row on signup, reading `full_name` and `avatar_url`
 out of `raw_user_meta_data` where both providers land them. `public.delete_current_user()` deletes
 the caller's own `auth.users` row, which cascades. `private.current_merchant_ids()` is described
-above; the permission engine, the tree and user-permission validators, each step's `seed_*` trigger
-function and the access-code triggers are in the sections below. The definer functions PostgREST
+above; the permission engine, the tree validator, each step's `seed_*` trigger function, the access-code
+triggers and the "Access changed" trigger are in the sections below. The definer functions PostgREST
 serves besides `delete_current_user()` are `public.my_permissions()` (it answers only for a system the
 caller belongs to), the document RPCs `submit_document`, `cancel_document` and `delete_document`
 (Steps 15 and 19), and the access-code RPCs `create_access_codes`, `claim_access_code` and
-`decide_access_request` (Access Codes, below) — each checks `(select auth.uid())` itself.
+`decide_access_request` (Access Codes, below) — each checks `(select auth.uid())` itself. The Employees
+saves, `save_role` and `save_member_access`, are invoker: the owner-only policies decide them.
 
 `security definer` means the body runs with the *owner's* privileges, not the caller's — a
 deliberate privilege escalation, which is why all three of these are mandatory every time:
@@ -450,7 +461,7 @@ is *created*, not each time it fires.
 `alter table … enable row level security` is set explicitly for every table — `profiles`,
 `merchants`, the reference data, and each foundation step's — and every migration added later must
 carry that line for its own tables. The policies themselves are no longer hand-written per business
-table: `private.apply_doctype_policies()` writes them (Step 11, below; CLAUDE.md §6.7). A new table in `public` is served over HTTP by
+table: `private.apply_doctype_policies()` writes them (Step 11 and Employees & permissions, below; CLAUDE.md §6.7). A new table in `public` is served over HTTP by
 PostgREST the moment it exists. The dashboard's Security Advisor reports the ones missing it under
 `rls_disabled_in_public`.
 
@@ -517,6 +528,12 @@ made on New Year's Eve in Manila gets Manila's year. Every later step adds its o
 year for the systems that existed.
 
 ### Step 11, Users & Access — `20261008145056_users_and_access.sql`
+
+> **Superseded on 2026-10-14** by Employees & permissions (below): of this step, `doctypes`, `roles`,
+> `merchant_members`, `permitted_merchant_ids()`, `my_permissions()` and `apply_doctype_policies()` remain,
+> re-created there; the rest was dropped. What follows is what this migration did. The ERPNext roles the later
+> step sections name (Sales User, Stock Manager, System Manager …) are the model of their day; today a doctype
+> is reached through the permissions in that section's table.
 
 ERPNext's permission model, enforced by RLS rather than mirrored in the client
 (docs.frappe.io/erpnext/role-based-permissions, /user-permissions, /role-and-role-profile):
@@ -1051,6 +1068,9 @@ loyalty.
 
 ### Step 21, Access for the New Documents — `20261012131350_access_for_documents.sql`
 
+> **Undone on 2026-10-14** with User Permissions (Employees & permissions, below): `doctype_links`, the two
+> restriction functions and the link clauses are gone. What follows is what this migration did.
+
 docs.frappe.io/erpnext/user-permissions, /role-based-permissions. 21.1 needed no change: every document type
 of Steps 13–20 got its rules, Submit and Cancel included, with its own step. This migration is 21.2 — a User
 Permission now restricts the documents that *link* to its record, and **Applicable For** means something.
@@ -1236,6 +1256,110 @@ tables as doctypes — no role may let someone in. Out of scope: push notificati
 and make another). Unverified: two people using a one-person code at the same instant (the row lock is
 standard Postgres; the probes ran in one session).
 
+### Employees & permissions — `20261014034106_employees_and_permissions.sql`
+
+Discord-style roles in place of ERPNext's (`.claude/updates-and-revamps/roles-perms-references/`). The owner
+makes roles, turns permissions on for each, gives every employee one role, and may turn a permission on or off
+for one employee alone — that employee's own setting wins. Someone with no role sees Home only. Supersedes Step
+11's roles, role profiles and permission matrix, and Step 21's User Permissions (the human's call, 2026-10-13:
+removed, not rebuilt).
+
+| Table | Holds |
+| --- | --- |
+| `permissions` | global, read-only: 20 abilities in five groups — `key`, `label`, `description`, `position`, and `requires`, the one it needs (Process Sales and Process Refunds need Open/Close Register; Apply Discounts needs Process Sales) |
+| `permission_rules` | global, read-only: what each permission reaches, as ERPNext's doctype × type (`select`, `read`, `write`, `create`, `delete`, `submit`, `cancel`). Every permission also gets `select` on the seven one-row settings every screen reads (System Settings, Global Defaults, Currency, Accounts, Selling, Stock and Print Settings) |
+| `role_grants` | per system: a role's permissions. Owner-only (`for all` on `owned_merchant_ids()`) |
+| `member_overrides` | per system: one employee's exceptions — `permission`, `allowed`. Owner-only |
+| `roles` | now the owner's own, every one: `role_name`, `description` (≤ 200), `color` (one of 13 palette keys). ERPNext's 50 seeded roles are deleted, and `is_standard`, `disabled` and the name guard with them |
+| `merchant_members` | gains `role_id` — one role, or none; deleting the role leaves its holders with none (`on delete set null (role_id)`). Loses `role_profile_id` and `enabled` |
+
+**What each permission reaches** (the rules, abridged — `select` is a lookup: a price, a field's options):
+
+| Group | Permission | Reach |
+| --- | --- | --- |
+| Sales & POS | Process Sales | sells: POS Invoice select/create/write/submit, and looks up what the Register prices with |
+| | Apply Discounts | nothing more: the poster checks it |
+| | Process Refunds | POS Invoice read/create/write/submit — opens a sale to return it |
+| | Void Transactions | POS Invoice read/cancel/delete |
+| | View Sales | POS Invoice read: Orders and the Dashboard's sales |
+| Payment & Cash | Open/Close Register | POS Opening and Closing Entry select/create/write/submit |
+| | View Shift Totals | both entries read: the sessions, their closings, the cash a drawer should hold |
+| | Close Any Register | POS Opening Entry read/cancel, POS Closing Entry select/create/write/submit |
+| Inventory | View Stock Levels | Bin, Stock Ledger Entry and Item read |
+| | Manage Items | Item and Item Price read/write/create/delete |
+| | Receive Shipments | Stock Entry read/write/create/delete/submit |
+| | Adjust Inventory | Stock Reconciliation in full, cancel included; Stock Entry read/cancel |
+| Accounting | View General Ledger | GL Entry read |
+| Setup | Company & Calendar | Company, Global Defaults, System Settings, Currency read/write; Fiscal Year in full |
+| | Accounting & Payments | Account, Cost Center, Mode of Payment in full; Accounts Settings read/write |
+| | Taxes | the four tax doctypes in full |
+| | Stock Setup | Warehouse, UOM, UOM Conversion Factor, Brand, Item Group in full; Stock Settings read/write |
+| | Selling & Pricing | Price List, Pricing Rule in full; Selling Settings read/write |
+| | POS Profiles | POS Profile in full; looks employees up (`User` select) for its users |
+| | Naming & Printing | Print Format, Letter Head in full; Document Naming Settings, Print Settings read/write |
+
+The owner, and only the owner: Employees, roles and exceptions, Access Codes.
+
+**The engine** (definer, in `private`, `search_path = ''`, answering for `(select auth.uid())`):
+`my_permission_keys()` — the caller's effective permissions everywhere: the role's grants less what an
+exception turns off, plus what one turns on, each kept only with the one it requires (recursive), so a later
+change to a role cannot leave Apply Discounts standing alone. `has_permission(merchant, key)` — the owner holds
+all. `permitted_merchant_ids(doctype, ptype)` keeps its signature and now reads the rules (a `read` rule answers
+`select` too), so every policy, poster and RPC that asked it still works; `my_permissions(merchant)` keeps its
+shape and adds `permissions`, the keys. `current_merchant_ids()` (no more Enabled), `pos_profile_usable()` and
+`assert_postable()` (the frozen period's role is the member's `role_id`) are re-created to match.
+
+**The sale's poster** (`private.submit_pos_invoices()`, re-created from Step 20's): a sale needs Process
+Sales (`sales_not_permitted`), a return Process Refunds (`refunds_not_permitted`), and a discount — on the sale,
+on a line, or a rate typed more than one smallest unit away from the line's Price List Rate — Apply Discounts
+(`discounts_not_permitted`); all 42501, the owner excepted. A Pricing Rule's price needs nothing.
+
+**The policies.** `apply_doctype_policies()` is re-created without User Permissions or link clauses — select
+← `select`, insert ← create, update ← write, delete ← delete; a child table's select ← its parent's `select`, its
+writes ← its parent's write — and re-applied to all 55 tables (38 parents, 17 children). Then the old model goes:
+`role_permissions`, `standard_role_permissions`, `role_profiles` and `role_profile_roles`, `member_roles`,
+`user_permissions`, `doctype_links`, `doctypes.restrictable`, the Role Profile, Role Permission and User
+Permission doctypes, and their functions.
+
+**The owner's saves** — security invoker, so `role_grants`', `member_overrides`' and the members' policies decide:
+`save_role(payload)` writes a role, its permissions and — with `member_ids` — who holds it (they move to it;
+anyone left off loses it); `save_member_access(member, role, overrides)` sets an employee's role and replaces
+their exceptions. Both refuse a set that breaks a requirement (`permission_requires`, the label in `detail`).
+**"Access changed"**: `private.notify_access_changed()` on `role_grants`, `member_overrides` and a member's
+`role_id` tells each employee a change reaches — once, while it is unread.
+
+**Starter roles**, in every system (`private.seed_roles()`, from `merchants_seed_20_access`, and backfilled):
+Cashier (green: Process Sales, Open/Close Register), Stock Clerk (orange: View Stock Levels, Receive Shipments),
+Store Manager (maroon: every permission). A role the owner already has by that name is left alone.
+
+**The app.** **Employees** is a destination for the owner alone (`ownerOnly` in `DESTINATIONS`), its own Stack
+(`src/app/(app)/systems/[id]/employees/`): the list (`src/screens/employees/index.tsx` — the owner pinned, search,
+a chip per role, a table wide), an employee's permissions (`employee.tsx` over `editor/access-editor.tsx`: the role,
+how far they are from it, every permission as a switch, "Role: On/Off" where they differ), the roles
+(`roles.tsx`) and a role's page (`role.tsx` over `editor/role-editor.tsx`: General with 13 colours, Permissions,
+Members), and on a tablet two panes that ask before dropping unsaved changes (`roles.tsx`, `permissions.tsx`). The
+checks are import-free in `src/features/permissions/access.ts` (`can`, `has`, `showsDestination`, `toggle`,
+`effective`, `overridesFor`), asserted in `tools/check-logic.mjs`. What changed on other screens: the Dashboard's
+blocks follow View Sales, View Shift Totals / Close Any Register and View Stock Levels; Sell shows the session box
+for whoever may open one and **Register** only with Process Sales; **Return** needs Process Refunds; the cart's
+rate and discount fields need the POS Profile's switches **and** Apply Discounts, and `buildSale` ignores a typed
+price without it; the in-system Home tells someone with no role why it is empty. Setup → Users & Access is gone.
+
+How it was checked: a rolled-back probe harness of 30 identities — the owner, no role, each permission alone with
+its requirement, the starter roles, exceptions on and off, a broken requirement, an outsider — comparing what RLS
+lets each read and write with what `my_permissions` says, 0 mismatches; the revert run twice to a catalog identical
+to before (1,946 items); then the phone run (`.claude/tests/test-report/`, 2026-10-14). Two bugs that run found and
+fixed: the editors never enabled Save on a saved role or employee (the React Compiler and a `form` object passed
+down — they read `useFormState` now), and an open app missed a change while an earlier "Access changed" was unread
+(`usePermissions` asks every minute).
+
+Rejected: keeping ERPNext's model — too fine for a shop owner; several roles per employee (Discord's own) — one
+role and the employee's exceptions, the human's call; a `has_permission` call in each table's policies — fifty-five
+policies to rewrite, and a permission's reach no longer one table of rules. Known limits (tenancy.md §7): a `select`
+rule is a full read through the API — Process Sales can read every sale there, though no screen lists them without
+View Sales; Apply Discounts is checked against the Price List Rate the app sends. Tablet layouts are built and
+untested (owed).
+
 ---
 
 ## Frontend wiring
@@ -1273,10 +1397,12 @@ Feature folders are keyed on the **resource**, never on the page or screen that 
 in the app that knows the table is called `merchants`.
 
 What a person may do in a system comes from `usePermissions({ merchantId })`
-(`src/features/role-permissions/queries.ts`, the `my_permissions` RPC) and `can(permissions, doctype,
-ptype)`. Screens use it only to hide what RLS would refuse — a Setup row, a **New** or **Save** button,
-a field left editable, a rail destination with nothing in it to read (Step 21); the policies stay the
-boundary. Saving roles, members or rules invalidates it.
+(`src/features/role-permissions/queries.ts`, the `my_permissions` RPC) with `can(permissions, doctype,
+ptype)` and `has(permissions, key)` (`src/features/permissions/access.ts`). Screens use it only to hide what RLS
+would refuse — a Setup row, a **New** or **Save** button, a field left editable, a rail destination with nothing
+in it to open; the policies stay the boundary. Saving a role or an employee's access invalidates it, and it is
+asked again every minute, so an owner's change on another phone reaches an open app within one (Employees &
+permissions, above).
 
 Paper's icons go through `PaperProvider`'s `settings` prop in `src/app/_layout.tsx` to
 `renderIcon` (`src/lib/icons.tsx`), which draws each app icon name as the platform's own symbol with

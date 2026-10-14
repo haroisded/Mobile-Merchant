@@ -53,8 +53,8 @@ function Preview({ merchantId, control, money }: PreviewProps) {
   const [qty, setQty] = useState('1');
   const [itemTemplateId, setItemTemplateId] = useState('');
   const rows = useWatch({ control, name: 'rows' });
-  // An Item Tax Template's rates need its read; without it the sample has no item template to pick.
-  const readsItemTemplates = can(usePermissions({ merchantId }).data, 'Item Tax Template', 'read');
+  // An Item Tax Template's rates are its rows, which a lookup of it reads; without one the sample has no item template to pick.
+  const readsItemTemplates = can(usePermissions({ merchantId }).data, 'Item Tax Template', 'select');
   const itemTemplates = useItemTaxTemplatesQuery({ merchantId }).data ?? [];
   const itemTemplate = itemTemplates.find((template) => template.id === itemTemplateId);
   const sample = { rate: Number(price) || 0, qty: Number(qty) || 0, itemTaxRates: itemTemplate ? itemTaxRates(itemTemplate) : undefined };

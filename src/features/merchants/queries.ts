@@ -55,6 +55,16 @@ export function useMerchantsQuery() {
   });
 }
 
+/**
+ * One system out of the list the shell already fetched (a cache hit), and whether the caller owns it — what a route
+ * inside a system hands its screen. Undefined until the list has it.
+ */
+export function useMerchant(id: string) {
+  const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === id);
+  const userId = useSession()?.user.id;
+  return merchant ? { merchant, isOwner: merchant.owner_id === userId } : undefined;
+}
+
 export function useCreateSystemMutation() {
   const queryClient = useQueryClient();
   const session = useSession();

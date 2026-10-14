@@ -41,15 +41,16 @@ against when a screen picks its copy for a case it expects. It also narrows `dat
 
 `src/lib/auth.ts` is exempt — auth-js returns its own error classes and keeps explicit checks.
 
-**A record with child rows saves through one RPC.** A member and its roles, a role profile and its
-roles, a doctype's whole set of rules, a tax template and its rows, an item group and its Item Tax rows, an
+**A record with child rows saves through one RPC.** A role with its permissions and who holds it, an
+employee's role and exceptions, a tax template and its rows, an item group and its Item Tax rows, an
 item and its UOM and Item Tax rows:
-`public.save_member`, `save_role_profile`, `save_role_permissions`, `save_sales_tax_template`,
+`public.save_role`, `save_member_access`, `save_sales_tax_template`,
 `save_item_tax_template`, `save_item_group`, `save_item`, `save_pos_profile`, `save_stock_entry`, `save_stock_reconciliation` write them
 in one transaction, so a failure never leaves a half-saved record. A rule that reads the other rows (a tax
 row's Reference Row #) is a deferred constraint trigger, checked once the replaced rows are all in.
 They are security **invoker** — the caller's own policies decide each row — and take one `payload`
-jsonb. A single row stays a plain `.insert` / `.update`.
+jsonb (`save_member_access` takes `p_member`, `p_role` and `p_overrides`: its "no role" is the argument left
+out, as the generated types forbid null). A single row stays a plain `.insert` / `.update`.
 
 A document and its rows save the same way — `public.save_stock_entry`, `save_stock_reconciliation` — and
 answer with the document's id, which the mutation returns: a new document's page goes on with it
@@ -73,7 +74,7 @@ reconciliation for the whole file, saved and submitted — so every row or none 
 own policies. `src/features/items/csv.ts` parses the file and checks it first: import-free, asserted in
 `tools/check-logic.mjs`, handed the records to look names up in, and answering each mistake by the
 spreadsheet's row and the column's heading. It checks what the screen can know (a name not in the system,
-a number that is not one, what the importer's roles and the settings allow); the database still decides, and
+a number that is not one, what the importer's permissions and the settings allow); the database still decides, and
 a refusal comes back as it was raised with `hint = 'row N'` — the Nth row sent — or `'opening stock'`, which
 the screen turns into the file's own row number. Not Zod: a file is not a form, and its messages need a row
 and a column. Rejected: a `.insert` of all rows — it skips `save_item`'s price; `save_item_with_opening_stock`
@@ -85,7 +86,10 @@ opening stock each took 3.8 s, 2026-10-13).
 `item-prices/resolve.ts`, `tax-rules/resolve.ts`, `pricing-rules/apply.ts` — handed to `cart.ts` as an
 engine and asserted in `tools/check-logic.mjs`. The poster checks the outcome a sale claims (the rule covers
 the line and gives that rate), not the choice. Rejected: a second ranking engine in SQL. Typed cart state
-that two pages share — the lines, the additional discount — is `src/Store/cart.ts`, never a query.
+that two pages share — the lines, the additional discount — is `src/Store/cart.ts`, never a query. Without
+**Apply Discounts** (`SaleSetup.typedPrices`, the owner or the permission) `buildSale` drops whatever rate or
+discount the cart holds and the cart shows no field for one, so a cart stored before the permission went is
+priced as the price list says and never refused for a field the screen no longer shows.
 
 **A document is submitted, cancelled and deleted through three RPCs, whatever its type.**
 `useDocumentActionMutation({ doctype, action, invalidate })` (`src/features/documents/queries.ts`) calls
@@ -120,10 +124,15 @@ of this device invalidates it (`invalidateDashboard`, from `invalidateLedgers` a
 (`refetchStaleDashboard` in a `useFocusEffect`) or the app resumes (`refetchOnWindowFocus`, opted in) — its
 queries are `STALE.MINUTES.ONE`.
 
-**Permissions are read once per system.** `usePermissions({ merchantId })` and `can(permissions,
-doctype, ptype)` (`src/features/role-permissions/queries.ts`) gate what a screen shows; a mutation that
-changes roles, members or rules calls `invalidatePermissions(queryClient)`. RLS still decides
-(tenancy.md rule 11).
+**Permissions are read once per system, and asked again every minute.** `usePermissions({ merchantId })`
+(`src/features/role-permissions/queries.ts`) answers `public.my_permissions`; `can(permissions, doctype,
+ptype)` and `has(permissions, key)` — import-free in `src/features/permissions/access.ts`, asserted in
+`tools/check-logic.mjs`, re-exported from `role-permissions/queries.ts` — gate what a screen shows. A mutation
+that changes roles or employees calls `invalidatePermissions(queryClient)`. The query also polls
+(`refetchInterval` `STALE.MINUTES.ONE`): an owner's change on another phone must reach this one within a
+minute, and the "Access changed" notification cannot carry it while an earlier one is unread
+(`private.notify_access_changed()` keeps one). The permission catalog (`usePermissionCatalogQuery`,
+`src/features/permissions/queries.ts`) is `STALE.STATIC`. RLS still decides (tenancy.md rule 11).
 
 **Generated types.** Run after every migration:
 
@@ -183,13 +192,14 @@ migration seeds and no client can write (countries, currency presets) is `STALE.
 (the naming series preview: it follows the date and the fiscal years, and neither invalidates it) names
 `STALE.ALWAYS` — leaving `staleTime` off takes the five-minute default above, not zero.
 
-**What another person changes** reaches this phone only by asking again — there is no Realtime. The one
-query that polls is the unread notifications (`src/features/notifications/queries.ts`): `refetchInterval`
-`STALE.MINUTES.ONE` and `refetchOnWindowFocus: true`, mounted by the tab bar so it runs on every tab and
-inside a system. Its `queryFn` compares the answer with the cached one, and an unread id it has not seen
-invalidates what notifications are about — merchants, access requests and codes, members — once per new
-row, however many components read the count. Rejected: a `useEffect` on the newest id — it ran on every
-observer's mount (the tab bar, each bell), refetching all four on every entry into a system.
+**What another person changes** reaches this phone only by asking again — there is no Realtime. Two
+queries poll, each `refetchInterval` `STALE.MINUTES.ONE` with `refetchOnWindowFocus: true`: the caller's
+permissions inside a system (above), and the unread notifications (`src/features/notifications/queries.ts`),
+mounted by the tab bar so it runs on every tab and inside a system. The notifications' `queryFn` compares the
+answer with the cached one, and an unread id it has not seen invalidates what notifications are about —
+merchants, permissions, access requests and codes, members — once per new row, however many components
+read the count. Rejected: a `useEffect` on the newest id — it ran on every observer's mount (the tab bar,
+each bell), refetching them all on every entry into a system.
 
 **Wire `onlineManager` and `focusManager`** per the TanStack React Native guide, or queries never
 learn they are offline and never refetch on resume. This is separate from the `AppState` listener in

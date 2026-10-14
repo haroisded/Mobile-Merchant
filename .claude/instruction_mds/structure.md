@@ -37,13 +37,14 @@ src/
     merchants/            queries.ts  schema.ts — merchants is the Company
     countries/            queries.ts — read-only reference data
     currency-presets/     queries.ts — read-only reference data
-    doctypes/             queries.ts — read-only registry
     fiscal-years/         queries.ts  schema.ts
     access-codes/         queries.ts  schema.ts  code.ts — a code's shape, status and expiry, the claim's answers, import-free
     access-requests/      queries.ts — the owner's requests, the caller's own waiting ones, claim, decide
     notifications/        queries.ts — the list, the unread count, mark read
-    members/  roles/  role-profiles/  user-permissions/   queries.ts  schema.ts
-    role-permissions/     queries.ts — the matrix, and usePermissions / can for every screen
+    members/              queries.ts — a system's employees with their role and exceptions, the owner's cross-system list
+    roles/                queries.ts  schema.ts — roles with their permissions, save_role, the colour palette's keys
+    permissions/          queries.ts  access.ts — the catalog; can / has, requirements and exceptions, import-free
+    role-permissions/     queries.ts — usePermissions for every screen (re-exports can / has)
     system-settings/  currencies/                         queries.ts  schema.ts
     global-defaults/      queries.ts
     accounts/  cost-centers/                              queries.ts  schema.ts
@@ -84,8 +85,10 @@ src/
     stock-reconciliations/  index.tsx  stock-reconciliation-form.tsx
     company/              index.tsx
     fiscal-years/         index.tsx  fiscal-year-form.tsx
-    users/  roles/  role-profiles/  user-permissions/     index.tsx  <name>-form.tsx (+ records.ts)
-    role-permissions/     index.tsx
+    employees/            index.tsx  employee.tsx  roles.tsx  role.tsx  permissions.tsx  role-chip.tsx  use-employees.ts
+                          use-discard.ts — the Employees destination's pages; editor/ holds the two editors they
+                          share (role-editor.tsx, access-editor.tsx, permission-switches.tsx, editor-footer.tsx)
+    system-home/          index.tsx — the first screen inside a system; tells someone with no role why
     global-defaults/  system-settings/  currency/         index.tsx
     chart-of-accounts/    index.tsx  account-form.tsx
     cost-centers/         index.tsx  cost-center-form.tsx
@@ -149,6 +152,7 @@ Never create a feature folder named after a page.
 | The Dashboard's reports — four functions that each add up several resources | `src/features/dashboard/` — the one folder named as its page is, because the reports are: `public.dashboard_cards` belongs to no single table. Rejected: a hook in each of `pos-invoices/`, `bins/` and `pos-opening-entries/` — one card reads all three |
 | Access codes, the requests they bring, the inbox | three resources, three folders — `access-codes/`, `access-requests/`, `notifications/` — and one screen, `src/screens/access-codes/`, reading the first two and `members/`. Rejected: a `features/invites/` folder — a page's name, not a table's |
 | The bell with its unread count | `src/components/bell-action.tsx` — the systems list and a system's header both draw it |
+| Roles, employees, the permission catalog | three resources — `roles/`, `members/`, `permissions/` — and one screen folder, `src/screens/employees/`. `usePermissions` stays in `role-permissions/` because seventy-odd screens import it from there; the checks themselves moved to `permissions/access.ts` so `tools/check-logic.mjs` can run them. Rejected: a `features/employees/` folder — a page's name (rule 2) |
 
 ## 3. Screen folder size
 
@@ -180,6 +184,8 @@ src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, ite
                                          import-items.tsx, stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
                                          stock-reconciliation.tsx, stock-balance.tsx, stock-ledger.tsx
 src/app/(app)/systems/[id]/accounts/     Accounts — its own Stack: index.tsx, general-ledger.tsx
+src/app/(app)/systems/[id]/employees/    Employees, the owner's alone — its own Stack: index.tsx, employee.tsx, roles.tsx,
+                                         role.tsx, permissions.tsx (a tablet's two panes)
 
 A ledger row opens its document, and a document its entries, **inside the stack the reader is in**, so Back
 returns there. So a page reached from another destination is re-exported into it, one line a file:
@@ -196,9 +202,10 @@ A new destination is a route file beside `index.tsx` and a row in the shell's `D
 becomes a directory when it grows more than one screen (list, detail, create, edit), with a `Stack`
 `_layout.tsx` and `stack: true` on its row, so a tap on it lands on its index. The shell hands every
 destination the system's `id` as a param — a drawer screen reads only the params it is navigated with — and
-lists it for whoever may open a row of its index (`sections`: Read on the row's doctype, or the permission an
-action row names — Import Items, Item create), or, with no index, one of the doctypes it adds
-up (`doctypes`: the Dashboard).
+lists it by `showsDestination` (`src/features/permissions/access.ts`): for whoever may open a row of its index
+(`sections`: Read on the row's doctype, or the permission an action row names — Import Items, Item create), or
+holds one of the permissions it names (`permissions`: the Dashboard's four, Sell's Open/Close Register), or for
+the owner alone (`ownerOnly`: Employees). Home always shows.
 
 Sheet routes (confirms, pickers) live in `src/app/(app)/sheets/`, and small-form routes (a page narrow,
 a Dialog wide) in `src/app/(app)/forms/` — both leaf screens of the `(app)` Stack.

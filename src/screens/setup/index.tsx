@@ -28,11 +28,6 @@ type SetupRoute =
   | 'selling-settings'
   | 'pricing-rules'
   | 'pos-profiles'
-  | 'users'
-  | 'roles'
-  | 'role-profiles'
-  | 'role-permissions'
-  | 'user-permissions'
   | 'document-naming-settings'
   | 'print-formats'
   | 'letter-heads'
@@ -138,22 +133,6 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
     ],
   },
   {
-    title: 'Users & Access',
-    hint: 'Who may work in this system, and what each of them may do',
-    entries: [
-      { label: 'Users', hint: 'Invite people by email; give them roles', doctype: 'User', route: 'users' },
-      { label: 'Roles', hint: 'The standard roles, and your own', doctype: 'Role', route: 'roles' },
-      { label: 'Role Profiles', hint: 'A set of roles given together', doctype: 'Role Profile', route: 'role-profiles' },
-      {
-        label: 'Role Permissions Manager',
-        hint: 'What each role may read, write, create and delete',
-        doctype: 'Role Permission',
-        route: 'role-permissions',
-      },
-      { label: 'User Permissions', hint: 'Restrict a user to particular records', doctype: 'User Permission', route: 'user-permissions' },
-    ],
-  },
-  {
     title: 'Naming & Printing',
     hint: 'How documents are numbered, and what a receipt looks like',
     entries: [
@@ -183,7 +162,7 @@ export function SetupIndex({ merchantId, merchantName, isOwner }: { merchantId: 
       onOpen={(route) => router.push(`/systems/${merchantId}/setup/${route}`)}
       offline="You're offline. Setup will load when you reconnect."
       failure="Couldn't load Setup. Try again."
-      empty="Your roles give you nothing to set up here. Ask the owner if you need more."
+      empty="Your permissions give you nothing to set up here. Ask the owner if you need more."
     />
   );
 }

@@ -88,7 +88,7 @@ const POSTING_REFUSALS = new Map([
   ['not_a_draft', 'It has already been submitted or cancelled. Go back and open it again.'],
   ['not_submitted', "It isn't submitted any more. Go back and open it again."],
   ['document_locked', "A submitted document can't be changed. Cancel it instead."],
-  ['not_permitted', "Your roles don't allow this."],
+  ['not_permitted', "You don't have permission for this."],
   ['no_document_series', 'Document Naming Settings has no series for this document. Add one there first.'],
   ['no_fiscal_year', "No fiscal year covers the posting date, so its series can't number the document."],
   ['posting_date_in_future', 'The posting date is in the future. Pick today or earlier.'],
@@ -111,8 +111,8 @@ const POSTING_REFUSALS = new Map([
   ['no_inventory_account', 'The warehouse has no account, and the company has no Default Inventory Account. Set one first.'],
   ['nothing_to_reconcile', 'Nothing would change: every row already matches the books.'],
   ['no_rows', 'Add at least one item first.'],
-  ['stock_entry_not_found', "It no longer exists, or your roles can't change it."],
-  ['stock_reconciliation_not_found', "It no longer exists, or your roles can't change it."],
+  ['stock_entry_not_found', "It no longer exists, or you can't change it."],
+  ['stock_reconciliation_not_found', "It no longer exists, or you can't change it."],
   // The Register (supabase/migrations/20261012004616_pos_shift_and_sale.sql).
   ['no_open_session', 'Your session is no longer open. Go back to Sell and open one.'],
   ['session_not_open', 'That session is already closed.'],
@@ -140,6 +140,11 @@ const POSTING_REFUSALS = new Map([
   ['max_discount_exceeded', "One of the items is discounted by more than its Max Discount allows."],
   ['pricing_rule_mismatch', "A pricing rule has changed since, or no longer applies. Go back and open the cart again."],
   ['below_valuation', "One of the items would sell for less than it is valued at, which Selling Settings don't allow."],
+  // Employees & permissions (supabase/migrations/20261014034106_employees_and_permissions.sql): the owner took the
+  // permission away while this screen was open.
+  ['sales_not_permitted', "You can't ring up sales any more. Ask the owner for Process Sales."],
+  ['refunds_not_permitted', "You can't take returns any more. Ask the owner for Process Refunds."],
+  ['discounts_not_permitted', "You can't change a price or give a discount. Ask the owner for Apply Discounts."],
 ]);
 
 /** The words for a document the database refused to save, submit or cancel — null for any other failure. */
@@ -169,6 +174,22 @@ export function itemRefusal(cause: Error | null): string | null {
   const error = postgrestError(cause);
   if (error?.code === '23505') return 'There is already an item with this code.';
   return ITEM_REFUSALS.get(error?.message ?? '') ?? postingRefusal(cause);
+}
+
+// What the database names when it refuses a role or an employee's access
+// (supabase/migrations/20261014034106_employees_and_permissions.sql). Here because the Roles and the
+// Permissions editors both meet them.
+const ACCESS_REFUSALS = new Map([
+  ['permission_requires', 'A permission is on without the one it needs. Turn that one on too.'],
+  ['role_not_found', 'That role no longer exists. Go back and open Roles again.'],
+  ['member_not_found', 'That employee is no longer in this system.'],
+]);
+
+/** The words for a role or an employee's access the database refused to save — null for any other failure. */
+export function accessRefusal(cause: Error | null): string | null {
+  const error = postgrestError(cause);
+  if (error?.code === '23505') return 'There is already a role with this name.';
+  return ACCESS_REFUSALS.get(error?.message ?? '') ?? null;
 }
 
 /** The line under a form or confirm: an offline wait, or what went wrong. */

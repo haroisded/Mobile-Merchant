@@ -11,12 +11,12 @@ import { Avatar } from '../../../../components/avatar';
 import { BellAction } from '../../../../components/bell-action';
 import { Button } from '../../../../components/button';
 import { Icon } from '../../../../components/icon';
-import { readsAny } from '../../../../components/record-index';
-import type { IndexSection } from '../../../../components/record-index';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
-import { can, usePermissions } from '../../../../features/role-permissions/queries';
+import { showsDestination } from '../../../../features/permissions/access';
+import type { DestinationRule } from '../../../../features/permissions/access';
+import { usePermissions } from '../../../../features/role-permissions/queries';
 import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import type { IconName } from '../../../../lib/icons';
@@ -35,23 +35,25 @@ import { radius, spacing } from '../../../../themes';
 // One expo-router Drawer serves both widths — drawerType 'permanent' is the rail, 'front' is the
 // drawer — so the two share one route table and one destination list (.claude/instruction_mds/frontend.md §4.4).
 
-// `sections` is the destination's index (the same list its screen draws): the item shows only to someone
-// who may read one of its rows. The Dashboard has no index, so it names the doctypes its blocks add up
-// (`doctypes`) and shows to someone who may read one of them. With neither — Home — the item always shows.
-type Destination = { name: string; label: string; icon: IconName; stack?: boolean; sections?: IndexSection<string>[]; doctypes?: string[] };
+// Who sees a destination (src/features/permissions/access.ts, showsDestination): `sections`, its index (the same
+// list its screen draws), for someone who may open one of its rows; `permissions` for someone who holds one — the
+// Dashboard's blocks, and Sell's session for a cashier who opens one without reading the list; `ownerOnly` for
+// Employees. With none of them — Home — the item always shows.
+type Destination = DestinationRule & { name: string; label: string; icon: IconName; stack?: boolean };
 
 // Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
 // as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Stock is the items,
 // their prices and their stock (./stock/); Accounts is the books every document posts to (./accounts/);
-// Setup is the company's foundation records (./setup/) — each a stack of its own. Sell is the Register and
-// its sessions (./sell/). Dashboard is the numbers they add up to (./dashboard.tsx) — its own destination,
-// not Home, which stays as it is.
+// Employees is who works here and what each may do (./employees/), the owner's alone; Setup is the company's
+// foundation records (./setup/) — each a stack of its own. Sell is the Register and its sessions (./sell/).
+// Dashboard is the numbers they add up to (./dashboard.tsx) — its own destination, not Home, which stays as it is.
 const DESTINATIONS: Destination[] = [
   { name: 'index', label: 'Home', icon: 'home' },
-  { name: 'dashboard', label: 'Dashboard', icon: 'dashboard', doctypes: ['POS Invoice', 'POS Opening Entry', 'Bin'] },
-  { name: 'sell', label: 'Sell', icon: 'sell', stack: true, sections: SELL_SECTIONS },
+  { name: 'dashboard', label: 'Dashboard', icon: 'dashboard', permissions: ['view_sales', 'view_shift_totals', 'close_any_register', 'view_stock'] },
+  { name: 'sell', label: 'Sell', icon: 'sell', stack: true, sections: SELL_SECTIONS, permissions: ['open_close_register'] },
   { name: 'stock', label: 'Stock', icon: 'stock', stack: true, sections: STOCK_SECTIONS },
   { name: 'accounts', label: 'Accounts', icon: 'accounts', stack: true, sections: ACCOUNTS_SECTIONS },
+  { name: 'employees', label: 'Employees', icon: 'group', stack: true, ownerOnly: true },
   { name: 'setup', label: 'Setup', icon: 'settings', stack: true, sections: SETUP_SECTIONS },
 ];
 
@@ -92,13 +94,7 @@ export default function SystemLayout() {
   // everything and needs no my_permissions; a member sees Home until theirs arrive. Hidden is not refused —
   // every screen stays registered below, RLS decides, and an index says so when it has nothing to show.
   const isOwner = merchant.owner_id === userId;
-  const shown = DESTINATIONS.filter(
-    (entry) =>
-      (!entry.sections && !entry.doctypes) ||
-      isOwner ||
-      (entry.sections !== undefined && readsAny(entry.sections, permissions.data)) ||
-      (entry.doctypes ?? []).some((doctype) => can(permissions.data, doctype, 'read'))
-  );
+  const shown = DESTINATIONS.filter((entry) => isOwner || showsDestination(entry, permissions.data));
 
   // The expanded rail grows with the font scale so its labels stay whole (fontScaled).
   const drawerWidth = wide ? (expanded ? fontScaled(RAIL_EXPANDED) : RAIL_COLLAPSED) : DRAWER_WIDTH;

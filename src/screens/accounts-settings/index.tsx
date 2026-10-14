@@ -14,7 +14,7 @@ import type { AccountsSettings } from '../../features/accounts-settings/queries'
 import { accountsSettingsSchema } from '../../features/accounts-settings/schema';
 import type { AccountsSettingsValues } from '../../features/accounts-settings/schema';
 import { can, usePermissions } from '../../features/role-permissions/queries';
-import { ALL_ROLE, useRolesQuery } from '../../features/roles/queries';
+import { useRolesQuery } from '../../features/roles/queries';
 import type { Role } from '../../features/roles/queries';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
@@ -57,13 +57,8 @@ const defaults = (saved: AccountsSettings): AccountsSettingsValues => ({
   frozen_accounts_modifier: saved.frozen_accounts_modifier ?? '',
 });
 
-/** Roles that can hold an exception: every role but All, which every member holds. The saved one stays listed. */
-const roleOptions = (roles: Role[], keep: string | null) => [
-  { value: '', label: 'None' },
-  ...roles
-    .filter((role) => role.id === keep || (role.role_name !== ALL_ROLE && !role.disabled))
-    .map((role) => ({ value: role.id, label: role.role_name, hint: role.is_standard ? 'Standard' : 'Custom' })),
-];
+/** The role whose holders may still post into a frozen period (the owner always may). */
+const roleOptions = (roles: Role[]) => [{ value: '', label: 'None' }, ...roles.map((role) => ({ value: role.id, label: role.role_name }))];
 
 function SettingsForm({ merchantId, saved, roles }: { merchantId: string; saved: AccountsSettings; roles: Role[] }) {
   const update = useUpdateAccountsSettingsMutation({ merchantId });
@@ -138,7 +133,7 @@ function SettingsForm({ merchantId, saved, roles }: { merchantId: string; saved:
           name="frozen_accounts_modifier"
           label="Role Allowed Past the Frozen Date"
           title="Role"
-          options={roleOptions(roles, saved.frozen_accounts_modifier)}
+          options={roleOptions(roles)}
           disabled={!editable}
         />
       </FieldGrid>

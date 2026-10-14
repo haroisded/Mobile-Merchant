@@ -143,6 +143,10 @@ dead and correct to delete.
   `access_requests` or a member row directly (tenancy.md rule 13). Re-checked the same day by reading
   `pg_proc` for definer functions in `public` that `authenticated` may execute: these three and the five
   above, eight in all, none executable by `anon`. Confirmed false positive.
+  Still eight after `20261014034106_employees_and_permissions.sql` re-created `public.my_permissions`
+  (`get_advisors`, 2026-10-14): the Employees saves, `public.save_role` and `public.save_member_access`, are
+  security **invoker** — `role_grants`' and `member_overrides`' owner-only policies decide them — so they are not
+  on that list, and a definer `save_role` or `save_member_access` there would be a real finding.
 - **`rls_enabled_no_policy` (INFO) on `private.access_code_failures`** (`get_advisors`, 2026-10-14). The
   claim's rate-limit log: only `claim_access_code`, a definer function, reads or writes it, it sits in
   `private` where PostgREST does not reach, and RLS is on so that no grant could ever expose it. No policy

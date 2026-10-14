@@ -33,9 +33,9 @@ together and explained inline.
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
 - **A systems list and a merchant shell** — create a system (a company: name, abbreviation, country,
-  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with six
-  destinations — Home, Dashboard, Sell, Stock, Accounts and Setup — each listed only for someone whose roles can read
-  something in it
+  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with seven
+  destinations — Home, Dashboard, Sell, Stock, Accounts, Employees and Setup — each listed only for someone whose
+  permissions reach something in it (Employees for the owner alone)
 - **Access Codes, the only way into someone else's system** — a tab beside Home: the owner makes codes (one to
   twenty at a time; 5 min, 30 min, 1 hour, to the end of a day, or never; one person or many) and sends them from
   the phone's share sheet. Whoever enters one on Home waits under Waiting for approval; the owner approves or
@@ -43,10 +43,13 @@ together and explained inline.
   code never names its system until it is valid. **Notifications** (a tab with an unread count, and a bell
   inside every system) tells each side what happened — no push yet: the count is asked for every minute and
   whenever the app comes back
-- **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Users & Access
-  (the people let in with an access code, standard and custom roles, role profiles, an editable Role Permissions
-  Manager and User Permissions — holding a person to one warehouse, item group, account or cost center, and
-  to the sales, stock and ledger rows that link to it — all enforced by RLS); Global Defaults, System Settings and the Currency
+- **Employees, Discord-style** — the owner's own destination inside a system: everyone let in with an
+  access code, each holding one **role** (Cashier, Stock Clerk and Store Manager come with every system, and
+  the owner makes more — a name, a colour and the permissions it carries, such as Process Sales, Apply Discounts,
+  View Stock Levels or Taxes) and, where the role does not fit, their own exceptions, which win. Someone with no
+  role sees Home only; a change reaches their open app within a minute, with an **Access changed**
+  notification. All enforced by RLS: the permissions are spelled out as ERPNext's doctype rules underneath
+- **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Global Defaults, System Settings and the Currency
   (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
   folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment;
   Taxes — Tax Categories, Sales Taxes and Charges Templates (rows on the net total, on an earlier row, fixed
@@ -57,7 +60,7 @@ together and explained inline.
   item group and date, with a check of which template a sample sale gets; Selling Settings' pricing rules;
   Document Naming Settings — the series invoices and items are numbered by, and the number each is at; Print
   Formats with a sample receipt, Letter Heads and Print Settings.
-  Each new system is seeded with its year, roles, settings, a POS chart of accounts and Main, its default
+  Each new system is seeded with its year, three starter roles, settings, a POS chart of accounts and Main, its default
   accounts, Cash and Credit Card, its country's tax (Philippines: VAT 12%), All Warehouses → Stores, thirteen
   units with three conversions, Standard Selling, All Item Groups → Products, Services, Stock Settings on
   Products, Nos, Stores and FIFO, the three naming series ERPNext ships, Print Settings, a POS Receipt print
@@ -81,7 +84,7 @@ together and explained inline.
 - **Dashboard** — a rail destination: Today, Last 7 Days or This Month; four number cards (Sales with its
   invoice count, Gross Profit, Open Registers with the cash they should hold, Low Stock); sales per day as a
   bar chart; the best sellers by quantity or amount, by item or item group; and the items out of stock or at
-  their re-order level. Each figure is added up from the rows the reader's own roles let them read
+  their re-order level. Each block shows with its permission, and each figure is added up from the rows the reader may read
 - **Import Items** — under Stock, for whoever may create an Item: save the CSV template to a folder, fill it
   in, choose it, and read every mistake by row and column before anything is saved; then one tap imports
   every item — up to 500 a file — with its price and its opening stock, and lists what was made. The phone's
@@ -202,12 +205,12 @@ and `delete_current_user()` — the function behind the **Delete account** butto
 requires in-app account deletion (Guideline 5.1.1(v)) and no client-side key may write to
 `auth.users`. `merchants` is the tenant table — one business per row: its owner, and its Company
 fields (name, abbreviation, country, default currency) — with its own policies and
-`private.current_merchant_ids()` — the systems a person owns or is an enabled member of — with
+`private.current_merchant_ids()` — the systems a person owns or is a member of — with
 `private.permitted_merchant_ids(doctype, permission)` built on it, the function every business
 table's policies call. `countries` and `currency_presets` are read-only reference data seeded from
 frappe's country list; `fiscal_years` holds each company's accounting years. Users & Access adds
-`merchant_members`, `roles`, `role_profiles`, `role_permissions`, `user_permissions` and the global
-`doctypes` and `standard_role_permissions`; Defaults & Money adds `system_settings`, `global_defaults`
+`merchant_members`, `roles` and the global `doctypes` (its role profiles, permission matrix and User Permissions
+were replaced on 2026-10-14, below); Defaults & Money adds `system_settings`, `global_defaults`
 and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees; Step 4 the Company's default accounts
 and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5 `modes_of_payment`; Step 6
 `tax_categories`, `sales_tax_templates`, `item_tax_templates` with their rows, and the read-only
@@ -222,9 +225,13 @@ Step 16 `stock_reconciliations` and `stock_entries` with their rows; Step 17 `po
 (`is_return`, `return_against`), and `public.delete_document` removes a cancelled document; Step 20
 `pricing_rules` with its `pricing_rule_targets`, and the discount columns on `merchants`, `items`,
 `pos_profiles`, `pos_invoices` and `pos_invoice_items`; Step 21 the read-only `doctype_links` — which
-document types follow a User Permission on the record they link to; Step 22 adds no table — four read-only
-report functions the Dashboard calls, each run under the caller's own policies; Step 23 adds none either —
-`public.import_items`, which saves a file's items through the same functions one item's form uses. Triggers named
+document types follow a User Permission on the record they link to (dropped with User Permissions); Step 22 adds
+no table — four read-only report functions the Dashboard calls, each run under the caller's own policies; Step 23
+adds none either — `public.import_items`, which saves a file's items through the same functions one item's form
+uses. Access Codes adds `access_codes`, `access_requests` and `notifications`; Employees & permissions adds the
+global, read-only `permissions` and `permission_rules` — the abilities an owner hands out, and the doctype rules
+each one stands for — and the owner-only `role_grants` and `member_overrides`, with `merchant_members.role_id`
+(one role each). Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

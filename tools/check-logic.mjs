@@ -8,6 +8,7 @@ import { codeStatus, expiryArgs, expiryText, formatCode, normalizeCode } from '.
 import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
+import { can, effective, has, overridesFor, readsAny, showsDestination, toggle } from '../src/features/permissions/access.ts';
 import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { pickPricingRule, ruleRate } from '../src/features/pricing-rules/apply.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
@@ -247,6 +248,7 @@ const setupOf = (over = {}) => ({
   accountName: (accountId) => `Account ${accountId}`,
   precision: 2,
   roundedTotalDisabled: true,
+  typedPrices: true,
   ...over,
 });
 const cartOf = (...lines) => lines.map(([itemId, qty, uomId = 'nos', rate = null]) => ({ itemId, qty, uomId, rate }));
@@ -379,6 +381,13 @@ assert.equal(additionalDiscount({ applyOn: 'Grand Total', percentage: null, amou
 // 144 + 17.28 VAT is 161.28; 5 % off it is 8.06, leaving 153.22 — 136.80 net, the line 7.20 lighter.
 const cheaper = buildSale(cartOf(['coffee', 2]), setupOf(PROMO), ENGINES, { applyOn: 'Grand Total', percentage: 5, amount: 0 });
 assert.deepEqual([cheaper.discountAmount, cheaper.netTotal, cheaper.totalTaxes, cheaper.grandTotal, cheaper.lines[0].distributed], [8.06, 136.8, 16.42, 153.22, 7.2]);
+// Without Apply Discounts what was typed does not count — the rule prices the line, and no additional discount —
+// so a cart stored before the permission went is never refused for a field no longer shown.
+const NO_DISCOUNTS = { ...PROMO, typedPrices: false };
+assert.deepEqual(lineOf(saleOf([{ itemId: 'coffee', uomId: 'nos', qty: 2, rate: 70 }], NO_DISCOUNTS)), [72, 8, 10, 144, 'promo']);
+assert.deepEqual(lineOf(saleOf([{ itemId: 'coffee', uomId: 'nos', qty: 2, rate: null, discountPercentage: 25 }], NO_DISCOUNTS)), [72, 8, 10, 144, 'promo']);
+assert.equal(buildSale(cartOf(['coffee', 2]), setupOf(NO_DISCOUNTS), ENGINES, { applyOn: 'Grand Total', percentage: 5, amount: 0 }).discountAmount, 0);
+assert.equal(saleOf(cartOf(['coffee', 1, 'nos', 70]), { prices: [], typedPrices: false }).lines[0].priced, false);
 const discounted = checkoutPayload(cheaper, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 153.22 }], settle(153.22, [153.22], cents));
 assert.deepEqual([discounted.apply_discount_on, discounted.additional_discount_percentage, discounted.discount_amount], ['Grand Total', 5, 8.06]);
 assert.deepEqual((({ price_list_rate, discount_percentage, discount_amount, rate, distributed_discount_amount, pricing_rule_id }) => [price_list_rate, discount_percentage, discount_amount, rate, distributed_discount_amount, pricing_rule_id])(discounted.items[0]), [80, 10, 8, 72, 7.2, 'promo']);
@@ -492,5 +501,52 @@ assert.deepEqual(
   [null, '2026-10-14T07:00:00Z', '2026-10-14T08:00:00Z', '2026-10-14T08:00:20Z', '2026-10-14T08:59:00Z', '2026-10-14T09:00:00Z', '2026-10-15T07:59:00Z', '2026-10-16T00:00:00Z'].map((at) => expiryText(at, NOW, lastDay)),
   ['No expiry', 'Expired', 'Expired', '1 min left', '59 min left', '1 h left', '23 h left', 'Until 2026-10-15'],
 );
+
+// src/features/permissions/access.ts — what private.my_permission_keys() and public.my_permissions answer, as
+// the screens read them. The owner may do everything; a member what their role grants, less what an exception
+// turns off, plus what one turns on — and a permission only with the one it requires.
+const CATALOG = [
+  { key: 'process_sales', requires: 'open_close_register' },
+  { key: 'apply_discounts', requires: 'process_sales' },
+  { key: 'process_refunds', requires: 'open_close_register' },
+  { key: 'view_sales', requires: null },
+  { key: 'open_close_register', requires: null },
+];
+const OWNER = { is_owner: true, owner_email: null, owner_name: null, perms: {}, permissions: [] };
+const CASHIER = {
+  is_owner: false,
+  owner_email: null,
+  owner_name: null,
+  perms: { 'POS Invoice': { select: true, read: false, write: true, create: true, delete: false, submit: true, cancel: false } },
+  permissions: ['process_sales', 'open_close_register'],
+};
+assert.deepEqual([has(OWNER, 'view_sales'), has(CASHIER, 'process_sales'), has(CASHIER, 'apply_discounts'), has(null, 'process_sales')], [true, true, false, false]);
+assert.deepEqual([can(OWNER, 'GL Entry', 'read'), can(CASHIER, 'POS Invoice', 'create'), can(CASHIER, 'POS Invoice', 'read'), can(undefined, 'Item', 'read')], [true, true, false, false]);
+// A switch turned on brings what it requires; turned off, it takes what requires it. Catalog order out.
+assert.deepEqual(toggle(CATALOG, ['view_sales'], 'apply_discounts', true), ['process_sales', 'apply_discounts', 'view_sales', 'open_close_register']);
+assert.deepEqual(toggle(CATALOG, ['process_sales', 'apply_discounts', 'process_refunds', 'open_close_register'], 'open_close_register', false), []);
+assert.deepEqual(toggle(CATALOG, ['process_sales', 'apply_discounts', 'process_refunds', 'open_close_register'], 'process_sales', false), ['process_refunds', 'open_close_register']);
+assert.deepEqual(toggle(CATALOG, ['view_sales'], 'view_sales', false), []);
+// The role, then the exceptions; a permission whose requirement is gone goes with it.
+const ROLE = ['process_sales', 'open_close_register'];
+assert.deepEqual(effective(CATALOG, ROLE, []), ['process_sales', 'open_close_register']);
+assert.deepEqual(effective(CATALOG, ROLE, [{ permission: 'apply_discounts', allowed: true }]), ['process_sales', 'apply_discounts', 'open_close_register']);
+assert.deepEqual(effective(CATALOG, ROLE, [{ permission: 'open_close_register', allowed: false }]), []);
+assert.deepEqual(effective(CATALOG, [], [{ permission: 'apply_discounts', allowed: true }]), []);
+assert.deepEqual(effective(CATALOG, [], [{ permission: 'view_sales', allowed: true }]), ['view_sales']);
+// What save_member_access is sent: an exception only where the employee differs from the role.
+assert.deepEqual(overridesFor(CATALOG, ROLE, ['process_sales', 'apply_discounts', 'open_close_register']), [{ permission: 'apply_discounts', allowed: true }]);
+assert.deepEqual(overridesFor(CATALOG, ROLE, []), [{ permission: 'process_sales', allowed: false }, { permission: 'open_close_register', allowed: false }]);
+assert.deepEqual(overridesFor(CATALOG, ROLE, ROLE), []);
+assert.deepEqual(overridesFor(CATALOG, [], ['view_sales']), [{ permission: 'view_sales', allowed: true }]);
+// A rail destination: Home always, the owner everything, Employees the owner alone; an index for whoever may open a
+// row of it; a destination with permissions for whoever holds one — Sell for a cashier, who opens a session
+// without reading the session list.
+const SELL = [{ entries: [{ doctype: 'POS Invoice' }, { doctype: 'POS Opening Entry' }] }];
+assert.deepEqual([readsAny(SELL, CASHIER), readsAny(SELL, OWNER), readsAny([{ entries: [{ doctype: 'POS Invoice', ptype: 'create' }] }], CASHIER)], [false, true, true]);
+const shows = (rule, permissions) => showsDestination(rule, permissions);
+assert.deepEqual([shows({}, null), shows({ ownerOnly: true }, CASHIER), shows({ ownerOnly: true }, OWNER)], [true, false, true]);
+assert.deepEqual([shows({ sections: SELL, permissions: ['open_close_register'] }, CASHIER), shows({ sections: SELL }, CASHIER), shows({ sections: SELL }, null)], [true, false, false]);
+assert.deepEqual([shows({ permissions: ['view_sales', 'view_stock'] }, CASHIER), shows({ permissions: ['view_sales'] }, { ...CASHIER, permissions: ['view_sales'] })], [false, true]);
 
 console.log('check:logic — all assertions passed.');

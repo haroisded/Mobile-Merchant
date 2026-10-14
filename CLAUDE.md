@@ -321,7 +321,8 @@ ERPNext's model. That rebuild lands one ERPNext step per migration, starting wit
 `20261008101635_company_and_fiscal_year.sql`: read-only `countries` and `currency_presets`,
 `fiscal_years`, and `private.seed_company()` behind the `merchants_seed_10_company` trigger. Then
 `20261008145056_users_and_access.sql` (members, roles, role profiles, the editable permission matrix,
-User Permissions, and `private.permitted_merchant_ids()`), `20261008151723_defaults_and_money.sql`
+User Permissions, and `private.permitted_merchant_ids()` — all but members, roles and the seam replaced on
+2026-10-14, below), `20261008151723_defaults_and_money.sql`
 (System Settings, Global Defaults, Currency), `20261008152613_chart_of_accounts.sql` (the
 `accounts` and `cost_centers` trees, `private.validate_tree()`), `20261009004357_accounting_defaults.sql`
 (the Company's default accounts and Perpetual Inventory as `merchants` columns,
@@ -370,7 +371,8 @@ the discount checks and Discount Accounting). Then access for those documents:
 restrictable doctype and through which column; `private.restricted_merchant_ids()` and
 `private.allowed_record_ids()` taking the document type asked for; `private.apply_doctype_policies()`
 re-created with the link clause and a linking document's rows held to their parent, and re-applied;
-`private.validate_user_permission()` holding Applicable For to a doctype that links). Then the Dashboard,
+`private.validate_user_permission()` holding Applicable For to a doctype that links — all undone with User
+Permissions on 2026-10-14). Then the Dashboard,
 with no table: `20261012200010_dashboard.sql` (the invoker report functions `public.dashboard_cards`,
 `sales_by_day`, `top_selling` and `stock_alerts` — the caller's own policies decide every row they add up).
 Then Bulk Import, with no table either: `20261012204315_import_items.sql` (the invoker RPC
@@ -382,6 +384,18 @@ policies on `private.owned_merchant_ids()`, not doctypes; `private.access_code_f
 limit; the definer RPCs `public.create_access_codes`, `claim_access_code` and `decide_access_request`;
 `private.require_access_request()` refusing any other member insert; the notification triggers; the
 email-invite claim triggers dropped).
+Then Employees & permissions, Discord-style roles in place of ERPNext's:
+`20261014034106_employees_and_permissions.sql` (`public.permissions` and `public.permission_rules`, global and
+read-only — the catalog, and what each permission reaches; `role_grants` and `member_overrides`, owner-only like
+the access-code tables; `roles.description` and `color`, `merchant_members.role_id`; `private.my_permission_keys()`
+and `private.has_permission()`; `private.permitted_merchant_ids()`, `public.my_permissions()` (which adds
+`permissions`), `private.current_merchant_ids()`, `private.pos_profile_usable()` and `private.assert_postable()`
+re-created over them with the same signatures; `private.submit_pos_invoices()` re-created with Process Sales,
+Process Refunds and Apply Discounts; `private.apply_doctype_policies()` re-created without User Permissions and
+re-applied to every table; the invoker RPCs `public.save_role` and `save_member_access`;
+`private.notify_access_changed()`; the starter roles Cashier, Stock Clerk and Store Manager behind
+`merchants_seed_20_access`; ERPNext's roles, role profiles, member roles, the permission matrix, User Permissions
+and `doctype_links` dropped).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
@@ -464,24 +478,23 @@ inside `migrations/`, where `supabase db push` would apply it. The rules and the
 ### 6.7 Every business table is a doctype
 
 A new business table is registered, not hand-policied: in its migration, insert its `public.doctypes`
-row (kind `record`, `single`, `tree`, `document` or `ledger`; `restrictable` when a User Permission may hold
-someone to its records), its `standard_role_permissions` rows (ERPNext's matrix for it), a
-`public.doctype_links` row for each of its columns that links it to a restrictable doctype
-(`.claude/instruction_mds/tenancy.md` rule 12 — what makes a User Permission on a Warehouse filter it), then
-`select private.sync_standard_permissions()` and `select private.apply_doctype_policies('<table>', '<Doctype>')`
-(`true` as a third argument for a child table that follows its parent's doctype). That is what makes
-the Role Permissions Manager and User Permissions govern it. Seeding goes in a
+row (kind `record`, `single`, `tree`, `document` or `ledger`), the `public.permission_rules` rows that let
+each permission's holders reach it — `read` where their screens list or open it, `select` where they only
+look it up, the other types where they write it (`.claude/instruction_mds/tenancy.md` rule 12) — then
+`select private.apply_doctype_policies('<table>', '<Doctype>')` (`true` as a third argument for a child table
+that follows its parent's doctype). That is what makes the permissions an owner turns on govern it; the owner
+reaches every table without a rule. A table no permission names is the owner's alone. Seeding goes in a
 `merchants_seed_NN_<area>` trigger plus a backfill for existing systems. Rejected: policies written by
-hand per table — the shape drifts, and a rule edited in the Manager would not reach them
-(`.claude/instruction_mds/tenancy.md`). The one exception: `access_codes` and `access_requests`, which no
-role may touch — only the owner — so they carry hand-written owner-only policies on
-`private.owned_merchant_ids()` instead (tenancy.md rule 13).
+hand per table — the shape drifts, and a permission's reach would live in many policies instead of one table
+of rules (`.claude/instruction_mds/tenancy.md`). The one exception: `access_codes`, `access_requests`,
+`role_grants` and `member_overrides`, which no permission may touch — only the owner — so they carry
+hand-written owner-only policies on `private.owned_merchant_ids()` instead (tenancy.md rule 13).
 
 Two kinds post, and each has one rule that must hold:
 
 - **A `document`** (Stock Entry, Stock Reconciliation, POS Opening Entry, POS Invoice, POS Closing Entry) carries `name` and `docstatus` (0 draft, 1 submitted,
   2 cancelled). `apply_doctype_policies` adds `private.guard_docstatus()` to it — and
-  `guard_docstatus_child()` to its rows — so a signed-in role writes drafts only. `docstatus` moves through
+  `guard_docstatus_child()` to its rows — so whoever is signed in writes drafts only. `docstatus` moves through
   `public.submit_document(doctype, id)` and `public.cancel_document(doctype, id)` and nowhere else; a new
   document type adds `private.submit_<table_name>(uuid)`, which `submit_document` calls. Rejected: a
   `submit_*` / `cancel_*` pair per document — the same lock, `auth.uid()` and permission check repeated,

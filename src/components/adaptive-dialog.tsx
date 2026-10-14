@@ -259,9 +259,8 @@ type ActionsProps = {
   saveLabel?: string;
   /** Absent for a new record, or without the delete permission. */
   onDelete?: () => void;
+  /** Delete's own word where it is not a delete: an access request's Decline. */
   deleteLabel?: string;
-  /** Another action between Delete and Cancel ("Set User Permissions"). */
-  extra?: ReactNode;
 };
 
 /**
@@ -269,7 +268,7 @@ type ActionsProps = {
  * but Save stays disabled while it waits, so a second tap cannot queue a second write
  * (.claude/instruction_mds/data-layer.md §5).
  */
-export function FormActions({ mutation, onCancel, onSave, saveLabel = 'Save', onDelete, deleteLabel = 'Delete', extra }: ActionsProps) {
+export function FormActions({ mutation, onCancel, onSave, saveLabel = 'Save', onDelete, deleteLabel = 'Delete' }: ActionsProps) {
   const { colors } = useAppTheme();
   const inFlight = mutation.isPending && !mutation.isPaused;
 
@@ -280,7 +279,6 @@ export function FormActions({ mutation, onCancel, onSave, saveLabel = 'Save', on
           {deleteLabel}
         </Button>
       ) : null}
-      {extra}
       <Button mode="outlined" onPress={onCancel} disabled={inFlight} contentStyle={styles.action}>
         {onSave ? 'Cancel' : 'Close'}
       </Button>

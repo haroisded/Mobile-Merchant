@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { can, usePermissions } from '../features/role-permissions/queries';
-import type { Permissions, Ptype } from '../features/role-permissions/queries';
+import { opens } from '../features/permissions/access';
+import { usePermissions } from '../features/role-permissions/queries';
+import type { Ptype } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
@@ -24,13 +25,6 @@ export type IndexEntry<R extends string> = {
 
 export type IndexSection<R extends string> = { title: string; hint: string; entries: IndexEntry<R>[] };
 
-/** Whether these roles may open `entry`'s page. */
-const opens = (entry: IndexEntry<string>, permissions: Permissions | null | undefined) => can(permissions, entry.doctype, entry.ptype ?? 'read');
-
-/** Whether these roles may open any row of an index — what decides if its destination shows in the shell. */
-export const readsAny = (sections: IndexSection<string>[], permissions: Permissions | null | undefined) =>
-  sections.some((section) => section.entries.some((entry) => opens(entry, permissions)));
-
 type Props<R extends string> = {
   merchantId: string;
   /** The system's name, above the title. */
@@ -46,8 +40,8 @@ type Props<R extends string> = {
   onOpen: (route: R) => void;
   offline: string;
   failure: string;
-  /** What shows when the person's roles leave no row. */
-  empty: string;
+  /** What shows when the person's permissions leave no row; null when the box above (Sell's session) stands in for it. */
+  empty: string | null;
   /** What the destination shows above its sections — Sell's session. */
   children?: ReactNode;
 };
@@ -84,7 +78,7 @@ export function RecordIndex<R extends string>({ merchantId, kicker, title, meta,
             <QueryState query={permissions} offline={offline} failure={failure} />
           </View>
         )}
-        {permissions.data && shown.length === 0 ? <Text variant="bodyMedium">{empty}</Text> : null}
+        {permissions.data && shown.length === 0 && empty !== null ? <Text variant="bodyMedium">{empty}</Text> : null}
         <View style={styles.grid} onLayout={onLayout}>
           {rows.map((row) => (
             <View key={row[0].title} style={styles.gridRow}>

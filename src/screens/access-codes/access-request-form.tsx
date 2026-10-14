@@ -88,7 +88,7 @@ function Decide({ request, onDismiss }: { request: AccessRequest; onDismiss: () 
       </FieldGrid>
       {pending ? (
         <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-          Approving lets them into {request.merchant_name}. What they can do there is up to the roles you give them in Setup → Users.
+          Approving lets them into {request.merchant_name} with no role: they see Home only until you give them one under Employees.
         </Text>
       ) : null}
     </AdaptiveDialog>

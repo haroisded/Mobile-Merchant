@@ -11,6 +11,7 @@ import type { Merchant } from '../../features/merchants/queries';
 import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries';
 import { useOpenPosSessionMutation } from '../../features/pos-opening-entries/queries';
 import { usePosProfilesQuery } from '../../features/pos-profiles/queries';
+import { can, usePermissions } from '../../features/role-permissions/queries';
 import { failureMessage, postgrestError } from '../../lib/errors';
 import { spacing } from '../../themes';
 
@@ -31,6 +32,8 @@ export function OpenSession({ merchant }: { merchant: Merchant }) {
   const modes = useModesOfPaymentQuery({ merchantId: merchant.id }).data;
   const open = useOpenPosSessionMutation({ merchantId: merchant.id });
   const [picked, setPicked] = useState<string>();
+  // Who can add a POS Profile is told where; a cashier is told whom to ask.
+  const managesProfiles = can(usePermissions({ merchantId: merchant.id }).data, 'POS Profile', 'create');
 
   const usable = (profiles.data ?? []).filter((profile) => !profile.disabled);
   // The only profile needs no picking.
@@ -60,7 +63,11 @@ export function OpenSession({ merchant }: { merchant: Merchant }) {
           ready={profile !== undefined}
           onDone={() => router.back()}
         >
-          {usable.length === 0 ? <NoteCallout>No POS Profile is enabled yet. Add one in Setup → POS Profiles first.</NoteCallout> : null}
+          {usable.length === 0 ? (
+            <NoteCallout>
+              {managesProfiles ? 'No POS Profile is enabled yet. Add one in Setup → POS Profiles first.' : 'No POS Profile is enabled yet. Ask the owner to add one.'}
+            </NoteCallout>
+          ) : null}
           <SearchSelect
             label="POS Profile"
             required

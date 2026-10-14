@@ -254,7 +254,7 @@ export function DocumentState({ doctype, query }: StateProps) {
       <PageHeader kicker="Document" title={doctype} onBack={() => router.back()} />
       <View style={styles.state}>
         <QueryState query={query} offline={`You're offline. This ${noun} will load when you reconnect.`} failure={`Couldn't load this ${noun}. Try again.`}>
-          <Text variant="bodyMedium">{`This ${noun} no longer exists, or your roles can't open it.`}</Text>
+          <Text variant="bodyMedium">{`This ${noun} no longer exists, or you can't open it.`}</Text>
         </QueryState>
       </View>
     </View>

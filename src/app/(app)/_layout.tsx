@@ -27,10 +27,6 @@ const SHEETS = ['sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal
 // files are in ./forms/, and the same both-halves rule as SHEETS holds.
 const DIALOG_ROUTES = [
   'forms/fiscal-year',
-  'forms/role',
-  'forms/role-profile',
-  'forms/user',
-  'forms/user-permission',
   'forms/account',
   'forms/cost-center',
   'forms/mode-of-payment',

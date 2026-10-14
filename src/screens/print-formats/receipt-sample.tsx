@@ -40,9 +40,9 @@ export function ReceiptSample({ merchant, control }: { merchant: Merchant; contr
   const taxNote = !template
     ? 'No Sales Taxes and Charges Template is the default, so the sample carries no tax.'
     : // Said only once the permissions are in: while they load, nothing is known to be missing.
-      !permissions || can(permissions, 'Sales Taxes and Charges Template', 'read')
+      !permissions || can(permissions, 'Sales Taxes and Charges Template', 'select')
       ? undefined
-      : "Your roles can't read the default tax template's rows, so the sample carries no tax.";
+      : "You can't look up the default tax template's rows, so the sample carries no tax.";
 
   return (
     <View style={styles.sample}>

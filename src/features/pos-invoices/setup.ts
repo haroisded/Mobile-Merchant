@@ -14,11 +14,13 @@ import type { PosProfile } from '../pos-profiles/queries';
 import { usePriceListsQuery } from '../price-lists/queries';
 import { pickPricingRule, ruleRate } from '../pricing-rules/apply';
 import { usePricingRulesQuery } from '../pricing-rules/queries';
+import { has, usePermissions } from '../role-permissions/queries';
 import { calculateTaxes } from '../sales-tax-templates/calculate';
 import { useSalesTaxTemplatesQuery } from '../sales-tax-templates/queries';
 import { useSellingSettingsQuery } from '../selling-settings/queries';
 import { useTaxRulesQuery } from '../tax-rules/queries';
 import { resolveTaxRule } from '../tax-rules/resolve';
+import { useSession } from '../../Store/StoreUser';
 import type { Engines, SaleSetup } from './cart';
 
 /** What is sold and for how much: the items, their groups, the prices, the price lists and the Pricing Rules. Undefined until all have loaded. */
@@ -41,7 +43,7 @@ function useTaxRecords(merchantId: string) {
   const itemTaxTemplates = useItemTaxTemplatesQuery(args).data;
   const rules = useTaxRulesQuery(args).data;
   const accountsSettings = useAccountsSettingsQuery(args).data;
-  // The name a tax added from an Item Tax Template prints under; a cashier who cannot read accounts gets "Tax".
+  // The name a tax added from an Item Tax Template prints under; without Account lookups it prints as "Tax".
   const accounts = useAccountsQuery(args).data;
 
   return templates && itemTaxTemplates && rules && accountsSettings && accounts ? { templates, itemTaxTemplates, rules, accountsSettings, accounts } : undefined;
@@ -65,6 +67,8 @@ function useSaleRecords(merchant: Merchant) {
  */
 export function useSaleSetup(merchant: Merchant, profile: PosProfile) {
   const records = useSaleRecords(merchant);
+  const permissions = usePermissions({ merchantId: merchant.id }).data;
+  const isOwner = merchant.owner_id === useSession()?.user.id;
   if (!records) return undefined;
 
   const { system, currency, selling } = records;
@@ -98,6 +102,7 @@ export function useSaleSetup(merchant: Merchant, profile: PosProfile) {
     accountName: (accountId) => accountNames.get(accountId) ?? 'Tax',
     precision,
     roundedTotalDisabled: records.globals.disable_rounded_total,
+    typedPrices: isOwner || has(permissions, 'apply_discounts'),
   };
   const engines: Engines = {
     resolvePrice,

@@ -29,7 +29,7 @@ export function AccountsIndex({ merchantId, merchantName, isOwner }: { merchantI
       onOpen={(route) => router.push(`/systems/${merchantId}/accounts/${route}`)}
       offline="You're offline. Accounts will load when you reconnect."
       failure="Couldn't load Accounts. Try again."
-      empty="Your roles give you nothing to see here. Ask the owner if you need more."
+      empty="Your permissions give you nothing to see here. Ask the owner if you need more."
     />
   );
 }

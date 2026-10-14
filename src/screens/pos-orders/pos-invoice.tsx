@@ -15,7 +15,7 @@ import { invalidatePosInvoices, usePosInvoiceQuery, usePosInvoiceReturnsQuery } 
 import type { PosInvoiceDocument } from '../../features/pos-invoices/queries';
 import { usePosProfilesQuery } from '../../features/pos-profiles/queries';
 import { usePrintFormatsQuery } from '../../features/print-formats/queries';
-import { can, usePermissions } from '../../features/role-permissions/queries';
+import { has, usePermissions } from '../../features/role-permissions/queries';
 import { useUomsQuery } from '../../features/uoms/queries';
 import { displayDate } from '../../lib/dates';
 import { spacing } from '../../themes';
@@ -39,12 +39,9 @@ function Invoice({ merchant, invoice }: { merchant: Merchant; invoice: PosInvoic
   const money = useMoney(merchant);
   // The returns made against a sale; a return has none.
   const returns = usePosInvoiceReturnsQuery({ returnAgainst: invoice.id }).data ?? [];
-  // A submitted sale with something left of it, by a role that can ring one up.
+  // A submitted sale with something left of it, for someone who may take returns.
   const returnable =
-    invoice.docstatus === 1 &&
-    !invoice.is_return &&
-    can(permissions, 'POS Invoice', 'create') &&
-    returnableLines(invoice, returns).some((row) => row.left > 0);
+    invoice.docstatus === 1 && !invoice.is_return && has(permissions, 'process_refunds') && returnableLines(invoice, returns).some((row) => row.left > 0);
 
   return (
     <View style={styles.fill}>

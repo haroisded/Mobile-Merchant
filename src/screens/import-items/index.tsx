@@ -136,7 +136,7 @@ function importFailure(error: Error | null, rows: ItemCsvRow[]) {
   // public.import_items' hint: 'row 3' — the third row sent — or 'opening stock'.
   const row = rows[Number(/^row (\d+)$/.exec(cause?.hint ?? '')?.[1]) - 1]?.row;
   const where = row ? `Row ${row}: ` : cause?.hint === 'opening stock' ? 'Opening stock: ' : '';
-  const why = itemRefusal(error) ?? (cause?.code === '42501' ? "Your roles don't allow this." : null);
+  const why = itemRefusal(error) ?? (cause?.code === '42501' ? "You don't have permission for this." : null);
   if (why) return `${where}${why} Nothing was imported.`;
   return failureMessage(row ? `Row ${row} couldn't be saved, so nothing was imported. Check it and try again.` : "Couldn't import the file, so nothing was saved. Try again.");
 }

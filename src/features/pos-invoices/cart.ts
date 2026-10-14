@@ -84,6 +84,8 @@ export type SaleSetup = {
   precision: number;
   /** Global Defaults' Disable Rounded Total. */
   roundedTotalDisabled: boolean;
+  /** Apply Discounts (or the owner): whether a rate or discount typed on a line, and the sale's discount, count. */
+  typedPrices: boolean;
 };
 
 export type Engines = {
@@ -299,8 +301,12 @@ function taxRows(template: SaleTemplate | null, itemTemplates: (string | null)[]
 }
 
 /** The cart priced, taxed and totalled, less `discount` — the sale's additional discount. A line whose item is gone is left out. */
-export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines, discount?: AdditionalDiscount): Sale {
-  const entries = cart.flatMap((line, cartIndex) => {
+export function buildSale(cart: CartLine[], setup: SaleSetup, engines: Engines, typedDiscount?: AdditionalDiscount): Sale {
+  // Without Apply Discounts nothing typed counts — so a cart stored before the permission went is never refused
+  // (discounts_not_permitted) for a field the screen no longer shows.
+  const counted = setup.typedPrices ? cart : cart.map((line) => ({ ...line, rate: null, discountPercentage: null, discountAmount: null }));
+  const discount = setup.typedPrices ? typedDiscount : undefined;
+  const entries = counted.flatMap((line, cartIndex) => {
     const item = setup.items.get(line.itemId);
     if (!item) return [];
 

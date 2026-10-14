@@ -16,7 +16,7 @@ import type { Merchant } from '../../features/merchants/queries';
 import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries';
 import type { ModeOfPayment } from '../../features/modes-of-payment/queries';
 import { additionalDiscount, buildSale, checkoutPayload, settle, tenderedAmounts } from '../../features/pos-invoices/cart';
-import type { CartDiscount, Sale } from '../../features/pos-invoices/cart';
+import type { CartDiscount, Sale, SaleSetup } from '../../features/pos-invoices/cart';
 import { useCheckoutMutation } from '../../features/pos-invoices/queries';
 import { useSaleSetup } from '../../features/pos-invoices/setup';
 import type { PosOpeningEntry } from '../../features/pos-opening-entries/queries';
@@ -43,11 +43,17 @@ export function Cart({ merchant }: { merchant: Merchant }) {
 
 type Settled = ReturnType<typeof settle>;
 
+/** A rate or a discount is typed where the POS Profile allows it and the cashier holds Apply Discounts (setup.typedPrices). */
+const typing = (profile: PosProfile, setup: SaleSetup) => ({
+  typesRates: profile.allow_rate_change && setup.typedPrices,
+  typesDiscounts: profile.allow_discount_change && setup.typedPrices,
+});
+
 /** What stands between the cart and Complete Order, in words; null when it can be paid. */
-function whatStops(sale: Sale, settled: Settled, profile: PosProfile, money: (value: number) => string) {
+function whatStops(sale: Sale, settled: Settled, profile: PosProfile, typesRates: boolean, money: (value: number) => string) {
   if (sale.lines.length === 0) return 'The cart is empty. Go back to the Register and add an item.';
   const unpriced = sale.lines.find((line) => !line.priced);
-  if (unpriced) return `${unpriced.itemName} has no price. ${profile.allow_rate_change ? 'Enter its rate, or add' : 'Add'} an Item Price for it.`;
+  if (unpriced) return `${unpriced.itemName} has no price. ${typesRates ? 'Enter its rate, or add' : 'Add'} an Item Price for it.`;
   return settled.shortfall > profile.write_off_limit ? `${money(settled.shortfall)} is still to pay.` : null;
 }
 
@@ -81,6 +87,7 @@ type FormProps = {
 
 function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormProps) {
   const { setup, engines } = sale;
+  const { typesRates, typesDiscounts } = typing(profile, setup);
   const lines = useCart(session.id);
   const discount = useCartDiscount(session.id);
   const money = useMoney(merchant);
@@ -95,7 +102,7 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
     payments.map((payment) => payment.amount),
     (value) => engines.round(value, setup.precision)
   );
-  const gap = whatStops(built, settled, profile, money);
+  const gap = whatStops(built, settled, profile, typesRates, money);
 
   // Made per render, not per tap: sendOnce's guard is the handler two quick taps share.
   const send = sendOnce(checkout, (invoiceId: string) => {
@@ -124,12 +131,12 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
           typed={lines[line.cartIndex]}
           item={sale.items.find((candidate) => candidate.id === line.itemId)}
           uoms={uoms}
-          rateEditable={profile.allow_rate_change}
-          discountEditable={profile.allow_discount_change}
+          rateEditable={typesRates}
+          discountEditable={typesDiscounts}
           money={money}
         />
       ))}
-      {profile.allow_discount_change ? <AdditionalDiscount sessionId={session.id} discount={discount} applyOn={built.applyDiscountOn} /> : null}
+      {typesDiscounts ? <AdditionalDiscount sessionId={session.id} discount={discount} applyOn={built.applyDiscountOn} /> : null}
       <SampleBox>
         {built.discountAmount > 0 ? <SampleLine label="Additional Discount" value={money(-built.discountAmount)} sub={`Off the ${built.applyDiscountOn}`} /> : null}
         <SampleLine label="Net Total" value={money(built.netTotal)} />

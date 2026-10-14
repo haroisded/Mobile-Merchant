@@ -55,6 +55,21 @@ const lightColors = {
   // derived it from the text colour at 12%; Pressable reads nothing, so it is a key
   // (.claude/instruction_mds/frontend.md §5). On `primary` the ripple is `primaryHighlight`.
   ripple: "rgba(30, 41, 59, 0.12)",
+  // A role's colour: the dot beside its name and its swatch (src/features/roles/schema.ts, ROLE_COLORS; the
+  // database's roles_color). Never a text or fill colour — a name stays onSurface beside its dot.
+  roleGrey: "#9CA3AF",
+  roleSlate: "#64748B",
+  roleRed: "#EF4444",
+  roleMaroon: "#9F1239",
+  roleOrange: "#F97316",
+  roleAmber: "#F59E0B",
+  roleGreen: "#22C55E",
+  roleTeal: "#14B8A6",
+  roleCyan: "#06B6D4",
+  roleBlue: "#3B82F6",
+  roleIndigo: "#6366F1",
+  rolePurple: "#A855F7",
+  rolePink: "#EC4899",
 };
 
 
@@ -110,6 +125,20 @@ const darkColors = {
   surfaceSubtle: "#1A212C",
   primaryHighlight: "rgba(0, 0, 0, 0.12)",
   ripple: "rgba(225, 231, 239, 0.12)",
+  // The role palette a step lighter, to sit on the dark ground.
+  roleGrey: "#9CA3AF",
+  roleSlate: "#94A3B8",
+  roleRed: "#F87171",
+  roleMaroon: "#E11D48",
+  roleOrange: "#FB923C",
+  roleAmber: "#FBBF24",
+  roleGreen: "#4ADE80",
+  roleTeal: "#2DD4BF",
+  roleCyan: "#22D3EE",
+  roleBlue: "#60A5FA",
+  roleIndigo: "#818CF8",
+  rolePurple: "#C084FC",
+  rolePink: "#F472B6",
 };
 
 

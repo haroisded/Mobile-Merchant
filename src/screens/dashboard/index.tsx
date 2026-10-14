@@ -22,7 +22,7 @@ import {
 import type { TopBy } from '../../features/dashboard/queries';
 import { itemLabel } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
-import { can, usePermissions } from '../../features/role-permissions/queries';
+import { has, usePermissions } from '../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../features/system-settings/queries';
 import { fontScaled, useColumns } from '../../lib/columns';
 import { displayDate, todayIn } from '../../lib/dates';
@@ -95,7 +95,7 @@ export function Dashboard({ merchant, isOwner }: { merchant: Merchant; isOwner: 
         <Blocks
           merchant={merchant}
           today={todayIn(settings.data.time_zone)}
-          reads={(doctype) => isOwner || can(permissions.data, doctype, 'read')}
+          holds={(key) => isOwner || has(permissions.data, key)}
         />
       ) : (
         <View style={styles.state}>{waiting ? <QueryState query={waiting} offline={OFFLINE} failure={FAILURE} /> : null}</View>
@@ -104,17 +104,19 @@ export function Dashboard({ merchant, isOwner }: { merchant: Merchant; isOwner: 
   );
 }
 
-function Blocks({ merchant, today, reads }: { merchant: Merchant; today: string; reads: (doctype: string) => boolean }) {
+function Blocks({ merchant, today, holds }: { merchant: Merchant; today: string; holds: (permission: string) => boolean }) {
   const [period, setPeriod] = useState<Period>('today');
   const range = periodRange(period, today);
-  const sells = reads('POS Invoice');
-  const stocks = reads('Bin');
-  const registers = reads('POS Opening Entry');
+  // Each block behind the permission that shows it: a cashier's Process Sales looks sales up, but only View Sales
+  // shows them (public.permission_rules).
+  const sells = holds('view_sales');
+  const stocks = holds('view_stock');
+  const registers = holds('view_shift_totals') || holds('close_any_register');
 
   if (!sells && !stocks && !registers) {
     return (
       <View style={styles.state}>
-        <Text variant="bodyMedium">Your roles give you nothing to see here. Ask the owner if you need more.</Text>
+        <Text variant="bodyMedium">Your permissions give you nothing to see here. Ask the owner if you need more.</Text>
       </View>
     );
   }
@@ -131,8 +133,8 @@ function Blocks({ merchant, today, reads }: { merchant: Merchant; today: string;
         merchant={merchant}
         range={range}
         period={period}
-        // Gross Profit is answered only to whoever may also read the Stock Ledger, where the cost lives.
-        shows={{ sales: sells, profit: sells && reads('Stock Ledger Entry'), registers, stock: stocks }}
+        // Gross Profit is answered only to whoever may also read the Stock Ledger, where the cost lives: View Stock Levels.
+        shows={{ sales: sells, profit: sells && stocks, registers, stock: stocks }}
       />
       {sells ? <SalesPerDay merchant={merchant} range={chartRange(period, today)} /> : null}
       {sells ? <TopSelling merchant={merchant} range={range} /> : null}

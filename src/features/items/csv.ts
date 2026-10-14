@@ -168,7 +168,7 @@ function amount(value: string) {
 function rateMistake(rate: number, lookups: ItemCsvLookups) {
   if (rate <= 0) return null;
   if (!lookups.hasPriceList) return 'Selling Settings names no Default Price List for this rate. Set one there, or clear the rate.';
-  return lookups.mayPrice ? null : "Your roles can't add an item price. Clear the rate, or ask for Item Price create.";
+  return lookups.mayPrice ? null : "You can't add an item price. Clear the rate, or ask the owner for Manage Items.";
 }
 
 // Opening Stock is posted as a Stock Reconciliation: for an item that keeps stock, by someone who may post
@@ -176,7 +176,7 @@ function rateMistake(rate: number, lookups: ItemCsvLookups) {
 function openingMistake(opening: number, keepsStock: boolean, uom: UomRecord | undefined, lookups: ItemCsvLookups) {
   if (opening <= 0) return null;
   if (!keepsStock) return 'Only an item that keeps stock has opening stock. Clear it, or set Maintain Stock to yes.';
-  if (!lookups.mayStock) return "Your roles can't post opening stock. Clear it, or ask for Stock Reconciliation create and submit.";
+  if (!lookups.mayStock) return "You can't post opening stock. Clear it, or ask the owner for Adjust Inventory.";
   if (!lookups.hasWarehouse) return 'Stock Settings names no Default Warehouse for opening stock to go in. Set one there, or clear it.';
   return uom?.must_be_whole_number && !Number.isInteger(opening) ? `${uom.uom_name} can't be divided: enter a whole number.` : null;
 }

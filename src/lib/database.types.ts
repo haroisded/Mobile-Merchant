@@ -505,56 +505,20 @@ export type Database = {
         }
         Relationships: []
       }
-      doctype_links: {
-        Row: {
-          column_name: string
-          doctype: string
-          link_doctype: string
-        }
-        Insert: {
-          column_name: string
-          doctype: string
-          link_doctype: string
-        }
-        Update: {
-          column_name?: string
-          doctype?: string
-          link_doctype?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "doctype_links_doctype_fkey"
-            columns: ["doctype"]
-            isOneToOne: false
-            referencedRelation: "doctypes"
-            referencedColumns: ["name"]
-          },
-          {
-            foreignKeyName: "doctype_links_link_doctype_fkey"
-            columns: ["link_doctype"]
-            isOneToOne: false
-            referencedRelation: "doctypes"
-            referencedColumns: ["name"]
-          },
-        ]
-      }
       doctypes: {
         Row: {
           kind: string
           name: string
-          restrictable: boolean
           table_name: string
         }
         Insert: {
           kind: string
           name: string
-          restrictable?: boolean
           table_name: string
         }
         Update: {
           kind?: string
           name?: string
-          restrictable?: boolean
           table_name?: string
         }
         Relationships: []
@@ -1307,36 +1271,39 @@ export type Database = {
           },
         ]
       }
-      member_roles: {
+      member_overrides: {
         Row: {
+          allowed: boolean
           member_id: string
           merchant_id: string
-          role_id: string
+          permission: string
         }
         Insert: {
+          allowed: boolean
           member_id: string
           merchant_id: string
-          role_id: string
+          permission: string
         }
         Update: {
+          allowed?: boolean
           member_id?: string
           merchant_id?: string
-          role_id?: string
+          permission?: string
         }
         Relationships: [
           {
-            foreignKeyName: "member_roles_member_fk"
+            foreignKeyName: "member_overrides_member_fk"
             columns: ["member_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "merchant_members"
             referencedColumns: ["id", "merchant_id"]
           },
           {
-            foreignKeyName: "member_roles_role_fk"
-            columns: ["role_id", "merchant_id"]
+            foreignKeyName: "member_overrides_permission_fkey"
+            columns: ["permission"]
             isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id", "merchant_id"]
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -1346,11 +1313,10 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           email: string | null
-          enabled: boolean
           full_name: string | null
           id: string
           merchant_id: string
-          role_profile_id: string | null
+          role_id: string | null
           user_id: string
         }
         Insert: {
@@ -1358,11 +1324,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
-          enabled?: boolean
           full_name?: string | null
           id?: string
           merchant_id: string
-          role_profile_id?: string | null
+          role_id?: string | null
           user_id: string
         }
         Update: {
@@ -1370,11 +1335,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
-          enabled?: boolean
           full_name?: string | null
           id?: string
           merchant_id?: string
-          role_profile_id?: string | null
+          role_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1386,10 +1350,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "merchant_members_role_profile_fk"
-            columns: ["role_profile_id", "merchant_id"]
+            foreignKeyName: "merchant_members_role_fk"
+            columns: ["role_id", "merchant_id"]
             isOneToOne: false
-            referencedRelation: "role_profiles"
+            referencedRelation: "roles"
             referencedColumns: ["id", "merchant_id"]
           },
         ]
@@ -1720,6 +1684,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "access_requests"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_rules: {
+        Row: {
+          doctype: string
+          permission: string
+          ptype: string
+        }
+        Insert: {
+          doctype: string
+          permission: string
+          ptype: string
+        }
+        Update: {
+          doctype?: string
+          permission?: string
+          ptype?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_rules_doctype_fkey"
+            columns: ["doctype"]
+            isOneToOne: false
+            referencedRelation: "doctypes"
+            referencedColumns: ["name"]
+          },
+          {
+            foreignKeyName: "permission_rules_permission_fkey"
+            columns: ["permission"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      permissions: {
+        Row: {
+          category: string
+          description: string
+          key: string
+          label: string
+          position: number
+          requires: string | null
+        }
+        Insert: {
+          category: string
+          description: string
+          key: string
+          label: string
+          position: number
+          requires?: string | null
+        }
+        Update: {
+          category?: string
+          description?: string
+          key?: string
+          label?: string
+          position?: number
+          requires?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permissions_requires_fkey"
+            columns: ["requires"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -3021,147 +3053,61 @@ export type Database = {
         }
         Relationships: []
       }
-      role_permissions: {
+      role_grants: {
         Row: {
-          can_cancel: boolean
-          can_create: boolean
-          can_delete: boolean
-          can_read: boolean
-          can_select: boolean
-          can_submit: boolean
-          can_write: boolean
-          doctype: string
-          id: string
           merchant_id: string
+          permission: string
           role_id: string
         }
         Insert: {
-          can_cancel?: boolean
-          can_create?: boolean
-          can_delete?: boolean
-          can_read?: boolean
-          can_select?: boolean
-          can_submit?: boolean
-          can_write?: boolean
-          doctype: string
-          id?: string
           merchant_id: string
+          permission: string
           role_id: string
         }
         Update: {
-          can_cancel?: boolean
-          can_create?: boolean
-          can_delete?: boolean
-          can_read?: boolean
-          can_select?: boolean
-          can_submit?: boolean
-          can_write?: boolean
-          doctype?: string
-          id?: string
           merchant_id?: string
+          permission?: string
           role_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "role_permissions_doctype_fkey"
-            columns: ["doctype"]
+            foreignKeyName: "role_grants_permission_fkey"
+            columns: ["permission"]
             isOneToOne: false
-            referencedRelation: "doctypes"
-            referencedColumns: ["name"]
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
           },
           {
-            foreignKeyName: "role_permissions_role_fk"
+            foreignKeyName: "role_grants_role_fk"
             columns: ["role_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id", "merchant_id"]
-          },
-        ]
-      }
-      role_profile_roles: {
-        Row: {
-          merchant_id: string
-          role_id: string
-          role_profile_id: string
-        }
-        Insert: {
-          merchant_id: string
-          role_id: string
-          role_profile_id: string
-        }
-        Update: {
-          merchant_id?: string
-          role_id?: string
-          role_profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_profile_roles_profile_fk"
-            columns: ["role_profile_id", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "role_profiles"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "role_profile_roles_role_fk"
-            columns: ["role_id", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id", "merchant_id"]
-          },
-        ]
-      }
-      role_profiles: {
-        Row: {
-          created_at: string
-          id: string
-          merchant_id: string
-          role_profile_name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          merchant_id: string
-          role_profile_name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          merchant_id?: string
-          role_profile_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_profiles_merchant_id_fkey"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
           },
         ]
       }
       roles: {
         Row: {
+          color: string
           created_at: string
-          disabled: boolean
+          description: string | null
           id: string
-          is_standard: boolean
           merchant_id: string
           role_name: string
         }
         Insert: {
+          color?: string
           created_at?: string
-          disabled?: boolean
+          description?: string | null
           id?: string
-          is_standard?: boolean
           merchant_id: string
           role_name: string
         }
         Update: {
+          color?: string
           created_at?: string
-          disabled?: boolean
+          description?: string | null
           id?: string
-          is_standard?: boolean
           merchant_id?: string
           role_name?: string
         }
@@ -3330,50 +3276,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "price_lists"
             referencedColumns: ["id", "merchant_id"]
-          },
-        ]
-      }
-      standard_role_permissions: {
-        Row: {
-          can_cancel: boolean
-          can_create: boolean
-          can_delete: boolean
-          can_read: boolean
-          can_select: boolean
-          can_submit: boolean
-          can_write: boolean
-          doctype: string
-          role_name: string
-        }
-        Insert: {
-          can_cancel?: boolean
-          can_create?: boolean
-          can_delete?: boolean
-          can_read?: boolean
-          can_select?: boolean
-          can_submit?: boolean
-          can_write?: boolean
-          doctype: string
-          role_name: string
-        }
-        Update: {
-          can_cancel?: boolean
-          can_create?: boolean
-          can_delete?: boolean
-          can_read?: boolean
-          can_select?: boolean
-          can_submit?: boolean
-          can_write?: boolean
-          doctype?: string
-          role_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "standard_role_permissions_doctype_fkey"
-            columns: ["doctype"]
-            isOneToOne: false
-            referencedRelation: "doctypes"
-            referencedColumns: ["name"]
           },
         ]
       }
@@ -4028,67 +3930,6 @@ export type Database = {
           },
         ]
       }
-      user_permissions: {
-        Row: {
-          allow: string
-          applicable_for: string | null
-          apply_to_all_doctypes: boolean
-          created_at: string
-          for_value: string
-          hide_descendants: boolean
-          id: string
-          is_default: boolean
-          member_id: string
-          merchant_id: string
-        }
-        Insert: {
-          allow: string
-          applicable_for?: string | null
-          apply_to_all_doctypes?: boolean
-          created_at?: string
-          for_value: string
-          hide_descendants?: boolean
-          id?: string
-          is_default?: boolean
-          member_id: string
-          merchant_id: string
-        }
-        Update: {
-          allow?: string
-          applicable_for?: string | null
-          apply_to_all_doctypes?: boolean
-          created_at?: string
-          for_value?: string
-          hide_descendants?: boolean
-          id?: string
-          is_default?: boolean
-          member_id?: string
-          merchant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_permissions_allow_fkey"
-            columns: ["allow"]
-            isOneToOne: false
-            referencedRelation: "doctypes"
-            referencedColumns: ["name"]
-          },
-          {
-            foreignKeyName: "user_permissions_applicable_for_fkey"
-            columns: ["applicable_for"]
-            isOneToOne: false
-            referencedRelation: "doctypes"
-            referencedColumns: ["name"]
-          },
-          {
-            foreignKeyName: "user_permissions_member_fk"
-            columns: ["member_id", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchant_members"
-            referencedColumns: ["id", "merchant_id"]
-          },
-        ]
-      }
       warehouses: {
         Row: {
           account: string | null
@@ -4232,14 +4073,13 @@ export type Database = {
       save_item_group: { Args: { payload: Json }; Returns: string }
       save_item_tax_template: { Args: { payload: Json }; Returns: string }
       save_item_with_opening_stock: { Args: { payload: Json }; Returns: string }
-      save_member: { Args: { payload: Json }; Returns: string }
-      save_pos_profile: { Args: { payload: Json }; Returns: string }
-      save_pricing_rule: { Args: { payload: Json }; Returns: string }
-      save_role_permissions: {
-        Args: { p_doctype: string; p_merchant: string; p_rows: Json }
+      save_member_access: {
+        Args: { p_member: string; p_overrides?: Json; p_role?: string }
         Returns: undefined
       }
-      save_role_profile: { Args: { payload: Json }; Returns: string }
+      save_pos_profile: { Args: { payload: Json }; Returns: string }
+      save_pricing_rule: { Args: { payload: Json }; Returns: string }
+      save_role: { Args: { payload: Json }; Returns: string }
       save_sales_tax_template: { Args: { payload: Json }; Returns: string }
       save_stock_entry: { Args: { payload: Json }; Returns: string }
       save_stock_reconciliation: { Args: { payload: Json }; Returns: string }

@@ -23,10 +23,10 @@ const KIND_ICON = new Map([
   ['access_changed', 'shield'],
 ]);
 
-/** Where a notification leads: the requests to approve, or the system just opened to the reader. */
+/** Where a notification leads: the requests to approve, or the system just opened to the reader or changed for them. */
 function open(notification: Notification) {
   if (notification.kind === 'access_requested') router.navigate({ pathname: '/access-codes', params: { pane: 'requests' } });
-  if (notification.kind === 'access_approved' && notification.merchant_id) {
+  if ((notification.kind === 'access_approved' || notification.kind === 'access_changed') && notification.merchant_id) {
     router.push({ pathname: '/systems/[id]', params: { id: notification.merchant_id } });
   }
 }

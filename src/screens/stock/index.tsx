@@ -50,7 +50,7 @@ export function StockIndex({ merchantId, merchantName, isOwner }: { merchantId: 
       onOpen={(route) => router.push(`/systems/${merchantId}/stock/${route}`)}
       offline="You're offline. Stock will load when you reconnect."
       failure="Couldn't load Stock. Try again."
-      empty="Your roles give you nothing to see here. Ask the owner if you need more."
+      empty="Your permissions give you nothing to see here. Ask the owner if you need more."
     />
   );
 }

@@ -7,7 +7,7 @@ import { QueryState } from '../../components/query-state';
 import { RecordIndex } from '../../components/record-index';
 import type { IndexSection } from '../../components/record-index';
 import { Text } from '../../components/text';
-import { can, usePermissions } from '../../features/role-permissions/queries';
+import { can, has, usePermissions } from '../../features/role-permissions/queries';
 import { displayDate } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
@@ -31,6 +31,8 @@ export const SELL_SECTIONS: IndexSection<SellRoute>[] = [
 /** Sell: the cashier's session and the Register, then the orders and sessions behind them — a rail destination. */
 export function SellIndex({ merchantId, merchantName, isOwner }: { merchantId: string; merchantName: string; isOwner: boolean }) {
   const open = (route: SellRoute) => router.push(`/systems/${merchantId}/sell/${route}`);
+  // A cashier opens a session without reading the list of them: the box is theirs, and nothing is missing below it.
+  const opensSessions = isOwner || can(usePermissions({ merchantId }).data, 'POS Opening Entry', 'create');
 
   return (
     <RecordIndex
@@ -43,9 +45,9 @@ export function SellIndex({ merchantId, merchantName, isOwner }: { merchantId: s
       onOpen={open}
       offline="You're offline. Sell will load when you reconnect."
       failure="Couldn't load Sell. Try again."
-      empty="Your roles give you nothing to see here. Ask the owner if you need more."
+      empty={opensSessions ? null : 'Your permissions give you nothing to see here. Ask the owner if you need more.'}
     >
-      <SessionCard merchantId={merchantId} onOpen={open} />
+      {opensSessions ? <SessionCard merchantId={merchantId} onOpen={open} /> : null}
     </RecordIndex>
   );
 }
@@ -55,8 +57,6 @@ function SessionCard({ merchantId, onOpen }: { merchantId: string; onOpen: (rout
   const { colors } = useAppTheme();
   const { query, session, profile } = useRegisterSession(merchantId);
   const permissions = usePermissions({ merchantId }).data;
-  // Nothing here for someone whose roles neither sell nor open a session: the sections below are theirs.
-  if (!can(permissions, 'POS Opening Entry', 'read')) return null;
 
   return (
     <View style={[styles.card, { borderColor: colors.outlineVariant }]}>
@@ -70,9 +70,12 @@ function SessionCard({ merchantId, onOpen }: { merchantId: string; onOpen: (rout
               </Text>
             </View>
             <View style={styles.actions}>
-              <Button mode="contained" onPress={() => onOpen('register')}>
-                Register
-              </Button>
+              {/* Open/Close Register alone keeps a drawer without selling from it. */}
+              {has(permissions, 'process_sales') ? (
+                <Button mode="contained" onPress={() => onOpen('register')}>
+                  Register
+                </Button>
+              ) : null}
               <Button mode="outlined" onPress={() => onOpen('close-session')}>
                 Close Session
               </Button>
