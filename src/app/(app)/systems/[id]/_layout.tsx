@@ -17,6 +17,7 @@ import { useMerchantsQuery } from '../../../../features/merchants/queries';
 import { showsDestination } from '../../../../features/permissions/access';
 import type { DestinationRule } from '../../../../features/permissions/access';
 import { usePermissions } from '../../../../features/role-permissions/queries';
+import { useSystemSettingsQuery } from '../../../../features/system-settings/queries';
 import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import type { IconName } from '../../../../lib/icons';
@@ -87,6 +88,10 @@ export default function SystemLayout() {
   const userId = useSession()?.user.id;
   // The same query every index reads, so this adds no request of its own.
   const permissions = usePermissions({ merchantId: id });
+  // Unused here: subscribing starts System Settings beside my_permissions when the system opens. The Dashboard
+  // waits for its time zone, and money is formatted by it, so the first of those screens no longer asks for it
+  // and only then for its own rows — one round trip less (.claude/test-report/backend-performance-test-report.md).
+  useSystemSettingsQuery({ merchantId: id });
 
   if (!merchant) return <MissingMerchant merchants={merchants} />;
 

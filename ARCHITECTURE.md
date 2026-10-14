@@ -306,6 +306,10 @@ with no stack (Step 22, below); Sell,
 Stock and Accounts, each a `Stack` of its own whose index lists what the reader's roles let them open;
 and Setup — a `Stack` of its own (`systems/[id]/setup/`), whose index lists the company's foundation
 records on ERPNext's model and pushes each one; a tap on Setup in the rail always lands on that index.
+Opening a system asks for `my_permissions` and System Settings side by side: the shell subscribes to System
+Settings without reading it, so the Dashboard (which waits for its time zone) and every amount formatted by it
+find it cached instead of asking first and only then for their own rows — 0.7–1.0 s off the first Dashboard on
+the dev build (`.claude/test-report/backend-performance-test-report.md`, 2026-10-15).
 A small form opened from Setup (a fiscal year) is a `forms/` route of the `(app)` stack instead: a
 full page on a phone, and on a tablet a `transparentModal` whose whole content is a Dialog, so the
 list it was opened from stays visible under the backdrop. The header's
