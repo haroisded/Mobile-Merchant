@@ -1,0 +1,140 @@
+Your database architecture is well-engineered for a multi-tenant POS/ERP system, featuring `InitPlan`-optimized RLS policies (`(SELECT auth.uid())` and `(SELECT private.permitted_merchant_ids(...))`), single-roundtrip JSONB bulk RPCs (`pos_checkout`, `open_pos_session`, `close_pos_session`), and strict tenant isolation via composite foreign keys `(id, merchant_id)`. However, under real-world production concurrency (multiple registers checking out simultaneously, growing stock ledgers, and dashboard polling), several locking, indexing, and trigger bottlenecks in the current schema will degrade throughput if not addressed before launch.
+
+---
+
+## 1. High-Priority Concurrency & Write Bottlenecks
+
+* **Transaction-Long Serialization on `naming_series_counters`:**
+* **The Bottleneck:** Document tables (`pos_invoices`, `stock_entries`, `stock_reconciliations`, `pos_opening_entries`, `pos_closing_entries`) fire a `BEFORE INSERT` trigger (`private.name_document`) that increments and locks the corresponding row in `public.naming_series_counters`. In `public.pos_checkout`, the parent row in `public.pos_invoices` is inserted *first*, before inserting `pos_invoice_items`, `pos_invoice_taxes`, `pos_invoice_payments`, and executing `public.submit_document('POS Invoice', v_id)`. Consequently, the exclusive row lock on `naming_series_counters` for that merchant's invoice prefix is held for the entire duration of the transaction (including stock valuation, FIFO updates, and GL entry generation). If multiple cashiers at the same merchant press "Checkout" simultaneously, they will block and serialize behind each other.
+
+
+* **The Upgrade:** Defer assigning the final sequence number until the very end of `public.submit_document` (right before transaction commit), inserting drafts with a temporary placeholder or `NULL` name until submission.
+
+
+* **`CACHE 1` on High-Velocity Ledger Sequences:**
+* **The Bottleneck:** Both `public.gl_entries_id_seq` and `public.stock_ledger_entries_id_seq` are configured with `CACHE 1`. Every submitted POS invoice or 500-row stock import inserts multiple ledger rows, forcing synchronous sequence catalog locks and WAL writes on every single row.
+
+
+* **The Upgrade:** Increase the sequence cache so backends pre-allocate IDs in memory:
+```sql
+ALTER SEQUENCE public.gl_entries_id_seq CACHE 100;
+ALTER SEQUENCE public.stock_ledger_entries_id_seq CACHE 100;
+
+```
+
+
+
+
+* **MVCC Bloat & Non-HOT Updates on `public.bins`:**
+* **The Bottleneck:** Every sale of a stocked item updates its `public.bins` row (`actual_qty`, `valuation_rate`, `stock_value`, and `fifo_queue jsonb`). Because `public.bins` has four separate indexes (`bins_pkey`, `bins_item_idx`, `bins_warehouse_idx`, `bins_merchant_idx`) and default storage parameters, frequent updates—especially rewriting a growing `fifo_queue` JSONB array—rapidly generate dead tuples and prevent PostgreSQL from performing **HOT (Heap-Only Tuple) updates**. Moreover, `bins_item_idx (item_id, merchant_id)` is largely redundant because `item_id` is already the leading column of `bins_pkey (item_id, warehouse_id)`.
+
+
+* **The Upgrade:** Drop the redundant index and configure a lower `fillfactor` with aggressive autovacuum on `bins` and `naming_series_counters`:
+```sql
+DROP INDEX IF EXISTS public.bins_item_idx;
+
+ALTER TABLE public.bins SET (
+  fillfactor = 70,
+  autovacuum_vacuum_scale_factor = 0.01,
+  autovacuum_analyze_scale_factor = 0.005
+);
+
+ALTER TABLE public.naming_series_counters SET (
+  fillfactor = 70,
+  autovacuum_vacuum_scale_factor = 0.01
+);
+
+```
+
+
+
+
+
+---
+
+## 2. RPC, Query, and Trigger Optimizations
+
+* **Convert Child Document Guards from Row-Level to Statement-Level Triggers:**
+* **The Bottleneck:** Every child table (`pos_invoice_items`, `pos_invoice_taxes`, `pos_invoice_payments`, `stock_entry_items`, `stock_reconciliation_items`, `pos_opening_entry_balances`, `pos_closing_entry_payments`) has a `BEFORE INSERT OR DELETE OR UPDATE ... FOR EACH ROW` trigger executing `private.guard_docstatus_child(...)`. During a 20-item `pos_checkout` or a 500-item `save_stock_reconciliation`, PostgreSQL executes `guard_docstatus_child` hundreds of times in a loop, querying the parent document's `docstatus` once per child row.
+
+
+* **The Upgrade:** Refactor `guard_docstatus_child` into `AFTER INSERT OR UPDATE OR DELETE ... FOR EACH STATEMENT` triggers using transition tables (`REFERENCING NEW TABLE AS new_rows OLD TABLE AS old_rows`), checking `DISTINCT parent_id` against the parent table once per batch statement.
+
+
+* **Eliminate Redundant Sorting and Table Scans in `public.dashboard_cards`:**
+* **The Bottleneck:** `public.dashboard_cards` contains three performance traps:
+1. To compute the `low_stock` count, it calls `public.stock_alerts(p_merchant, null)`. Inside `stock_alerts`, PostgreSQL joins `bins`, `items`, and `warehouses` and runs `ORDER BY b.actual_qty, t.item_code, w.warehouse_name` over all matching rows—wasting CPU sorting and joining `warehouses` when `dashboard_cards` only needs `count(distinct a.item_id)`.
+
+
+2. To calculate `expected_cash`, it scans `pos_invoice_payments` joined with `modes_of_payment` twice: once to sum `p.amount` and again inside a correlated `EXISTS` subquery for `change_amount > 0`.
+
+
+3. The `open_sessions` CTE filters `pos_opening_entries` by `merchant_id = p_merchant AND docstatus = 1 AND status = 'Open'`, which is not covered by `pos_opening_entries_one_open (pos_profile_id, user_id)`.
+
+
+
+
+* **The Upgrade:** Replace the `stock_alerts` call in `dashboard_cards` with a direct `SELECT count(DISTINCT b.item_id) FROM public.bins b JOIN public.items t ON t.id = b.item_id WHERE ...` (no `warehouses` join, no `ORDER BY`), and combine the cash payment sum and cash-change check into a single aggregation.
+
+
+* **Skip Unnecessary `DELETE` Statements on New Inserts in `save_*` RPCs & `import_items`:**
+* **The Bottleneck:** In `save_item`, `save_item_group`, `save_item_tax_template`, `save_pos_profile`, `save_pricing_rule`, `save_sales_tax_template`, `save_stock_entry`, and `save_stock_reconciliation`, the functions unconditionally execute `DELETE FROM child_table WHERE parent_id = v_id` even when `v_id` was just created via `INSERT` in the `IF v_id IS NULL` branch. In `public.import_items` (up to 500 items per call), calling `save_item` in a loop triggers 1,000 unnecessary `DELETE` statements on `item_uoms` and `item_taxes` plus up to 500 repeated `SELECT s.default_price_list FROM public.selling_settings` queries.
+
+
+* **The Upgrade:** Move the `DELETE FROM child_table` statements inside the `ELSE` (update) block of each `save_*` function, and pass the pre-fetched `default_price_list` or bulk-insert items during `import_items`.
+
+
+
+---
+
+## 3. Indexing Upgrades & Storage De-Duplication
+
+| Target Table | Current State in Schema | Recommended Index / Upgrade | Why It Matters |
+| --- | --- | --- | --- |
+| **`public.items`** | Indexed on `(merchant_id, item_code)` and FKs, but no index on `item_name` or active status.
+
+ | `CREATE INDEX items_merchant_search_idx ON public.items (merchant_id, item_name) WHERE NOT disabled;` (plus a `pg_trgm` GIN index if using `ILIKE '%...%'`). | Prevents full tenant catalog scans during POS item search and filtering. |
+| **`public.pos_opening_entries`** | `pos_opening_entries_one_open` only indexes `(pos_profile_id, user_id)`.
+
+ | `CREATE INDEX pos_opening_entries_open_merchant_idx ON public.pos_opening_entries (merchant_id) WHERE docstatus = 1 AND status = 'Open';` | Makes the `open_sessions` lookup in `dashboard_cards` an instant index scan.
+
+ |
+| **`public.pos_invoices`** | `pos_invoices_date_idx` indexes `(merchant_id, posting_date DESC, created_at DESC)` across all `docstatus` values.
+
+ | `CREATE INDEX pos_invoices_submitted_date_idx ON public.pos_invoices (merchant_id, posting_date DESC) INCLUDE (net_total, is_return) WHERE docstatus = 1;` | Enables **Index-Only Scans** for `dashboard_cards` and `sales_by_day` without touching the heap.
+
+ |
+| **`public.notifications`** | Indexed on `(user_id, created_at DESC)`.
+
+ | `CREATE INDEX notifications_unread_idx ON public.notifications (user_id, created_at DESC) WHERE read_at IS NULL;` | Keeps unread notification queries fast as historical notification rows accumulate. |
+| **`gl_entries` & `stock_ledger_entries**` | `gl_entries_voucher_idx` and `stock_ledger_entries_voucher_idx` only index `(voucher_id)`.
+
+ | Replace with `(voucher_id, voucher_type)` or `(merchant_id, voucher_id, voucher_type)`. | Matches the exact `WHERE` predicate in `delete_document` (`cancel_gl` / `cancel_sle`).
+
+ |
+
+* **Evaluate Redundant `PRIMARY KEY (id)` + `UNIQUE (id, merchant_id)` Indexes:**
+* Across 30+ tables, you maintain both `PRIMARY KEY (id)` and `UNIQUE (id, merchant_id)` to support composite foreign keys. Because `id` is the leading column in `(id, merchant_id)`, PostgreSQL can already use the `(id, merchant_id)` B-tree index to serve any `WHERE id = $1` lookup. On write-heavy child tables that are never referenced by a foreign key at all (such as `pos_invoice_taxes`, `pos_invoice_payments`, `pos_opening_entry_balances`, `pos_closing_entry_payments`, `stock_entry_items`, `stock_reconciliation_items`), ensure you do not carry redundant composite unique indexes, and on `pos_invoice_items` (where `pos_invoice_items_id_merchant` exists solely for `return_against_item`), consider making `(id, merchant_id)` the primary key to cut primary index write overhead in half.
+
+
+
+
+
+---
+
+## 4. Pre-Deployment Supabase & Infrastructure Checklist
+
+1. **Route Client Traffic Through Supavisor in Transaction Mode (Port 6543):**
+Because all your RPCs explicitly set `SET search_path TO ''` and rely on stateless JWT evaluation (`auth.uid()`) rather than session variables, your schema is 100% compatible with Supavisor Transaction Mode. Use port `6543` in your app connection config to prevent connection exhaustion when multiple POS devices reconnect simultaneously.
+
+
+2. **Add Scheduled Cleanup via `pg_cron`:**
+In `public.claim_access_code`, expired rows in `private.access_code_failures` are only deleted for the currently calling user (`where f.user_id = v_uid and f.failed_at < now() - interval '15 minutes'`). Schedule a nightly `pg_cron` job to purge abandoned rows in `private.access_code_failures`, expired `public.access_codes`, and old read `public.notifications`.
+
+
+3. **Audit `private.permitted_merchant_ids` Execution Plans:**
+Every RLS policy in the `public` schema calls `private.permitted_merchant_ids(doctype, ptype)`. Before launch, verify that `private.permitted_merchant_ids` is declared `STABLE SECURITY DEFINER` (so it does not trigger recursive RLS checks on `merchants`, `merchant_members`, or `role_grants`) and test it with `EXPLAIN (ANALYZE, BUFFERS)` under a non-owner `authenticated` JWT role.
+
+
+
+Would you like to share the definitions of your `private` schema functions (such as `private.submit_pos_invoices` and `private.permitted_merchant_ids`) so we can audit the stock valuation and RLS lookup logic as well?

@@ -1,0 +1,18 @@
+# instructions 
+- read "B:\Development-Projects\Mobile-Merchant\.claude\current-system-features.md"
+
+# context
+- some reports stored in "B:\Development-Projects\Mobile-Merchant\.claude\tests\test-report",
+  are duplicates or even stale 
+
+# session-context
+- the goal of this session is to "remove / update" created reports stored in 
+  "B:\Development-Projects\Mobile-Merchant\.claude\tests\test-report",
+
+- The Current Problem is, some test reports might still contain stale reports,
+  or some reports might not actually even be reports 
+
+  to Identify if a "Test Report" is stale or not, you can depend on...
+- "B:\Development-Projects\Mobile-Merchant\.claude\tests"
+- git commit history, specifically, "Commits on Oct 8, 2026" upto "Commits on Oct 14, 2026"
+- you can also check the source code, if you need to clarify or gain context of the system even more
