@@ -34,7 +34,7 @@ export function Items({ merchant }: { merchant: Merchant }) {
   const group = (item: Item) => groups?.find((candidate) => candidate.id === item.item_group_id)?.item_group_name ?? '';
   const uom = (item: Item) => uoms?.find((candidate) => candidate.id === item.stock_uom)?.uom_name ?? '';
   const needle = search.trim().toLowerCase();
-  const found = items.data?.filter((item) => [item.item_code, item.item_name].some((text) => text.toLowerCase().includes(needle)));
+  const found = items.data?.filter((item) => [item.item_code, item.item_name, item.barcode ?? ''].some((text) => text.toLowerCase().includes(needle)));
 
   return (
     <View style={styles.fill}>
@@ -57,7 +57,7 @@ export function Items({ merchant }: { merchant: Merchant }) {
           dense
           value={search}
           onChangeText={setSearch}
-          placeholder="Search by code or name"
+          placeholder="Search by code, name or barcode"
           accessibilityLabel="Search items"
           left={<TextInput.Icon icon="search" />}
         />

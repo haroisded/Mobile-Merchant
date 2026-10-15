@@ -17,6 +17,12 @@ export const itemSchema = (codeTyped: boolean) =>
       item_code: codeTyped ? z.string().trim().min(1, 'Enter a code.').max(140, 'Use 140 characters or fewer.') : z.string(),
       // Blank: the code, as ERPNext fills it.
       item_name: z.string().trim().max(140, 'Use 140 characters or fewer.'),
+      // What the camera reads off the pack: items_barcode_shape's printable characters, no spaces. Blank for none.
+      barcode: z
+        .string()
+        .trim()
+        .max(64, 'Use 64 characters or fewer.')
+        .regex(/^[!-~]*$/, 'Use letters, digits and symbols, with no spaces.'),
       item_group_id: z.string().min(1, 'Pick an item group.'),
       stock_uom: z.string().min(1, 'Pick a unit of measure.'),
       description: z.string().trim().max(1000, 'Use 1,000 characters or fewer.'),

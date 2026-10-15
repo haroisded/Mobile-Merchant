@@ -172,7 +172,8 @@ const ITEM_REFUSALS = new Map([
  */
 export function itemRefusal(cause: Error | null): string | null {
   const error = postgrestError(cause);
-  if (error?.code === '23505') return 'There is already an item with this code.';
+  // Two unique keys: the code (items_code_unique) and the barcode (items_barcode_unique).
+  if (error?.code === '23505') return error.message.includes('items_barcode_unique') ? 'Another item already has this barcode.' : 'There is already an item with this code.';
   return ITEM_REFUSALS.get(error?.message ?? '') ?? postingRefusal(cause);
 }
 

@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { Button } from '../../components/button';
 import { FormFooter } from '../../components/form-footer';
+import { IconButton } from '../../components/icon-button';
 import { PageHeader } from '../../components/page-header';
 import { SessionState, useRegisterSession } from '../../components/pos-session';
 import { Text } from '../../components/text';
@@ -19,7 +20,8 @@ import { useSaleSetup } from '../../features/pos-invoices/setup';
 import type { PosOpeningEntry } from '../../features/pos-opening-entries/queries';
 import type { PosProfile } from '../../features/pos-profiles/queries';
 import { useAppTheme } from '../../lib/theme';
-import { addToCart, useCart, useCartDiscount } from '../../Store/cart';
+import { addToCart, cartQty, useCart, useCartDiscount } from '../../Store/cart';
+import { openScan } from '../../Store/scan';
 import { spacing } from '../../themes';
 
 /**
@@ -57,12 +59,8 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
 
   const { setup, engines } = sale;
   const onHand = new Map(bins.map((bin) => [bin.item_id, bin.actual_qty]));
-  const offered = offeredItems(sale.items, setup, {
-    groupIds: profile.pos_profile_item_groups.map((row) => row.item_group_id),
-    hideUnavailable: profile.hide_unavailable_items,
-    onHand,
-    search,
-  });
+  const offer = { groupIds: profile.pos_profile_item_groups.map((row) => row.item_group_id), hideUnavailable: profile.hide_unavailable_items, onHand };
+  const offered = offeredItems(sale.items, setup, { ...offer, search });
   const inCart = new Map<string, number>();
   for (const line of lines) inCart.set(line.itemId, (inCart.get(line.itemId) ?? 0) + line.qty);
   // The bar's total is the Cart's: less the additional discount typed there.
@@ -75,11 +73,31 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
     return [item.item_code, price ? money(price.rate) : 'No price', item.is_stock_item ? `${onHand.get(item.id) ?? 0} on hand` : null].filter(Boolean).join(' · ');
   };
 
+  // The scan adds what a tap on its row would: one, in the unit it sells in. A barcode first, then an Item Code
+  // printed as one (a shop's own Code 128 labels); an item this profile doesn't offer is refused, as its row is
+  // missing here.
+  const scan = () => {
+    openScan({
+      title: 'Scan to Sell',
+      mode: 'register',
+      onBarcode: (code) => {
+        const item = sale.items.find((candidate) => candidate.barcode === code) ?? sale.items.find((candidate) => candidate.item_code === code);
+        if (!item) return { type: 'error', text: `No item has the barcode ${code}.` };
+        if (offeredItems([item], setup, { ...offer, search: '' }).length === 0) return { type: 'error', text: `${item.item_name} isn't sold at this register.` };
+        const uom = item.sales_uom ?? item.stock_uom;
+        addToCart(session.id, item.id, uom);
+        return { type: 'info', text: `Added ${item.item_name} · ${cartQty(session.id, item.id, uom)} in the cart` };
+      },
+    });
+    router.push('/scan');
+  };
+
   return (
     <View style={styles.fill}>
       {header}
       <View style={styles.search}>
         <TextInput
+          style={styles.grow}
           mode="outlined"
           dense
           value={search}
@@ -90,6 +108,7 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
           left={<TextInput.Icon icon="search" />}
           accessibilityLabel="Search items"
         />
+        <IconButton icon="scan" mode="outlined" onPress={scan} accessibilityLabel="Scan a barcode" />
       </View>
       {/* Every item of the system can be here, so FlashList (.claude/instruction_mds/frontend.md §4.2); one row type, one pool. */}
       <FlashList
@@ -143,7 +162,8 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
-  search: { paddingHorizontal: spacing.md, paddingTop: spacing.ms, paddingBottom: spacing.sm },
+  search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.ms, paddingBottom: spacing.sm },
+  grow: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 56, paddingHorizontal: spacing.md, paddingVertical: spacing.ms, borderBottomWidth: 1 },
   rowText: { flex: 1, gap: spacing.xs },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).

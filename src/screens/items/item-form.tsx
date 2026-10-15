@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import type { Control } from 'react-hook-form';
+import type { Control, UseFormReturn } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { saveOnce } from '../../components/adaptive-dialog';
+import { Button } from '../../components/button';
 import { ControlledSwitch, ControlledText, FieldGrid } from '../../components/form-fields';
 import { PageForm } from '../../components/form-footer';
 import { ItemTaxFields, useItemTaxRecords } from '../../components/item-tax-fields';
@@ -26,6 +27,7 @@ import { useItemGroupsQuery } from '../../features/item-groups/queries';
 import type { ItemGroup } from '../../features/item-groups/queries';
 import { itemLabel, useDeleteItemMutation, useItemsQuery, useSaveItemMutation } from '../../features/items/queries';
 import type { Item } from '../../features/items/queries';
+import { readLabel } from '../../features/items/label';
 import { itemSchema } from '../../features/items/schema';
 import type { ItemValues } from '../../features/items/schema';
 import type { Merchant } from '../../features/merchants/queries';
@@ -36,7 +38,9 @@ import type { StockSettings } from '../../features/stock-settings/queries';
 import { uomOptions, useUomsQuery } from '../../features/uoms/queries';
 import type { Uom } from '../../features/uoms/queries';
 import { warehouseLabel } from '../../features/warehouses/queries';
+import { useShellWide } from '../../lib/columns';
 import { failureMessage, itemRefusal, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
+import { openScan } from '../../Store/scan';
 
 type Records = {
   groups: ItemGroup[];
@@ -87,6 +91,7 @@ export function ItemPage({ merchant, itemId }: { merchant: Merchant; itemId?: st
 const blank = ({ groups, stockSettings }: Records): ItemValues => ({
   item_code: '',
   item_name: '',
+  barcode: '',
   item_group_id: groups.find((group) => group.id === stockSettings.item_group && !group.is_group)?.id ?? '',
   stock_uom: stockSettings.stock_uom ?? '',
   description: '',
@@ -116,6 +121,7 @@ const text = (value: string | number | null) => String(value ?? '');
 const saved = (item: Item): ItemValues => ({
   item_code: item.item_code,
   item_name: item.item_name,
+  barcode: text(item.barcode),
   item_group_id: item.item_group_id,
   stock_uom: item.stock_uom,
   description: text(item.description),
@@ -140,6 +146,59 @@ const saved = (item: Item): ItemValues => ({
   uoms: item.item_uoms.map((row) => ({ uom_id: row.uom_id, conversion_factor: String(row.conversion_factor) })),
   taxes: item.item_taxes.map((row) => ({ item_tax_template_id: row.item_tax_template_id, tax_category_id: text(row.tax_category_id), valid_from: text(row.valid_from) })),
 });
+
+type ScanProductProps = {
+  form: Pick<UseFormReturn<ItemValues>, 'getValues' | 'setValue'>;
+  brands: Brand[];
+  existing: Item | undefined;
+  fromSeries: boolean;
+  priced: boolean;
+};
+
+/**
+ * Scan Product: opens the product scan for this form (src/screens/scan). A barcode fills Barcode, and a typed Item
+ * Code still empty; the label fills whichever of the name, brand, description and — on a new item its creator may
+ * price — the Standard Selling Rate is still empty. Nothing typed is overwritten but the barcode, the scan's own.
+ */
+function ScanProduct({ form: { getValues, setValue }, brands, existing, fromSeries, priced }: ScanProductProps) {
+  const wide = useShellWide();
+  const fill = (name: 'barcode' | 'item_code' | 'item_name' | 'description' | 'brand_id' | 'standard_rate', value: string) => {
+    if (value && (name === 'barcode' || !getValues(name))) setValue(name, value, { shouldDirty: true, shouldValidate: true });
+  };
+  const scan = () => {
+    openScan({
+      title: 'Scan Product',
+      mode: 'item',
+      onBarcode: (code) => {
+        fill('barcode', code);
+        if (!existing && !fromSeries) fill('item_code', code);
+        return { type: 'info', text: `Barcode ${code}. Now read the label, or tap Done.` };
+      },
+      onLabel: (lines) => {
+        const label = readLabel(lines, brands);
+        fill('item_name', label.item_name);
+        fill('brand_id', label.brand_id);
+        fill('description', label.description);
+        if (priced) fill('standard_rate', label.standard_rate);
+        return Object.values(label).some(Boolean);
+      },
+    });
+    router.push('/scan');
+  };
+
+  return (
+    <Button
+      mode="outlined"
+      icon="scan"
+      // Full width narrow, label at the left edge; hugging its label wide (.claude/instruction_mds/frontend.md §5).
+      style={wide ? styles.hug : undefined}
+      contentStyle={styles.leading}
+      onPress={scan}
+    >
+      Scan Product
+    </Button>
+  );
+}
 
 // Each refusal the database names for a new item is itemRefusal's (src/lib/errors.ts), shared with Import Items.
 const saveFailure = (error: Error | null) => itemRefusal(error) ?? failureMessage("Couldn't save this item. Try again.");
@@ -178,13 +237,14 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
   // Stock Settings' Item Naming By: a typed code, or the next name of the Item series.
   const fromSeries = !existing && records.stockSettings.item_naming_by === 'Naming Series';
 
-  const { control, handleSubmit, formState } = useForm<ItemValues>({
+  const { control, handleSubmit, formState, getValues, setValue } = useForm<ItemValues>({
     resolver: zodResolver(itemSchema(!fromSeries)),
     defaultValues: existing ? saved(existing) : blank(records),
     mode: 'onTouched',
   });
   const isStockItem = useWatch({ control, name: 'is_stock_item' });
   const section = { control, records, disabled: !editable };
+  const priced = !existing && can(permissions, 'Item Price', 'create');
 
   return (
     <View style={styles.fill}>
@@ -198,11 +258,12 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         dirty={!existing || formState.isDirty}
         onSave={handleSubmit(saveOnce(save, () => router.back()))}
       >
+        {editable ? <ScanProduct form={{ getValues, setValue }} brands={records.brands} existing={existing} fromSeries={fromSeries} priced={priced} /> : null}
         <Details
           {...section}
           existing={existing}
           fromSeries={fromSeries}
-          priced={!existing && can(permissions, 'Item Price', 'create')}
+          priced={priced}
           // The Opening Stock is a Stock Reconciliation saved and submitted as the creator.
           stocked={!existing && isStockItem && can(permissions, 'Stock Reconciliation', 'create') && can(permissions, 'Stock Reconciliation', 'submit')}
         />
@@ -286,6 +347,16 @@ function Details({ control, records, disabled, existing, fromSeries, priced, sto
           disabled={disabled || existing !== undefined}
         />
       )}
+      <ControlledText
+        control={control}
+        name="barcode"
+        label="Barcode"
+        hint="What the Register's scan reads"
+        placeholder="e.g. 4800016644214"
+        maxLength={64}
+        autoCapitalize="none"
+        disabled={disabled}
+      />
       <ControlledText control={control} name="item_name" label="Item Name" hint="Empty: the code" placeholder="e.g. Notebook A5" maxLength={140} disabled={disabled} />
       <ControlledSelect
         control={control}
@@ -525,4 +596,6 @@ function Taxes({ control, records, disabled }: SectionProps) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  hug: { alignSelf: 'flex-start' },
+  leading: { justifyContent: 'flex-start' },
 });

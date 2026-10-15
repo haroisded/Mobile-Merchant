@@ -72,3 +72,17 @@ export async function saveTextFile(name: string, mimeType: string, text: string)
   file.write(text);
   return file.name;
 }
+
+/**
+ * The address of an image the person picks — a product photo for the scan screen to read — or null when they
+ * leave the picker. Throws PickerUnavailableError when the picker did not open. Android hands back a
+ * content:// address, which ML Kit's text recognizer opens itself (InputImage.fromFilePath).
+ */
+export async function pickImage(): Promise<string | null> {
+  try {
+    const picked = await File.pickFileAsync(undefined, 'image/*');
+    return (Array.isArray(picked) ? picked[0] : picked).uri;
+  } catch (cause) {
+    return leftPicker(cause);
+  }
+}

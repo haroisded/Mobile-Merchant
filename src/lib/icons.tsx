@@ -51,6 +51,9 @@ export const ICONS = {
   // The shell's Accounts destination: the General Ledger. Checked against both sets on 2026-10-12.
   accounts: { ios: 'building.columns', android: 'account_balance' },
 
+  // The product scan: Scan Product on the Item form, the Register's scan. Checked against both sets on 2026-10-15.
+  scan: { ios: 'barcode.viewfinder', android: 'barcode_scanner' },
+
   // Profile
   camera: { ios: 'camera', android: 'photo_camera' },
   device: { ios: 'iphone', android: 'smartphone' },

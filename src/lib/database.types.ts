@@ -1080,6 +1080,7 @@ export type Database = {
       items: {
         Row: {
           allow_negative_stock: boolean
+          barcode: string | null
           brand_id: string | null
           created_at: string
           default_price_list: string | null
@@ -1104,6 +1105,7 @@ export type Database = {
         }
         Insert: {
           allow_negative_stock?: boolean
+          barcode?: string | null
           brand_id?: string | null
           created_at?: string
           default_price_list?: string | null
@@ -1128,6 +1130,7 @@ export type Database = {
         }
         Update: {
           allow_negative_stock?: boolean
+          barcode?: string | null
           brand_id?: string | null
           created_at?: string
           default_price_list?: string | null

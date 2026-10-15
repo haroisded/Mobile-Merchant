@@ -118,6 +118,16 @@ Rejected: running the wrapper's `onDestroy` inline in `expo` — the origin, but
 teardown for the whole app and the dev launcher; `android:configChanges` — stops only some relaunches;
 `expo-document-picker` and `expo-sharing` — two native packages to route around four lines.
 
+### Two native packages read the camera
+
+`expo-camera` (`CameraView`, its ML Kit barcode scanner, `takePictureAsync`; its config plugin in `app.json` with
+`recordAudioAndroid: false`) and `@infinitered/react-native-mlkit-text-recognition` (ML Kit text recognition, Latin,
+the model bundled) — both used only by `src/screens/scan/` (ARCHITECTURE.md, Product scan). Native, so a JavaScript
+reload does not bring them: a build made before 2026-10-15 crashes on opening **Scan Product** or the Register's scan.
+Adding them left `expo-modules-core` at 57.0.20, so the patch above still applies; check that again whenever either is
+upgraded. Rejected: `@react-native-ml-kit/text-recognition` (five scripts' models in every build) and
+`expo-mlkit-ocr` (`useFrameworks: static` and iOS 16 for the whole app).
+
 ### Where the documentation lives
 
 Three files at the root, and a change usually touches more than one:
@@ -403,6 +413,9 @@ Dashboard adds up, a person's unread notifications; `public.dashboard_cards` re-
 `stock_alerts()` and to read a session's cash once; the eight `save_*` RPCs re-created to clear child rows only on an
 update. What `supabase/database-improvements.txt` proposed and this did not do is in ARCHITECTURE.md, Backend
 performance).
+Then the product scan's key: `20261015000059_item_barcodes.sql` (`items.barcode`, `items_barcode_shape` and the
+partial unique index `items_barcode_unique` on `(merchant_id, barcode)`; `save_item` re-created to take it — an update
+only when the payload names the key, so an older build cannot clear one).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

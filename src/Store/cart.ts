@@ -32,6 +32,12 @@ export const addToCart = (sessionId: string, itemId: string, uomId: string) =>
       : [...lines, { itemId, uomId, qty: 1, rate: null }],
   }));
 
+/** How many of an item, in that unit, the cart holds now — read outside a render, for the scan's answer. */
+export const cartQty = (sessionId: string, itemId: string, uomId: string) => {
+  const state = useCartStore.getState();
+  return state.sessionId === sessionId ? (state.lines.find((line) => line.itemId === itemId && line.uomId === uomId)?.qty ?? 0) : 0;
+};
+
 export const updateCartLine = (sessionId: string, index: number, patch: Partial<CartLine>) =>
   change(sessionId, (lines) => ({ lines: lines.map((line, at) => (at === index ? { ...line, ...patch } : line)) }));
 

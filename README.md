@@ -89,6 +89,11 @@ together and explained inline.
   in, choose it, and read every mistake by row and column before anything is saved; then one tap imports
   every item — up to 500 a file — with its price and its opening stock, and lists what was made. The phone's
   own file pickers, through `expo-file-system`: no extra native package
+- **Product scan** — the phone's camera, read on the phone by Google ML Kit (no network, no cost). On a new
+  item, **Scan Product** reads the barcode and the label: Barcode, Item Code, name, brand, description and price
+  fill whichever fields are still empty. At the Register, the barcode button rings a product up by its barcode.
+  Native: `expo-camera` and `@infinitered/react-native-mlkit-text-recognition`, so it needs a development build
+  made after they were added; the camera permission is asked the first time
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependencies** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`
@@ -231,7 +236,8 @@ adds none either — `public.import_items`, which saves a file's items through t
 uses. Access Codes adds `access_codes`, `access_requests` and `notifications`; Employees & permissions adds the
 global, read-only `permissions` and `permission_rules` — the abilities an owner hands out, and the doctype rules
 each one stands for — and the owner-only `role_grants` and `member_overrides`, with `merchant_members.role_id`
-(one role each). Triggers named
+(one role each); Item barcodes adds `items.barcode`, unique within a system — the key the Register's scan
+finds an item by. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

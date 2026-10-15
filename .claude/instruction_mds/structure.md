@@ -31,8 +31,8 @@ Which directories exist under `src/`, and what goes in each. What goes *inside* 
 ```
 src/
   app/                    routes and layouts only
-  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts, files.ts (the device's file pickers)  …
-  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts, cart.ts)
+  lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts, files.ts (the device's file pickers), barcode.ts (which camera reads count)  …
+  Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts, cart.ts, scan.ts)
   features/
     merchants/            queries.ts  schema.ts — merchants is the Company
     countries/            queries.ts — read-only reference data
@@ -58,7 +58,8 @@ src/
     print-formats/        queries.ts  schema.ts  receipt.ts — what a receipt prints, import-free
     letter-heads/         queries.ts  schema.ts
     print-settings/       queries.ts
-    items/                queries.ts  schema.ts  csv.ts — what a CSV file of items holds and what is wrong with it, import-free
+    items/                queries.ts  schema.ts  csv.ts — what a CSV file of items holds and what is wrong with it, import-free;
+                          label.ts — a product label's lines read into an item's fields, import-free
     item-prices/          queries.ts  schema.ts  resolve.ts — the rate a sale line takes, import-free
     gl-entries/  stock-ledger-entries/  bins/             queries.ts — read-only: only a posting writes a ledger
     documents/            queries.ts — submit / cancel for every document, and what a posting invalidates
@@ -112,6 +113,7 @@ src/
     pos-orders/           index.tsx  pos-invoice.tsx  pos-return.tsx — the sales, one sale's receipt, its return
     pos-opening-entries/  index.tsx  open-session.tsx
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
+    scan/                 index.tsx — the product scan: the camera, its barcodes, Read Label (the full-screen route scan.tsx)
     profile/
     sign-in/
   components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  …
@@ -149,6 +151,7 @@ Never create a feature folder named after a page.
 | A dialog that also opens as a sheet route (RemoveSystemDialog, DeleteAccountDialog) | `src/components/` — the route is its second host |
 | Column-count hook | `src/lib/columns.ts` |
 | Reading a CSV file of items; picking the file | `src/features/items/csv.ts` — data, and import-free so `tools/check-logic.mjs` runs it; `src/lib/files.ts` — the device wrapper (rule 6). Rejected: a `features/import/` folder — a page, not a resource (rule 2) |
+| The product scan: the camera page, what a label says, the request between them | `src/screens/scan/` — one page, opened by the Item form and the Register (rule 4: a second screen uses it, so it is a screen of its own, not a component of either); `src/features/items/label.ts` — what a label's lines mean for an item, and `src/lib/barcode.ts` — which camera reports count, both import-free so `tools/check-logic.mjs` runs them; `src/Store/scan.ts` — the request, as `picker.ts` carries the picker's. Rejected: a `features/scan/` folder — a device feature, not a resource (rule 2) |
 | The Dashboard's reports — four functions that each add up several resources | `src/features/dashboard/` — the one folder named as its page is, because the reports are: `public.dashboard_cards` belongs to no single table. Rejected: a hook in each of `pos-invoices/`, `bins/` and `pos-opening-entries/` — one card reads all three |
 | Access codes, the requests they bring, the inbox | three resources, three folders — `access-codes/`, `access-requests/`, `notifications/` — and one screen, `src/screens/access-codes/`, reading the first two and `members/`. Rejected: a `features/invites/` folder — a page's name, not a table's |
 | The bell with its unread count | `src/components/bell-action.tsx` — the systems list and a system's header both draw it |

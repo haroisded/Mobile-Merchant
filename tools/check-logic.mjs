@@ -8,12 +8,14 @@ import { codeStatus, expiryArgs, expiryText, formatCode, normalizeCode } from '.
 import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
+import { readLabel } from '../src/features/items/label.ts';
 import { can, effective, has, overridesFor, readsAny, showsDestination, toggle } from '../src/features/permissions/access.ts';
 import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { pickPricingRule, ruleRate } from '../src/features/pricing-rules/apply.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
+import { CONFIRM_FRAMES, SAME_CODE_MS, noSightings, sighted } from '../src/lib/barcode.ts';
 import { fullYearEnd, todayIn, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
@@ -548,5 +550,48 @@ const shows = (rule, permissions) => showsDestination(rule, permissions);
 assert.deepEqual([shows({}, null), shows({ ownerOnly: true }, CASHIER), shows({ ownerOnly: true }, OWNER)], [true, false, true]);
 assert.deepEqual([shows({ sections: SELL, permissions: ['open_close_register'] }, CASHIER), shows({ sections: SELL }, CASHIER), shows({ sections: SELL }, null)], [true, false, false]);
 assert.deepEqual([shows({ permissions: ['view_sales', 'view_stock'] }, CASHIER), shows({ permissions: ['view_sales'] }, { ...CASHIER, permissions: ['view_sales'] })], [false, true]);
+
+// src/features/items/label.ts — a label's lines into an Item's fields. The brand printed largest is skipped for the
+// name; the digits under the barcode and the price line are no one's; a brand matches whole words only.
+const BRANDS = [{ id: 'b1', brand: 'Nescafe' }, { id: 'b2', brand: 'Nescafe Gold' }, { id: 'b3', brand: 'Kopiko' }];
+const label = [
+  { text: 'NESCAFE', height: 90 },
+  { text: 'Classic Instant Coffee', height: 60 },
+  { text: 'Net Wt. 200 g', height: 20 },
+  { text: '₱ 185.00', height: 40 },
+  { text: '4 800016 644214', height: 18 },
+  { text: 'Made in the Philippines', height: 16 },
+];
+assert.deepEqual(readLabel(label, BRANDS), {
+  item_name: 'Classic Instant Coffee',
+  description: 'Net Wt. 200 g\nMade in the Philippines',
+  brand_id: 'b1',
+  standard_rate: '185.00',
+});
+// The longest brand named wins; PHP and P mark a price, thousands separators drop; nothing found is ''.
+assert.equal(readLabel([{ text: 'Nescafe Gold Blend', height: 10 }], BRANDS).brand_id, 'b2');
+assert.equal(readLabel([{ text: 'Kopikoffee', height: 10 }], BRANDS).brand_id, '');
+assert.equal(readLabel([{ text: 'PHP1,250.5', height: 10 }], BRANDS).standard_rate, '1250.5');
+assert.equal(readLabel([{ text: 'SRP P 49', height: 10 }], BRANDS).standard_rate, '49');
+assert.equal(readLabel([{ text: 'Soap 5 pcs', height: 10 }], BRANDS).standard_rate, '');
+assert.deepEqual(readLabel([], BRANDS), { item_name: '', description: '', brand_id: '', standard_rate: '' });
+// A date and time stamped on the picture (the emulator's camera does) is no one's: nothing read is nothing filled.
+assert.deepEqual(readLabel([{ text: '15.10.26 00:36:14', height: 30 }, { text: 'EXP 10/27', height: 10 }], BRANDS), { item_name: 'EXP 10/27', description: '', brand_id: '', standard_rate: '' });
+
+// src/lib/barcode.ts — which camera reports count. Frames are 100 ms apart.
+const frames = (codes, repeats, seen = noSightings(), start = 0) => codes.map((code, i) => sighted(seen, code, start + i * 100, repeats));
+assert.equal(CONFIRM_FRAMES, 3);
+// Held in view: counts once, on the third frame.
+assert.deepEqual(frames(['A', 'A', 'A', 'A', 'A'], true), [false, false, true, false, false]);
+// A one-frame misread in between is never taken, and does not make A count twice.
+assert.deepEqual(frames(['A', 'A', 'A', 'X', 'A', 'A', 'A'], true), [false, false, true, false, false, false, false]);
+// At the Register, shown again after SAME_CODE_MS out of view: counts again; on the Item form: never.
+for (const repeats of [true, false]) {
+  const seen = noSightings();
+  frames(['A', 'A', 'A'], repeats, seen);
+  assert.deepEqual(frames(['A', 'A', 'A'], repeats, seen, 200 + SAME_CODE_MS), [repeats, false, false]);
+}
+// Another code takes over at once once confirmed.
+assert.deepEqual(frames(['A', 'A', 'A', 'B', 'B', 'B'], false), [false, false, true, false, false, true]);
 
 console.log('check:logic — all assertions passed.');

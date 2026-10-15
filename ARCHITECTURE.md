@@ -34,8 +34,10 @@ src/lib/money.ts           ERPNext's money: Banker's / Commercial rounding, cash
                            smallest coin, the number formats, the amount in words
 src/lib/tree.ts            the tree masters' walks: children (a restricted branch shows at the top),
                            the path to a node, a node's subtree
+src/lib/barcode.ts         which of the camera's barcode reports count: three frames agreeing, and a repeat
+                           only at the Register after 2 s out of view
 src/lib/files.ts           the device's file pickers (expo-file-system): the text of a picked file,
-                           and a text file saved into a picked folder
+                           a text file saved into a picked folder, and a picked image's address
 src/lib/theme.ts           useAppTheme() for the Merchant colour keys
 src/lib/icons.tsx          the icon name map ({ ios, android } symbols) and Paper's icon renderer
 src/lib/database.types.ts  generated from the schema; regenerate whenever a migration lands
@@ -44,6 +46,7 @@ src/Store/picker.ts        the open searchable picker's options and callback, fo
 src/Store/confirm.ts       the open confirm's text and action, for the sheets/confirm route
 src/Store/ledger-filters.ts what each ledger report is narrowed to, for the forms/ledger-filters route
 src/Store/cart.ts          the Register's cart, one per session — shared by the Register and Cart pages
+src/Store/scan.ts          the open product scan's mode and callbacks, for the scan route
 src/themes.js              MD3 light/dark palettes + Merchant keys, roundness, spacing and radius
                            scales, the type scale
 src/features/<resource>/   data only — queries.ts and schema.ts for merchants (the Company), fiscal-years,
@@ -61,7 +64,8 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            item-groups, selling-settings, tax-rules (+ resolve.ts, the rule a sale
                            takes), stock-settings; naming-series, print-formats (+ receipt.ts, what a
                            receipt prints), letter-heads, print-settings; items (+ csv.ts, what a CSV file
-                           of items holds and what is wrong with it), item-prices
+                           of items holds and what is wrong with it; label.ts, a product label's lines
+                           read into an item's fields), item-prices
                            (+ resolve.ts, the rate a sale line takes); pricing-rules (+ apply.ts, the
                            rule a cart line takes and its rate); pos-profiles (a register's
                            settings and its child tables); pos-opening-entries, pos-invoices (+ cart.ts,
@@ -99,7 +103,8 @@ src/screens/<screen>/      UI by screen — home (the systems list, its slot car
                            its return),
                            pos-closing-entries (the list, Close Session, one entry), dashboard (the period
                            switch, the number cards, sales per day, best sellers, stock alerts),
-                           import-items (the template, a file's mistakes, the import and its log), profile, sign-in
+                           import-items (the template, a file's mistakes, the import and its log), scan
+                           (the product scan: the camera, its barcodes, Read Label), profile, sign-in
 src/components/            one re-export per Paper primitive in use (text.tsx is the Text wrapper:
                            per-variant font-scale cap and iOS ramp), plus what more than one screen or a
                            sheet route draws: adaptive-dialog (+ FormActions, saveOnce),
@@ -127,7 +132,7 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            and the files frontend.md restores on first use: note-callout, header-title
 src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
 src/app/sign-in.tsx        renders the sign-in screen
-src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, the sheets/ routes (native
+src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, scan, the sheets/ routes (native
                            formSheet: confirms, the picker) and the forms/ routes (a small form: a
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
 src/app/(app)/(tabs)/      home, access-codes, notifications, settings, account + the NativeTabs bar (five:
@@ -160,8 +165,8 @@ supabase/migrations/       profiles, merchants, current_merchant_ids, the signup
                            20261012085548_pos_invoice_discounts.sql,
                            20261012131350_access_for_documents.sql, 20261012200010_dashboard.sql,
                            20261012204315_import_items.sql; then 20261013213537_access_codes.sql,
-                           20261014034106_employees_and_permissions.sql and
-                           20261014170428_backend_performance.sql
+                           20261014034106_employees_and_permissions.sql,
+                           20261014170428_backend_performance.sql and 20261015000059_item_barcodes.sql
 supabase/reverts/          one revert per migration, same filename — never inside migrations/
 supabase/all-in-one/       add.sql + revert.sql, generated by tools/build-migrations.mjs
 .claude/instruction_mds/   conventions for what is built on the scaffold — structure, data layer,
@@ -183,7 +188,8 @@ tools/check-logic.mjs          npm run check:logic — asserts the pure date mat
                                the Item Price a sale line takes, the Dashboard's periods, what a CSV
                                file of items holds, an access code's shape, status and expiry, and the
                                permission checks (can, has, a destination's rule, requirements, an
-                               employee's exceptions, a cart without Apply Discounts)
+                               employee's exceptions, a cart without Apply Discounts), what a product
+                               label's lines fill, and which camera barcode reports count
 ```
 
 ---
@@ -1406,6 +1412,29 @@ Rejected, with the human on 2026-10-15:
 Not in the review and left as they are: `get_advisors`' 38 INFO unindexed foreign keys, mostly `merchant_id` on
 child tables — they matter when a whole system is removed.
 
+### Item barcodes — `20261015000059_item_barcodes.sql`
+
+The key the Register's scan finds an item by (Product scan, below). `items.barcode` is nullable text, held to
+`items_barcode_shape` (1–64 printable ASCII characters, no spaces) and unique within a system by the partial index
+`items_barcode_unique (merchant_id, barcode) where barcode is not null` — two systems may sell the same product. No
+new table, so RLS and the Item doctype's policies already cover it.
+
+`save_item` re-created from its backend-performance body: an insert takes `nullif(btrim(payload ->> 'barcode'), '')`;
+an update takes the barcode only when the payload names the key, so a build from before this migration — which sends
+no `barcode` — cannot clear one. `import_items` and `save_item_with_opening_stock` reach it through `save_item`
+unchanged; the CSV template has no Barcode column yet. The revert restores the previous body and drops the index,
+the check and the column, with every item's barcode.
+
+Checked in a rolled-back block as two owners (2026-10-15): trimmed on save, a duplicate refused with 23505 on
+`items_barcode_unique`, blank stored as null, a space refused by the check, a payload without the key keeps the
+barcode and `''` clears it, `import_items` unaffected, the same barcode allowed in another system, another owner's
+update refused (`item_not_found`).
+
+Rejected: **the Item Code as the barcode** — a shop's codes are its own (`NOTE-A5`), and Item Naming By can number
+them from a series; **ERPNext's Item Barcode child table** (several barcodes, a type per row) — one per item covers a
+shop's packs, and a unit's own barcode can come with the units when asked; **matching the scanned label's name** to
+find an item — a guess at the till charges the wrong product.
+
 ---
 
 ## Frontend wiring
@@ -1456,3 +1485,62 @@ Paper's icons go through `PaperProvider`'s `settings` prop in `src/app/_layout.t
 Paper's own default goes through `react-native-vector-icons`, whose font files nothing here loads, so
 icons would render as blank boxes. `react-native-vector-icons` stays in `package.json` because Paper
 imports it internally regardless of the override.
+
+## Product scan
+
+A camera page that reads a product for the person: on the Item form it fills a new item, at the Register it
+rings one up. Everything runs on the phone — Google ML Kit, no network, no per-scan cost.
+
+```
+Item form ── Scan Product ─┐                         ┌─ barcode ─ onBarcode ─ the form's Barcode (+ an empty typed Item Code)
+                           ├─ src/Store/scan.ts ─ /scan                         or addToCart, at the Register
+Register ── barcode button ┘   (mode, callbacks)     └─ Read Label / Choose Photo ─ recognizeText ─ readLabel ─ empty fields
+```
+
+- **The route.** `src/app/(app)/scan.tsx`, a full-screen leaf of the `(app)` stack like `create-system`. A route
+  cannot take a callback, so the screen that opens it leaves `{ title, mode, onBarcode, onLabel? }` in
+  `src/Store/scan.ts` first — the picker's pattern.
+- **Barcodes**, live: `expo-camera`'s `CameraView` with `barcodeScannerSettings` EAN-13, EAN-8, UPC-A, UPC-E and Code
+  128 — on Android its scanner is ML Kit's barcode model. A code still in view is reported every frame, and one frame
+  can misread a slanted barcode as another valid code (seen on the emulator), so `src/lib/barcode.ts` counts a code
+  only once three frames running agree. At the Register the same code counts again after 2 s out of view, so holding
+  a jar up adds one and showing it twice adds two; on the Item form never — taking the label's picture pauses the
+  scanner longer than that, and the repeat would cover what the label said. The
+  Register looks the code up among the items it has loaded — `barcode`, then `item_code` (a shop's own Code 128
+  labels) — and refuses one its POS Profile does not offer (`offeredItems` without the search).
+- **Labels**, from one picture: **Read Label** (`takePictureAsync`) or **Choose Photo** (`pickImage`,
+  `src/lib/files.ts`) hands the file to `recognizeText` from `@infinitered/react-native-mlkit-text-recognition` —
+  ML Kit text recognition v2, Latin script. `src/features/items/label.ts` (import-free, in `check:logic`) turns its
+  lines into the fields: the first ₱ / PHP / P amount is the Standard Selling Rate; an existing Brand named as a whole
+  word, the longest first; the tallest line left is the name; up to four more are the description; a line of digits
+  and separators alone (the numbers under a barcode, a date or time stamp) is none of them. The form fills only empty
+  fields (`setValue` with `shouldDirty`), except Barcode, which is the scan's own, and answers whether the label held
+  anything: nothing keeps the scan open on "No print found".
+- **Permission.** `useCameraPermissions({ request: true })`; refused for good, the page offers `Linking.openSettings`
+  and asks again whenever the app returns to the foreground — the hook itself asks only when it mounts.
+
+Packages, both native (a development build, not Metro, picks them up): `expo-camera` 57.0.6, with its config plugin
+in `app.json` (`cameraPermission`, `recordAudioAndroid: false` — no microphone permission for a scanner), and
+`@infinitered/react-native-mlkit-text-recognition` 5.0.1 (an Expo module, `com.google.mlkit:text-recognition:16.0.1`
+bundled, so it works with no Play-services download) with its `@infinitered/react-native-mlkit-core`.
+
+Rejected:
+- **A cloud OCR or a vision model** for the label — a network round-trip and a cost per scan for what the phone reads
+  in a fraction of a second. It is the named next step (Claude through an Edge Function) for what ML Kit cannot do:
+  picking an Item Group, reading a supplier's receipt into a Stock Entry.
+- **`@react-native-ml-kit/text-recognition`** — it bundles the Latin, Chinese, Devanagari, Japanese and Korean models
+  into every build. **`expo-mlkit-ocr`** — it needs `useFrameworks: static` and iOS 16 for the whole app.
+- **A barcode read from a chosen photo** (`scanFromURLAsync`). On Android it loads the picture through
+  `expo-image-loader`, which is not installed; without it the call's promise never settles
+  (`CameraViewModule.kt`, `appContext.service<ImageLoaderInterface>()?.`). Choose Photo reads words only.
+- **Text recognition on live frames** — a frame processor and a second native package, for a label that one picture
+  reads.
+
+Testing on the Android emulator (2026-10-15): the back camera is the virtual scene, and `adb emu virtualscene-image
+wall <png>` puts a label on its wall poster, which the device pose (the emulator's gRPC `setPhysicalModel`, rotation
+and position) aims the camera at — live barcodes work there. Its still capture does not: `takePictureAsync` returns a
+black frame with the date and time stamped on it, so Read Label is checked on a phone, and Choose Photo stands in for
+it on the emulator (same recognizer, same parser).
+
+Not built (named, for when asked): a supplier's delivery receipt into Stock Entry rows, a shelf price tag into an
+Item Price, a count sheet into a Stock Reconciliation, a Barcode column in the CSV template, a haptic on each scan.
