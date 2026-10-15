@@ -66,3 +66,7 @@ supabase/.branches/
 
 # graphify knowledge graph output
 graphify-out/
+
+# a stray "nul": in Git Bash, `> nul` or `2>nul` writes a real file by that name, which Windows reserves,
+# so git cannot read it and `git add .` fails (2026-10-15)
+nul

@@ -32,7 +32,8 @@ import { spacing } from '../../themes';
 /**
  * Stock Settings (docs.frappe.io/erpnext/stock-settings, /fifo-and-moving-average): how new items are named,
  * the group, unit and warehouse they start with, the valuation method that costs each sale, negative stock,
- * and whether a first sale's rate becomes the item's price. No Show Barcode Field: barcode is out of scope.
+ * and whether a first sale's rate becomes the item's price. No Show Barcode Field: an item's Barcode
+ * always shows (ARCHITECTURE.md, Item barcodes).
  */
 export function StockSettingsScreen({ merchant }: { merchant: Merchant }) {
   const settings = useStockSettingsQuery({ merchantId: merchant.id });
