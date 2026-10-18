@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useShellWide } from '../lib/columns';
+import { FORM_MEASURE, useShellWide } from '../lib/columns';
 import type { Notice } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
@@ -22,12 +22,15 @@ export function FormFooter({ notice, children }: { notice: Notice | null; childr
   const { colors } = useAppTheme();
   return (
     <SafeAreaView edges={['bottom']} style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
-      {notice ? (
-        <HelperText type={notice.type} padding="none">
-          {notice.text}
-        </HelperText>
-      ) : null}
-      {children}
+      {/* Held to the form's measure, as the fields above it are: a notice across a tablet is a line no one reads. */}
+      <View style={styles.measure}>
+        {notice ? (
+          <HelperText type={notice.type} padding="none">
+            {notice.text}
+          </HelperText>
+        ) : null}
+        {children}
+      </View>
     </SafeAreaView>
   );
 }
@@ -86,8 +89,9 @@ export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, 
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  footer: { gap: spacing.sm, padding: spacing.ms, borderTopWidth: 1 },
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: 720 },
+  footer: { padding: spacing.ms, borderTopWidth: 1 },
+  measure: { gap: spacing.sm, width: '100%', maxWidth: FORM_MEASURE },
+  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   leading: { justifyContent: 'flex-start' },
   hug: { alignSelf: 'flex-start' },

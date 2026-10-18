@@ -19,15 +19,17 @@ import { additionalDiscount, buildSale, listPrice, offeredItems } from '../../fe
 import { useSaleSetup } from '../../features/pos-invoices/setup';
 import type { PosOpeningEntry } from '../../features/pos-opening-entries/queries';
 import type { PosProfile } from '../../features/pos-profiles/queries';
+import { useShellWide } from '../../lib/columns';
 import { useAppTheme } from '../../lib/theme';
 import { addToCart, cartQty, useCart, useCartDiscount } from '../../Store/cart';
 import { openScan } from '../../Store/scan';
 import { spacing } from '../../themes';
+import { CartPane } from './cart';
 
 /**
  * The Register (docs.frappe.io/erpnext/point-of-sale): the items the session's POS Profile offers, each a tap
- * away from the cart. Narrow at every width for now — the items here, the cart a page further
- * (./cart.tsx); a tablet's two panes wait for the tablet pass.
+ * away from the cart. Narrow, the cart is a page further (./cart.tsx), reached from the bar at the bottom; wide,
+ * it is the right pane beside the items (CartPane), so a tap shows in the cart at once.
  */
 export function Register({ merchant }: { merchant: Merchant }) {
   const { query, session, profile } = useRegisterSession(merchant.id);
@@ -38,6 +40,7 @@ export function Register({ merchant }: { merchant: Merchant }) {
 
 function Counter({ merchant, session, profile }: { merchant: Merchant; session: PosOpeningEntry; profile: PosProfile }) {
   const { colors } = useAppTheme();
+  const wide = useShellWide();
   const sale = useSaleSetup(merchant, profile);
   const bins = useBinsQuery({ merchantId: merchant.id, item: '', warehouse: profile.warehouse }).data;
   const lines = useCart(session.id);
@@ -92,9 +95,8 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
     router.push('/scan');
   };
 
-  return (
+  const items = (
     <View style={styles.fill}>
-      {header}
       <View style={styles.search}>
         <TextInput
           style={styles.grow}
@@ -145,22 +147,53 @@ function Counter({ merchant, session, profile }: { merchant: Merchant; session: 
           </Pressable>
         )}
       />
-      <FormFooter notice={null}>
-        <Button
-          mode="contained"
-          disabled={lines.length === 0}
-          onPress={() => router.push({ pathname: '/systems/[id]/sell/cart', params: { id: merchant.id } })}
-          contentStyle={styles.leading}
-        >
-          {lines.length === 0 ? 'Cart is empty' : `Cart · ${count} ${count === 1 ? 'item' : 'items'} · ${money(total)}`}
-        </Button>
-      </FormFooter>
     </View>
+  );
+
+  return (
+    <View style={styles.fill}>
+      {header}
+      {/* Two panes of the shell's pane, flex shares rather than a measured width (rule 15): the items, then the cart
+          behind a 1px rule (.claude/instruction_mds/frontend.md §5, Register and Cart). */}
+      {wide ? (
+        <View style={styles.panes}>
+          <View style={styles.itemsPane}>{items}</View>
+          <View style={[styles.cartPane, { borderLeftColor: colors.outlineVariant }]}>
+            <CartPane merchant={merchant} session={session} profile={profile} />
+          </View>
+        </View>
+      ) : (
+        <>
+          {items}
+          <CartBar merchantId={merchant.id} count={count} total={money(total)} />
+        </>
+      )}
+    </View>
+  );
+}
+
+/** Narrow only, the bar to the cart's page: wide, the cart is beside the list, and a full-width bar across a tablet reads as a banner. */
+function CartBar({ merchantId, count, total }: { merchantId: string; count: number; total: string }) {
+  return (
+    <FormFooter notice={null}>
+      <Button
+        mode="contained"
+        disabled={count === 0}
+        onPress={() => router.push({ pathname: '/systems/[id]/sell/cart', params: { id: merchantId } })}
+        contentStyle={styles.leading}
+      >
+        {count === 0 ? 'Cart is empty' : `Cart · ${count} ${count === 1 ? 'item' : 'items'} · ${total}`}
+      </Button>
+    </FormFooter>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  panes: { flex: 1, flexDirection: 'row' },
+  // The cart has more to lay out than the item list: three parts in five.
+  itemsPane: { flex: 2 },
+  cartPane: { flex: 3, borderLeftWidth: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.ms, paddingBottom: spacing.sm },
   grow: { flex: 1 },

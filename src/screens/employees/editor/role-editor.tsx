@@ -15,6 +15,7 @@ import { ROLE_COLORS } from '../../../features/roles/schema';
 import type { RoleColor, RoleValues } from '../../../features/roles/schema';
 import { accessRefusal, failureMessage, mutationNotice } from '../../../lib/errors';
 import { useAppTheme } from '../../../lib/theme';
+import { FORM_MEASURE } from '../../../lib/columns';
 import { spacing } from '../../../themes';
 import { EditorFooter } from './editor-footer';
 import { PermissionSwitches } from './permission-switches';
@@ -165,7 +166,7 @@ function ColorField({ control }: { control: Control<RoleValues> }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { gap: spacing.md, padding: spacing.md, width: '100%', maxWidth: 720 },
+  body: { gap: spacing.md, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   // Sizes, not spacing: a swatch is a control, and its 48dp is the touch target (.claude/instruction_mds/frontend.md rule 19).
   swatch: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },

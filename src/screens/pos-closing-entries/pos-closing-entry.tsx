@@ -12,6 +12,7 @@ import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries'
 import { usePosClosingEntryQuery } from '../../features/pos-closing-entries/queries';
 import { usePosOpeningEntriesQuery } from '../../features/pos-opening-entries/queries';
 import { displayDate } from '../../lib/dates';
+import { FORM_MEASURE } from '../../lib/columns';
 import { spacing } from '../../themes';
 
 /**
@@ -61,5 +62,5 @@ export function PosClosingEntryPage({ merchant, docId }: { merchant: Merchant; d
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: 720 },
+  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
 });

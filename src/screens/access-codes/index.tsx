@@ -7,7 +7,7 @@ import { SegmentedButtons } from '../../components/segmented-buttons';
 import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { useMerchantsQuery } from '../../features/merchants/queries';
-import { fontScaled, useShellWide } from '../../lib/columns';
+import { fontScaled, READING_MEASURE, useShellWide } from '../../lib/columns';
 import { useSession } from '../../Store/StoreUser';
 import { spacing } from '../../themes';
 import { Codes } from './codes';
@@ -93,6 +93,6 @@ const styles = StyleSheet.create({
   grow: { flexGrow: 1 },
   // Wide, three segments at their labels' width would collapse (frontend.md §5, Pane switch): held to a
   // readable measure instead of the whole window.
-  switchWide: { maxWidth: 560 },
-  empty: { gap: spacing.ms, padding: spacing.md, alignItems: 'flex-start', maxWidth: 560 },
+  switchWide: { maxWidth: READING_MEASURE },
+  empty: { gap: spacing.ms, padding: spacing.md, alignItems: 'flex-start', maxWidth: READING_MEASURE },
 });

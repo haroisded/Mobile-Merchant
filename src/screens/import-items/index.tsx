@@ -21,7 +21,7 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useSellingSettingsQuery } from '../../features/selling-settings/queries';
 import { useStockSettingsQuery } from '../../features/stock-settings/queries';
 import { useUomsQuery } from '../../features/uoms/queries';
-import { useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useShellWide } from '../../lib/columns';
 import { failureMessage, itemRefusal, mutationNotice, postgrestError } from '../../lib/errors';
 import type { Notice } from '../../lib/errors';
 import { PickerUnavailableError, pickTextFile, saveTextFile } from '../../lib/files';
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   // The log's page, at PageForm's measure: left-aligned, never a row across a tablet
   // (.claude/instruction_mds/frontend.md rule 18).
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: 720 },
+  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
   // Narrow: full-width buttons, one under another, labels at the left. Wide: content width, in a wrapping row.
   actions: { gap: spacing.sm },
   actionsWide: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

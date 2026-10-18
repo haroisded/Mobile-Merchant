@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Text } from '../../components/text';
 import { usePermissions } from '../../features/role-permissions/queries';
+import { READING_MEASURE } from '../../lib/columns';
 import { spacing } from '../../themes';
 
 /**
@@ -25,5 +26,5 @@ export function SystemHome({ merchantId }: { merchantId: string }) {
 const styles = StyleSheet.create({
   body: { gap: spacing.sm, padding: spacing.md },
   // Running prose at a reading measure, left-aligned (.claude/instruction_mds/frontend.md rule 18).
-  measure: { maxWidth: 560 },
+  measure: { maxWidth: READING_MEASURE },
 });

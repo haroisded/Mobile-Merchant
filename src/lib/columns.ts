@@ -9,11 +9,18 @@ import type { LayoutChangeEvent } from 'react-native';
 // (.claude/instruction_mds/frontend.md §4.2).
 const MIN_CARD = 260;
 
-// ponytail: M3's "expanded" window class. Tune it on a real tablet.
+// ponytail: M3's "medium" window class. Tune it on a real tablet.
 //
 // The one width threshold (.claude/instruction_mds/frontend.md §4.1). Compared against the window's width,
-// once, in src/app/(app)/_layout.tsx; every wide/narrow pair (§4.4) flips on it together.
-export const WIDE_MIN = 840;
+// once, in src/app/(app)/_layout.tsx; every wide/narrow pair (§4.4) flips on it together. 600, not M3's
+// "expanded" 840 (the value until 2026-10-19): a tablet held upright (800dp on the Medium Tablet) is wide too,
+// and a phone — portrait-locked, under 600 — never is.
+export const WIDE_MIN = 600;
+
+// Measures: the widest a column of text or fields grows, left-aligned (.claude/instruction_mds/frontend.md rule 18).
+export const FORM_MEASURE = 720; // a full-page form, its footer, a document's page
+export const READING_MEASURE = 560; // a paragraph or a short block of controls under a page header
+export const DIALOG_MAX = 560; // a Dialog over the screen, and a small form's page
 
 // Chrome widths, not card widths: panes are named so no screen writes its own (.claude/instruction_mds/frontend.md §1).
 export const RAIL_EXPANDED = 128; // icons + labels; fits a nine-letter label in labelLarge

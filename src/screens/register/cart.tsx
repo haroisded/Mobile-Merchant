@@ -32,13 +32,21 @@ import { CartLineRow, NumberField } from './cart-line';
 /**
  * The Cart and its payment (docs.frappe.io/erpnext/point-of-sale): the lines, the totals with their taxes, an
  * amount per payment method, and Complete Order — which sends the sale as calculated here and lets the
- * database check and post it (public.pos_checkout).
+ * database check and post it (public.pos_checkout). A page of its own narrow; wide, the same form is the
+ * Register's right pane (CartPane, ./index.tsx).
  */
 export function Cart({ merchant }: { merchant: Merchant }) {
   const { query, session, profile } = useRegisterSession(merchant.id);
   if (!session || !profile) return <SessionState title="Cart" query={query} />;
 
   return <Checkout merchant={merchant} session={session} profile={profile} />;
+}
+
+type PaneProps = { merchant: Merchant; session: PosOpeningEntry; profile: PosProfile };
+
+/** The cart beside the Register's items on a tablet: no page header of its own, and a completed order stays on the Register. */
+export function CartPane(props: PaneProps) {
+  return <CheckoutBody {...props} beside />;
 }
 
 type Settled = ReturnType<typeof settle>;
@@ -50,42 +58,45 @@ const typing = (profile: PosProfile, setup: SaleSetup) => ({
 });
 
 /** What stands between the cart and Complete Order, in words; null when it can be paid. */
-function whatStops(sale: Sale, settled: Settled, profile: PosProfile, typesRates: boolean, money: (value: number) => string) {
-  if (sale.lines.length === 0) return 'The cart is empty. Go back to the Register and add an item.';
+function whatStops(sale: Sale, settled: Settled, profile: PosProfile, typesRates: boolean, money: (value: number) => string, beside: boolean) {
+  if (sale.lines.length === 0) return beside ? 'The cart is empty. Tap an item to add it.' : 'The cart is empty. Go back to the Register and add an item.';
   const unpriced = sale.lines.find((line) => !line.priced);
   if (unpriced) return `${unpriced.itemName} has no price. ${typesRates ? 'Enter its rate, or add' : 'Add'} an Item Price for it.`;
   return settled.shortfall > profile.write_off_limit ? `${money(settled.shortfall)} is still to pay.` : null;
 }
 
-function Checkout({ merchant, session, profile }: { merchant: Merchant; session: PosOpeningEntry; profile: PosProfile }) {
-  const sale = useSaleSetup(merchant, profile);
-  const modes = useModesOfPaymentQuery({ merchantId: merchant.id }).data;
-  const uoms = useUomsQuery({ merchantId: merchant.id }).data;
-
+function Checkout(props: PaneProps) {
   return (
     <View style={styles.fill}>
-      <PageHeader kicker={profile.pos_profile_name} title="Cart" meta={`Session ${session.name}`} onBack={() => router.back()} />
-      {sale && modes && uoms ? (
-        <CheckoutForm merchant={merchant} session={session} profile={profile} sale={sale} modes={modes} uoms={uoms} />
-      ) : (
-        <View style={styles.state}>
-          <ActivityIndicator />
-        </View>
-      )}
+      <PageHeader kicker={props.profile.pos_profile_name} title="Cart" meta={`Session ${props.session.name}`} onBack={() => router.back()} />
+      <CheckoutBody {...props} beside={false} />
     </View>
   );
 }
 
-type FormProps = {
-  merchant: Merchant;
-  session: PosOpeningEntry;
-  profile: PosProfile;
+function CheckoutBody({ merchant, session, profile, beside }: PaneProps & { beside: boolean }) {
+  const sale = useSaleSetup(merchant, profile);
+  const modes = useModesOfPaymentQuery({ merchantId: merchant.id }).data;
+  const uoms = useUomsQuery({ merchantId: merchant.id }).data;
+
+  return sale && modes && uoms ? (
+    <CheckoutForm merchant={merchant} session={session} profile={profile} sale={sale} modes={modes} uoms={uoms} beside={beside} />
+  ) : (
+    <View style={styles.state}>
+      <ActivityIndicator />
+    </View>
+  );
+}
+
+type FormProps = PaneProps & {
   sale: NonNullable<ReturnType<typeof useSaleSetup>>;
   modes: ModeOfPayment[];
   uoms: Uom[];
+  /** Beside the Register (wide), not a page above it. */
+  beside: boolean;
 };
 
-function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormProps) {
+function CheckoutForm({ merchant, session, profile, sale, modes, uoms, beside }: FormProps) {
   const { setup, engines } = sale;
   const { typesRates, typesDiscounts } = typing(profile, setup);
   const lines = useCart(session.id);
@@ -102,14 +113,14 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
     payments.map((payment) => payment.amount),
     (value) => engines.round(value, setup.precision)
   );
-  const gap = whatStops(built, settled, profile, typesRates, money);
+  const gap = whatStops(built, settled, profile, typesRates, money, beside);
 
   // Made per render, not per tap: sendOnce's guard is the handler two quick taps share.
   const send = sendOnce(checkout, (invoiceId: string) => {
     clearCart(session.id);
-    // The receipt takes the cart's place where the profile prints one; Back from it is the Register.
-    if (profile.print_receipt_on_order_complete) router.replace({ pathname: '/systems/[id]/sell/pos-invoice', params: { id: merchant.id, docId: invoiceId } });
-    else router.back();
+    // Beside the Register this form stays mounted: the next sale starts from the defaults, not this one's amounts.
+    setTyped({});
+    afterCheckout(merchant.id, invoiceId, profile.print_receipt_on_order_complete, beside);
   });
 
   return (
@@ -123,6 +134,8 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
       onSave={() => send(checkoutPayload(built, session, payments, settled))}
       saveLabel="Complete Order"
     >
+      {/* Beside the Register the page header is the Register's: the pane names itself. */}
+      {beside ? <SectionHeading title="Cart" hint={lineCount(built.lines.length)} /> : null}
       {built.lines.map((line) => (
         <CartLineRow
           key={`${line.cartIndex}:${line.itemId}`}
@@ -137,15 +150,7 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
         />
       ))}
       {typesDiscounts ? <AdditionalDiscount sessionId={session.id} discount={discount} applyOn={built.applyDiscountOn} /> : null}
-      <SampleBox>
-        {built.discountAmount > 0 ? <SampleLine label="Additional Discount" value={money(-built.discountAmount)} sub={`Off the ${built.applyDiscountOn}`} /> : null}
-        <SampleLine label="Net Total" value={money(built.netTotal)} />
-        {built.taxes.map((tax, index) => (
-          <SampleLine key={`${index}:${tax.account}`} label={tax.description} value={money(tax.tax_amount)} />
-        ))}
-        <SampleLine label="Grand Total" value={money(built.grandTotal)} />
-        {setup.roundedTotalDisabled ? null : <SampleLine label="Rounded Total" value={money(built.roundedTotal)} />}
-      </SampleBox>
+      <Totals sale={built} rounded={!setup.roundedTotalDisabled} money={money} />
       <SectionHeading title="Payment" hint="What the customer hands over, by payment method" />
       <FieldGrid>
         {payments.map((payment) => (
@@ -163,6 +168,19 @@ function CheckoutForm({ merchant, session, profile, sale, modes, uoms }: FormPro
       <Settlement settled={settled} writtenOff={gap === null} money={money} />
     </PageForm>
   );
+}
+
+const lineCount = (count: number) => (count === 0 ? 'Nothing yet' : `${count} ${count === 1 ? 'line' : 'lines'}`);
+
+/**
+ * Paid: back to the Register for the next sale. Where the profile prints a receipt it opens in the cart's place —
+ * over the Register beside it (wide) — and Back from it is the Register.
+ */
+function afterCheckout(merchantId: string, invoiceId: string, printsReceipt: boolean, beside: boolean) {
+  const receipt = { pathname: '/systems/[id]/sell/pos-invoice', params: { id: merchantId, docId: invoiceId } } as const;
+  if (printsReceipt && beside) router.push(receipt);
+  else if (printsReceipt) router.replace(receipt);
+  else if (!beside) router.back();
 }
 
 /**
@@ -185,6 +203,21 @@ function AdditionalDiscount({ sessionId, discount, applyOn }: { sessionId: strin
         />
       </FieldGrid>
     </>
+  );
+}
+
+/** The sale's totals: the additional discount first, below zero, then the net total, each tax, the grand and rounded totals. */
+function Totals({ sale, rounded, money }: { sale: Sale; rounded: boolean; money: (value: number) => string }) {
+  return (
+    <SampleBox>
+      {sale.discountAmount > 0 ? <SampleLine label="Additional Discount" value={money(-sale.discountAmount)} sub={`Off the ${sale.applyDiscountOn}`} /> : null}
+      <SampleLine label="Net Total" value={money(sale.netTotal)} />
+      {sale.taxes.map((tax, index) => (
+        <SampleLine key={`${index}:${tax.account}`} label={tax.description} value={money(tax.tax_amount)} />
+      ))}
+      <SampleLine label="Grand Total" value={money(sale.grandTotal)} />
+      {rounded ? <SampleLine label="Rounded Total" value={money(sale.roundedTotal)} /> : null}
+    </SampleBox>
   );
 }
 

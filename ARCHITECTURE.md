@@ -1510,6 +1510,17 @@ on `src/screens/home/system-card.tsx` — plus the merchant shell, whose header 
 decision, `useWindowDimensions().width >= WIDE_MIN`, read once for the shell, the `(tabs)` bar, and the
 `sheets/` routes alike (frontend.md §4.1).
 
+**The tablet pass (2026-10-19).** `WIDE_MIN` is 600, so a tablet held upright (800dp) gets the rail, tables and
+Dialogs as one held sideways does; a phone stays under it. On a wide window the Register is two panes — the items
+and, beside them, the Cart's own form (`CartPane`, `src/screens/register/cart.tsx`), so a sale is rung up without
+leaving the page; the Dashboard's period switch moves into its page header, its number cards fill one row and its
+blocks sit two to a row where they fit; the three trees (Chart of Accounts, Warehouses, Item Groups) draw a table;
+Notifications and every full-page form, footer included, are held to `FORM_MEASURE`; and a `FieldGrid` too narrow
+for two half fields (the Register's cart upright) stacks them. Checked on the Medium Tablet emulator held both
+ways, at font scale 1.0, 1.3 and 2.0, and at a phone's width, where nothing changed. Rejected: keeping 840 (an
+upright tablet got the phone's drawer and bottom bar); a second, tablet-only Register screen (rule 14: one
+threshold, no tablet-only screens); a measured cart-pane width (flex shares follow the pane, rule 15).
+
 ### The data layer
 
 `src/lib/query.ts` builds the `QueryClient` (`retry: false`, `refetchOnWindowFocus: false`) and, at

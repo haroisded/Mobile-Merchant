@@ -17,7 +17,7 @@ import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { useProfileQuery } from '../../features/profiles/queries';
 import { signOut } from '../../lib/auth';
-import { useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   leading: { justifyContent: 'flex-start' },
   screen: { flex: 1 },
-  body: { gap: spacing.ms, padding: spacing.lg, maxWidth: 640, width: '100%' },
+  body: { gap: spacing.ms, padding: spacing.lg, maxWidth: FORM_MEASURE, width: '100%' },
   // Left-aligned like every heading and label (.claude/instruction_mds/frontend.md rule 18).
   identity: { alignItems: 'flex-start', gap: spacing.xs },
   // Overlaps the avatar's corner: a position, not spacing between siblings.

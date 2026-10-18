@@ -18,6 +18,7 @@ import { usePrintFormatsQuery } from '../../features/print-formats/queries';
 import { has, usePermissions } from '../../features/role-permissions/queries';
 import { useUomsQuery } from '../../features/uoms/queries';
 import { displayDate } from '../../lib/dates';
+import { FORM_MEASURE } from '../../lib/columns';
 import { spacing } from '../../themes';
 
 /**
@@ -149,7 +150,7 @@ function InvoiceReceipt({ merchant, invoice }: { merchant: Merchant; invoice: Po
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: 720 },
+  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   open: { justifyContent: 'flex-start' },
 });

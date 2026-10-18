@@ -1,8 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { CellRows } from '../../components/cell-rows';
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
 import { BoxRow, RowBox } from '../../components/row-box';
@@ -24,7 +26,7 @@ import { itemLabel } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { has, usePermissions } from '../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../features/system-settings/queries';
-import { fontScaled, useColumns } from '../../lib/columns';
+import { fontScaled, useColumns, useShellWide } from '../../lib/columns';
 import { displayDate, todayIn } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
@@ -33,6 +35,9 @@ import { SalesChart } from './sales-chart';
 // ponytail: tune on a real tablet. A number card's narrowest width; the column count falls out of it — two
 // across a phone.
 const NUMBER_CARD = 150;
+// ponytail: tune on a real tablet. A block's narrowest width (the chart, the best sellers, the alerts): two side by
+// side on a landscape tablet's pane, one under another upright and on a phone.
+const BLOCK = 420;
 // The period switch's narrowest width: three segments' own padding (16 each side), plus their labels —
 // "Last 7 Days" the longest — which grow with the font scale (fontScaled). 328 at the default size: a phone's width.
 const PERIOD_SWITCH_PADDING = 96;
@@ -41,6 +46,7 @@ const PERIOD_SWITCH_LABELS = 232;
 // ever runs that low on that much.
 const ALERTS_SHOWN = 50;
 
+const META = 'Sales, registers and stock at a glance';
 const OFFLINE = "You're offline. The Dashboard will load when you reconnect.";
 const FAILURE = "Couldn't load the Dashboard. Try again.";
 
@@ -69,8 +75,8 @@ type Range = { from: string; to: string };
  * and the stock that needs restocking. A destination of its own — Home stays as it is. Each block shows only
  * to someone who may read what it adds up, and the database answers with that person's own rows either way.
  *
- * The period is counted in the system's time zone, the day a sale is dated by, so the page waits for System
- * Settings. Narrow anatomy at every width until the tablet pass.
+ * The period is counted in the store's time zone, the day a sale is dated by, so the page waits for System
+ * Settings. Wide, the period switch sits in the page header and the blocks two to a row where they fit.
  */
 export function Dashboard({ merchant, isOwner }: { merchant: Merchant; isOwner: boolean }) {
   const settings = useSystemSettingsQuery({ merchantId: merchant.id });
@@ -87,31 +93,80 @@ export function Dashboard({ merchant, isOwner }: { merchant: Merchant; isOwner: 
 
   // The owner may read everything and needs no my_permissions; a member's blocks wait for theirs.
   const waiting = !settings.data ? settings : !isOwner && permissions.data === undefined ? permissions : undefined;
+  if (waiting || !settings.data) {
+    return (
+      <View style={styles.fill}>
+        <PageHeader kicker={merchant.name} title="Dashboard" meta={META} />
+        <View style={styles.state}>{waiting ? <QueryState query={waiting} offline={OFFLINE} failure={FAILURE} /> : null}</View>
+      </View>
+    );
+  }
+
+  return <Loaded merchant={merchant} today={todayIn(settings.data.time_zone)} shows={shownBlocks(isOwner, permissions.data)} />;
+}
+
+/** The page once System Settings (and a member's permissions) are in: the period switch, then the blocks. */
+function Loaded({ merchant, today, shows }: { merchant: Merchant; today: string; shows: BlocksProps['shows'] }) {
+  const wide = useShellWide();
+  const [period, setPeriod] = useState<Period>('today');
+  const switcher = <PeriodSwitch value={period} onChange={setPeriod} fill={!wide} />;
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker={merchant.name} title="Dashboard" meta="Sales, registers and stock at a glance" />
-      {settings.data && !waiting ? (
-        <Blocks
-          merchant={merchant}
-          today={todayIn(settings.data.time_zone)}
-          holds={(key) => isOwner || has(permissions.data, key)}
-        />
-      ) : (
-        <View style={styles.state}>{waiting ? <QueryState query={waiting} offline={OFFLINE} failure={FAILURE} /> : null}</View>
-      )}
+      <PageHeader
+        kicker={merchant.name}
+        title="Dashboard"
+        meta={META}
+        // Pane switch, wide: in the page header's actions (.claude/instruction_mds/frontend.md §5).
+        actions={wide && Object.values(shows).some(Boolean) ? switcher : undefined}
+      />
+      <Blocks merchant={merchant} today={today} shows={shows} period={period} switcher={wide ? null : switcher} />
     </View>
   );
 }
 
-function Blocks({ merchant, today, holds }: { merchant: Merchant; today: string; holds: (permission: string) => boolean }) {
-  const [period, setPeriod] = useState<Period>('today');
+/**
+ * Which blocks show, each behind the permission that shows it: a cashier's Process Sales looks sales up, but only
+ * View Sales shows them (public.permission_rules). The owner may read everything.
+ */
+function shownBlocks(isOwner: boolean, permissions: Parameters<typeof has>[0]) {
+  const holds = (key: string) => isOwner || has(permissions, key);
+  return { sells: holds('view_sales'), stocks: holds('view_stock'), registers: holds('view_shift_totals') || holds('close_any_register') };
+}
+
+/**
+ * The period pane switch. Its segments do not measure their labels, so it is given the width three of them need
+ * (fontScaled). Narrow (`fill`), full width on a row of its own that scrolls sideways when a large font makes that
+ * more than the screen — never a cut-off label; wide, that width in the page header (.claude/instruction_mds/frontend.md §5).
+ */
+function PeriodSwitch({ value, onChange, fill }: { value: Period; onChange: (period: Period) => void; fill?: boolean }) {
+  const width = PERIOD_SWITCH_PADDING + fontScaled(PERIOD_SWITCH_LABELS);
+  // In the header the segments split exactly this width, and the longest label's share ran out at 1.3 ("Last 7 Day…",
+  // Medium Tablet, 2026-10-19): there is room there, so the padding grows with the font too.
+  const header = fontScaled(PERIOD_SWITCH_PADDING + PERIOD_SWITCH_LABELS);
+  const segments = <SegmentedButtons value={value} onValueChange={onChange} buttons={PERIODS} style={fill ? [styles.grow, { minWidth: width }] : { width: header }} />;
+
+  return fill ? (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.grow}>
+      {segments}
+    </ScrollView>
+  ) : (
+    segments
+  );
+}
+
+type BlocksProps = {
+  merchant: Merchant;
+  today: string;
+  shows: { sells: boolean; stocks: boolean; registers: boolean };
+  period: Period;
+  /** The period switch on a row of its own (narrow); null when the page header holds it (wide). */
+  switcher: ReactNode;
+};
+
+function Blocks({ merchant, today, shows: { sells, stocks, registers }, period, switcher }: BlocksProps) {
   const range = periodRange(period, today);
-  // Each block behind the permission that shows it: a cashier's Process Sales looks sales up, but only View Sales
-  // shows them (public.permission_rules).
-  const sells = holds('view_sales');
-  const stocks = holds('view_stock');
-  const registers = holds('view_shift_totals') || holds('close_any_register');
+  const { columns, onLayout } = useColumns(BLOCK);
 
   if (!sells && !stocks && !registers) {
     return (
@@ -121,14 +176,15 @@ function Blocks({ merchant, today, holds }: { merchant: Merchant; today: string;
     );
   }
 
+  const blocks = [
+    sells ? <SalesPerDay key="sales" merchant={merchant} range={chartRange(period, today)} /> : null,
+    sells ? <TopSelling key="top" merchant={merchant} range={range} /> : null,
+    stocks ? <StockAlerts key="alerts" merchant={merchant} /> : null,
+  ].filter((block) => block !== null);
+
   return (
     <ScrollView contentContainerStyle={styles.body}>
-      {/* Pane switch, narrow: full width on a row of its own (.claude/instruction_mds/frontend.md §5). Its
-          segments do not measure their labels, so the row holds the width three of them need and scrolls
-          sideways when a large font makes that more than the screen — never a cut-off label. */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.grow}>
-        <SegmentedButtons value={period} onValueChange={setPeriod} buttons={PERIODS} style={[styles.grow, { minWidth: PERIOD_SWITCH_PADDING + fontScaled(PERIOD_SWITCH_LABELS) }]} />
-      </ScrollView>
+      {switcher}
       <NumberCards
         merchant={merchant}
         range={range}
@@ -136,9 +192,8 @@ function Blocks({ merchant, today, holds }: { merchant: Merchant; today: string;
         // Gross Profit is answered only to whoever may also read the Stock Ledger, where the cost lives: View Stock Levels.
         shows={{ sales: sells, profit: sells && stocks, registers, stock: stocks }}
       />
-      {sells ? <SalesPerDay merchant={merchant} range={chartRange(period, today)} /> : null}
-      {sells ? <TopSelling merchant={merchant} range={range} /> : null}
-      {stocks ? <StockAlerts merchant={merchant} /> : null}
+      {/* Rows of `columns` blocks, as the cards are: a wide pane gets two side by side, never one wider row (rule 16). */}
+      <CellRows items={blocks} columns={columns} onLayout={onLayout} keyOf={(block) => String(block.key)} render={(block) => block} rowGap={spacing.lg} columnGap={spacing.lg} />
     </ScrollView>
   );
 }
@@ -177,22 +232,18 @@ function NumberCards({ merchant, range, period, shows }: { merchant: Merchant; r
       ? { label: 'Low Stock', figure: String(data.low_stock), sub: data.low_stock > 0 ? 'Out of stock, or at the re-order level' : 'Nothing to restock' }
       : null,
   ].filter((card) => card !== null);
-  // Rows of `columns` cards, the last one padded with empty cells so every card keeps the same width.
-  const rows = Array.from({ length: Math.ceil(list.length / columns) }, (_, row) => list.slice(row * columns, row * columns + columns));
 
   return (
-    <View style={styles.grid} onLayout={onLayout}>
-      {rows.map((row) => (
-        <View key={row[0].label} style={styles.gridRow}>
-          {row.map((card) => (
-            <NumberCard key={card.label} label={card.label} figure={card.figure} sub={card.sub} />
-          ))}
-          {Array.from({ length: columns - row.length }, (_, index) => (
-            <View key={index} style={styles.fill} />
-          ))}
-        </View>
-      ))}
-    </View>
+    // Never more columns than cards, so four fill a tablet's row.
+    <CellRows
+      items={list}
+      columns={Math.min(columns, list.length)}
+      onLayout={onLayout}
+      keyOf={(card) => card.label}
+      render={(card) => <NumberCard label={card.label} figure={card.figure} sub={card.sub} />}
+      rowGap={spacing.ms}
+      columnGap={spacing.ms}
+    />
   );
 }
 
@@ -295,8 +346,6 @@ const styles = StyleSheet.create({
   grow: { flexGrow: 1 },
   state: { padding: spacing.md, gap: spacing.sm, alignItems: 'flex-start' },
   body: { padding: spacing.md, gap: spacing.md },
-  grid: { gap: spacing.ms },
-  gridRow: { flexDirection: 'row', gap: spacing.ms },
   card: { flex: 1, borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', padding: spacing.ms, gap: spacing.xs },
   block: { gap: spacing.sm },
 });

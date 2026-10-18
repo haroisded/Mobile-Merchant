@@ -14,6 +14,7 @@ import { roleKeys } from '../../../features/roles/queries';
 import type { RoleWithGrants } from '../../../features/roles/queries';
 import { accessRefusal, failureMessage, mutationNotice } from '../../../lib/errors';
 import { useAppTheme } from '../../../lib/theme';
+import { FORM_MEASURE } from '../../../lib/columns';
 import { spacing } from '../../../themes';
 import { EditorFooter } from './editor-footer';
 import { PermissionSwitches } from './permission-switches';
@@ -125,6 +126,6 @@ export function AccessEditor({ member, roles, catalog, form, onDiscard }: Props)
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { gap: spacing.md, padding: spacing.md, width: '100%', maxWidth: 720 },
+  body: { gap: spacing.md, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
   hug: { alignSelf: 'flex-start' },
 });

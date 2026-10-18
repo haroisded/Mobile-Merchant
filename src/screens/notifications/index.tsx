@@ -10,7 +10,7 @@ import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { useMarkNotificationsReadMutation, useNotificationsQuery } from '../../features/notifications/queries';
 import type { Notification } from '../../features/notifications/queries';
-import { useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useShellWide } from '../../lib/columns';
 import { displayDateTime } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
@@ -56,6 +56,8 @@ export function NotificationsScreen() {
         <Appbar.Content title="Notifications" />
       </Appbar.Header>
       <FlatList
+        // Wide, the rows are held to the reading measure, left-aligned: never one row across a tablet (rule 16).
+        style={wide ? styles.measure : undefined}
         data={notifications.data ?? []}
         keyExtractor={(notification) => notification.id}
         ListHeaderComponent={
@@ -102,6 +104,7 @@ export function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  measure: { width: '100%', maxWidth: FORM_MEASURE },
   toolbar: { alignItems: 'flex-start', paddingHorizontal: spacing.sm, paddingTop: spacing.sm },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, paddingHorizontal: spacing.md, paddingVertical: spacing.ms, borderBottomWidth: 1 },

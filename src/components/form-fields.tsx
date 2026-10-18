@@ -6,7 +6,7 @@ import type { Control, FieldPath, FieldPathByValue, FieldValues } from 'react-ho
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 
-import { useShellWide } from '../lib/columns';
+import { fontScaled, useShellWide } from '../lib/columns';
 import { displayDate, storedDate, toLocalDate } from '../lib/dates';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
@@ -44,7 +44,7 @@ export function Field({ label, required, hint, span = 'half', error, children }:
   const halfMax = use(HalfWidthContext);
 
   return (
-    <View style={wide && span === 'half' ? [styles.half, halfMax === undefined ? null : { maxWidth: halfMax }] : styles.full}>
+    <View style={wide && span === 'half' && halfMax !== null ? [styles.half, halfMax === undefined ? null : { maxWidth: halfMax }] : styles.full}>
       <View style={styles.labelRow}>
         {/* A required field says so in words; an unmarked field is optional, so nothing says "optional". */}
         <Text variant="labelMedium">{required ? `${label} (required)` : label}</Text>
@@ -68,17 +68,27 @@ export function Field({ label, required, hint, span = 'half', error, children }:
 /**
  * The widest a half Field may grow: one column of its FieldGrid. Without it, a half field alone on its
  * row (the next one is full width, or hidden) grows across the whole row; `flexGrow` cannot tell it apart
- * from a pair. Measured, because Yoga has no `calc(50% - gap / 2)`.
+ * from a pair. Measured, because Yoga has no `calc(50% - gap / 2)`. Null: the grid is too narrow for two
+ * (HALF_MIN), so every field takes the whole row — a pane beside another, such as the Register's cart.
  */
-const HalfWidthContext = createContext<number | undefined>(undefined);
+const HalfWidthContext = createContext<number | null | undefined>(undefined);
 
-/** The two-column field grid on a wide form; one column narrow. */
+// ponytail: tune on a real tablet. A half field's narrowest width, its label and hint on one line at the default
+// font size; a grid with less than two of these stacks its fields.
+const HALF_MIN = 220;
+
+/** The two-column field grid on a wide form, where two half fields fit; one column narrow. */
 export function FieldGrid({ children }: { children: ReactNode }) {
   const [width, setWidth] = useState(0);
+  const half = (width - spacing.md) / 2;
+  const stack = width > 0 && half < fontScaled(HALF_MIN);
 
   return (
-    <View style={styles.grid} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      <HalfWidthContext value={width > 0 ? (width - spacing.md) / 2 : undefined}>{children}</HalfWidthContext>
+    // Keyed by the decision: a grid that stacks is mounted again as one. Re-rendering its laid-out fields from the
+    // half style to the full one left them side by side on Android — the 45% basis stayed (Fabric, Medium Tablet,
+    // 2026-10-19) — so the fields are never switched in place, only drawn stacked from their first frame.
+    <View key={stack ? 'stack' : 'pairs'} style={styles.grid} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      <HalfWidthContext value={width > 0 ? (stack ? null : half) : undefined}>{children}</HalfWidthContext>
     </View>
   );
 }

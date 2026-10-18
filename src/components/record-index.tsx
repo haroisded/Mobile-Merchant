@@ -7,6 +7,7 @@ import type { Ptype } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
+import { CellRows } from './cell-rows';
 import { Icon } from './icon';
 import { PageHeader } from './page-header';
 import { QueryState } from './query-state';
@@ -65,8 +66,6 @@ export function RecordIndex<R extends string>({ merchantId, kicker, title, meta,
       entries: section.entries.filter((entry) => isOwner || opens(entry, permissions.data)),
     }))
     .filter((section) => section.entries.length > 0);
-  // Rows of `columns` sections, the last one padded with empty cells so every card keeps the same width.
-  const rows = Array.from({ length: Math.ceil(shown.length / columns) }, (_, row) => shown.slice(row * columns, row * columns + columns));
 
   return (
     <View style={styles.fill}>
@@ -79,18 +78,15 @@ export function RecordIndex<R extends string>({ merchantId, kicker, title, meta,
           </View>
         )}
         {permissions.data && shown.length === 0 && empty !== null ? <Text variant="bodyMedium">{empty}</Text> : null}
-        <View style={styles.grid} onLayout={onLayout}>
-          {rows.map((row) => (
-            <View key={row[0].title} style={styles.gridRow}>
-              {row.map((section) => (
-                <SectionCard key={section.title} section={section} onOpen={onOpen} />
-              ))}
-              {Array.from({ length: columns - row.length }, (_, index) => (
-                <View key={index} style={styles.fill} />
-              ))}
-            </View>
-          ))}
-        </View>
+        <CellRows
+          items={shown}
+          columns={columns}
+          onLayout={onLayout}
+          keyOf={(section) => section.title}
+          render={(section) => <SectionCard section={section} onOpen={onOpen} />}
+          rowGap={spacing.lg}
+          columnGap={spacing.md}
+        />
       </ScrollView>
     </View>
   );
@@ -138,8 +134,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   body: { gap: spacing.md, padding: spacing.md },
   state: { gap: spacing.ms, alignItems: 'flex-start' },
-  grid: { gap: spacing.lg },
-  gridRow: { flexDirection: 'row', gap: spacing.md },
   section: { flex: 1, gap: spacing.sm },
   heading: { gap: spacing.xs },
   box: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },

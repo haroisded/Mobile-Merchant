@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useShellWide } from '../lib/columns';
+import { DIALOG_MAX, useShellWide } from '../lib/columns';
 import type { Notice } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   action: { justifyContent: 'flex-start' },
   // maxHeight: over a form route the rising keyboard shrinks the space the Dialog is centred in.
-  dialog: { maxWidth: 560, width: '100%', maxHeight: '90%', alignSelf: 'center' },
+  dialog: { maxWidth: DIALOG_MAX, width: '100%', maxHeight: '90%', alignSelf: 'center' },
   dialogKicker: { paddingHorizontal: spacing.lg, paddingTop: spacing.ml },
   titleUnderKicker: { marginTop: spacing.xs },
   // ScrollArea draws its own hairlines; the body pads itself instead. flexShrink: the body gives up
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   routeSheet: { borderTopWidth: 2 },
   page: { flex: 1 },
   // Left-aligned measure, not a centred column (.claude/instruction_mds/frontend.md rule 18, §9).
-  pageColumn: { flex: 1, width: '100%', maxWidth: 560 },
+  pageColumn: { flex: 1, width: '100%', maxWidth: DIALOG_MAX },
   sheetHeader: { gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
   sheetActions: { gap: spacing.sm, padding: spacing.md, borderTopWidth: 1 },
 });

@@ -17,7 +17,7 @@ import type { CurrencyPreset } from '../../features/currency-presets/queries';
 import { useCreateSystemMutation } from '../../features/merchants/queries';
 import { companySchema } from '../../features/merchants/schema';
 import type { CompanyValues } from '../../features/merchants/schema';
-import { useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
 
@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
   leading: { justifyContent: 'flex-start' },
   // Capped at the single-column measure and left-aligned (.claude/instruction_mds/frontend.md rule 18, §9), so a
   // tablet's fields do not span 1000dp.
-  body: { gap: spacing.ms, padding: spacing.lg, width: '100%', maxWidth: 640 },
+  body: { gap: spacing.ms, padding: spacing.lg, width: '100%', maxWidth: FORM_MEASURE },
   hug: { alignSelf: 'flex-start' },
 });

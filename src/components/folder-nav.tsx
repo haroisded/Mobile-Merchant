@@ -1,13 +1,17 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
+import { useTableFits } from '../lib/columns';
 import { failureMessage, postgrestError, usedElsewhere } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { childrenOf, pathTo, subtree } from '../lib/tree';
 import type { PickOption } from '../Store/picker';
 import { spacing } from '../themes';
 import { Button } from './button';
+import { DataTable } from './data-table';
+import { HeaderTitle } from './header-title';
 import { Icon } from './icon';
 import { QueryState } from './query-state';
 import { Text } from './text';
@@ -50,9 +54,13 @@ type Props<T extends TreeNode> = {
   failure: string;
 };
 
-/** The open folder's breadcrumb over its groups (folder rows) and ledgers (rows), loading and offline states included. */
+/**
+ * The open folder's breadcrumb over its groups (folder rows) and ledgers (rows), loading and offline states included.
+ * Wide, where the table fits (useTableFits), the same rows as a DataTable of two columns — the name, its details —
+ * under the breadcrumb: never one wider row (.claude/instruction_mds/frontend.md rule 16).
+ */
 export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, status, noun, open, onEdit, offline, failure }: Props<T>) {
-  const { colors } = useAppTheme();
+  const table = useTableFits();
   const nodes = query.data ?? [];
   const rows = childrenOf(nodes, parent ?? null);
   const count = (node: T) => {
@@ -78,43 +86,104 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
     );
   }
 
-  return (
+  const breadcrumb = <FolderBreadcrumb root={root} trail={pathTo(nodes, parent).map(label)} />;
+  const list = (
     <FlatList
       data={rows}
       keyExtractor={(node) => node.id}
-      ListHeaderComponent={<FolderBreadcrumb root={root} trail={pathTo(nodes, parent).map(label)} />}
+      ListHeaderComponent={table ? null : breadcrumb}
       ListEmptyComponent={
         <Text variant="bodyMedium" style={styles.state}>
           Nothing in this group yet.
         </Text>
       }
-      renderItem={({ item }) => {
-        const press = item.is_group ? () => open(item.id) : onEdit ? () => onEdit(item) : undefined;
-        return (
-          <Pressable
-            onPress={press}
-            disabled={!press}
-            // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
-            android_ripple={{ color: colors.ripple }}
-            accessibilityRole="button"
-            accessibilityLabel={[label(item), ...words(item)].join(', ')}
-            accessibilityHint={item.is_group ? 'Opens the group' : undefined}
-            style={[styles.row, { borderBottomColor: colors.surfaceVariant }]}
-          >
-            {item.is_group ? <Icon source="folder" size={22} color={colors.onSurfaceMuted} /> : null}
-            <View style={styles.text}>
-              <Text variant="titleMedium" numberOfLines={1} style={item.disabled ? { color: colors.onSurfaceFaint } : undefined}>
-                {label(item)}
-              </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-                {words(item).join(' · ')}
-              </Text>
-            </View>
-            {item.is_group ? <Icon source="chevron-right" size={20} color={colors.onSurfaceMuted} /> : null}
-          </Pressable>
-        );
-      }}
+      renderItem={({ item }) => (
+        <TreeRow
+          name={label(item)}
+          words={words(item)}
+          group={item.is_group}
+          disabled={item.disabled === true}
+          table={table}
+          onPress={item.is_group ? () => open(item.id) : onEdit ? () => onEdit(item) : undefined}
+        />
+      )}
     />
+  );
+
+  return table ? (
+    <TreeTable noun={noun[0]} breadcrumb={breadcrumb}>
+      {list}
+    </TreeTable>
+  ) : (
+    list
+  );
+}
+
+type RowProps = { name: string; words: string[]; group: boolean; disabled: boolean; table: boolean; onPress: (() => void) | undefined };
+
+/** A folder (a group) or a plain row (a ledger): its name and details under it, or in the table's two columns. */
+function TreeRow({ name, words, group, disabled, table, onPress }: RowProps) {
+  const { colors } = useAppTheme();
+  const folder = group ? <Icon source="folder" size={22} color={colors.onSurfaceMuted} /> : null;
+  const title = (
+    <Text variant="titleMedium" numberOfLines={1} style={[styles.name, disabled ? { color: colors.onSurfaceFaint } : undefined]}>
+      {name}
+    </Text>
+  );
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
+      android_ripple={{ color: colors.ripple }}
+      accessibilityRole="button"
+      accessibilityLabel={[name, ...words].join(', ')}
+      accessibilityHint={group ? 'Opens the group' : undefined}
+      style={[styles.row, table ? styles.tableRow : null, { borderBottomColor: colors.surfaceVariant }]}
+    >
+      {table ? (
+        <>
+          <View style={styles.nameCell}>
+            {folder ?? <View style={styles.iconSpace} />}
+            {title}
+          </View>
+          <Text variant="bodyMedium" style={styles.detailCell}>
+            {words.join(' · ')}
+          </Text>
+        </>
+      ) : (
+        <>
+          {folder}
+          <View style={styles.text}>
+            {title}
+            <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
+              {words.join(' · ')}
+            </Text>
+          </View>
+        </>
+      )}
+      {group ? <Icon source="chevron-right" size={20} color={colors.onSurfaceMuted} /> : <View style={table ? styles.chevronSpace : null} />}
+    </Pressable>
+  );
+}
+
+/** The wide tree: the breadcrumb over a DataTable headed by the noun's column ("Account") and Details. */
+function TreeTable({ noun, breadcrumb, children }: { noun: string; breadcrumb: ReactNode; children: ReactNode }) {
+  const { colors } = useAppTheme();
+
+  return (
+    <View style={styles.fill}>
+      {breadcrumb}
+      <DataTable style={styles.fill}>
+        <DataTable.Header style={{ borderBottomColor: colors.outlineVariant }}>
+          <HeaderTitle label={noun.replace(/\b\w/g, (letter) => letter.toUpperCase())} style={styles.nameCell} />
+          <HeaderTitle label="Details" style={styles.detailCell} />
+          <View style={styles.chevronSpace} />
+        </DataTable.Header>
+        {children}
+      </DataTable>
+    </View>
   );
 }
 
@@ -191,9 +260,18 @@ export function treeFailure(error: Error | null, fallback: string) {
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, borderBottomWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.ms },
+  tableRow: { minHeight: 52, paddingVertical: spacing.sm },
   text: { flex: 1, gap: spacing.xs },
+  name: { flexShrink: 1 },
+  // The table's two columns, in the header and in each row: the name (with its folder) wider than its details.
+  nameCell: { flex: 3, flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
+  detailCell: { flex: 2 },
+  // Sizes, not spacing (.claude/instruction_mds/frontend.md §4.5): the folder icon's and the chevron's places on a row without them.
+  iconSpace: { width: 22 },
+  chevronSpace: { width: 20 },
   crumbs: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
   crumb: { flexDirection: 'row', alignItems: 'center' },
 });
