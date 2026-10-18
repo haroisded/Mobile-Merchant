@@ -114,9 +114,9 @@ export function HomeScreen() {
           renderItem={({ item }) => (
             <View style={styles.cell}>
               {item === CREATE ? (
-                <SlotCard icon="add" title="Create New System" line="Make your own point-of-sale system." onPress={create} />
+                <SlotCard icon="add" title="Create New Store" line="Set up your own store's point of sale." onPress={create} />
               ) : item === ENTER ? (
-                <SlotCard icon="key" title="Enter Access Code" line="Join a system with the code its owner sent you." onPress={enterCode} />
+                <SlotCard icon="key" title="Enter Access Code" line="Join a store with the code its owner sent you." onPress={enterCode} />
               ) : (
                 <SystemCard
                   merchant={item}
@@ -153,18 +153,18 @@ function HomeHeader({ narrow, onCreate, onEnterCode }: HeaderProps) {
     <View style={styles.header}>
       <Text variant="titleMedium">Quick Actions</Text>
       <Button mode="contained" icon="add" onPress={onCreate} contentStyle={styles.leading}>
-        Create New System
+        Create New Store
       </Button>
       <Button mode="outlined" icon="key" onPress={onEnterCode} contentStyle={styles.leading}>
         Enter Access Code
       </Button>
       <PendingRequests />
-      <Text variant="titleMedium">Active Systems</Text>
+      <Text variant="titleMedium">Active Stores</Text>
     </View>
   ) : (
     <View style={styles.headerWide}>
-      <Text variant="headlineMedium">Your POS Systems</Text>
-      <Text variant="bodyLarge">Manage, edit, and monitor your custom point-of-sale system.</Text>
+      <Text variant="headlineMedium">Your Stores</Text>
+      <Text variant="bodyLarge">Manage, edit and monitor each store's point of sale.</Text>
       <PendingRequests />
     </View>
   );
@@ -187,7 +187,7 @@ function LoadStatus({ merchants }: { merchants: ReturnType<typeof useMerchantsQu
   if (merchants.isPaused) {
     return (
       <View style={styles.state}>
-        <Text variant="bodyMedium">You&apos;re offline. Your systems will load when you reconnect.</Text>
+        <Text variant="bodyMedium">You&apos;re offline. Your stores will load when you reconnect.</Text>
       </View>
     );
   }
@@ -201,13 +201,13 @@ function LoadStatus({ merchants }: { merchants: ReturnType<typeof useMerchantsQu
     // is the cause.
     return (
       <View style={styles.state}>
-        <Text variant="bodyMedium">{failureMessage("Couldn't load your systems. Try again.")}</Text>
+        <Text variant="bodyMedium">{failureMessage("Couldn't load your stores. Try again.")}</Text>
         <Button onPress={() => merchants.refetch()}>Try again</Button>
       </View>
     );
   }
   // Wide, the create card already says there is nothing yet.
-  return narrow ? <Text variant="bodyMedium">No systems yet.</Text> : null;
+  return narrow ? <Text variant="bodyMedium">No stores yet.</Text> : null;
 }
 
 // FlashList positions every cell absolutely, so neither `columnWrapperStyle` (it has no such prop)

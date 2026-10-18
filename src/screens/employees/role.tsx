@@ -23,7 +23,7 @@ export const deleteRoleBody = (role: RoleWithGrants, data: EmployeesData) => {
   const held = data.members.filter((member) => member.role_id === role.id).length;
   return held === 0
     ? 'Nobody holds it.'
-    : `${held} ${held === 1 ? 'employee holds' : 'employees hold'} it: they stay in the system with no role, and see Home only, until you give them another.`;
+    : `${held} ${held === 1 ? 'employee holds' : 'employees hold'} it: they stay in the store with no role, and see Home only, until you give them another.`;
 };
 
 /** One role as a page of the Employees stack, new without `roleId`: the phone's way in. A tablet edits it beside the list. */

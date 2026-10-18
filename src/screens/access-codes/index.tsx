@@ -71,13 +71,13 @@ export function AccessCodesScreen() {
   );
 }
 
-/** Someone who owns no system has no codes to make: what they can do is use one. */
+/** Someone who owns no store has no codes to make: what they can do is use one. */
 function NoSystems() {
   return (
     <View style={styles.empty}>
-      <Text variant="titleMedium">You don&apos;t own a system</Text>
+      <Text variant="titleMedium">You don&apos;t own a store</Text>
       <Text variant="bodyMedium">
-        Codes let people into a system you own. To join someone else&apos;s, enter the code its owner sent you.
+        Codes let people into a store you own. To join someone else&apos;s, enter the code its owner sent you.
       </Text>
       <Button mode="contained" icon="key" onPress={() => router.push('/forms/enter-access-code')}>
         Enter Access Code

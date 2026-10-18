@@ -16,15 +16,13 @@ import { Text } from '../../components/text';
 import { ledgerOptions, useAccountsQuery } from '../../features/accounts/queries';
 import type { Account } from '../../features/accounts/queries';
 import { fitsTaxAccount } from '../../features/accounts/schema';
-import { costCenterOptions, useCostCentersQuery } from '../../features/cost-centers/queries';
-import type { CostCenter } from '../../features/cost-centers/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { PREVIOUS_ROW_TYPES } from '../../features/sales-tax-templates/calculate';
 import type { ChargeType } from '../../features/sales-tax-templates/calculate';
 import { useDeleteSalesTaxTemplateMutation, useSalesTaxTemplatesQuery, useSaveSalesTaxTemplateMutation } from '../../features/sales-tax-templates/queries';
 import type { SalesTaxTemplate } from '../../features/sales-tax-templates/queries';
-import { salesTaxTemplateSchema } from '../../features/sales-tax-templates/schema';
+import { formRows, salesTaxTemplateSchema } from '../../features/sales-tax-templates/schema';
 import type { SalesTaxTemplateValues } from '../../features/sales-tax-templates/schema';
 import { useTaxCategoriesQuery } from '../../features/tax-categories/queries';
 import type { TaxCategory } from '../../features/tax-categories/queries';
@@ -32,24 +30,22 @@ import { useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
-import { TaxPreview } from './tax-preview';
 
 /**
- * One Sales Taxes and Charges Template: its title, category and default, the rows in calculation order, and a
- * Preview that applies them to a sample price. A page of the Setup stack — src/app/(app)/systems/[id]/setup/
- * sales-tax-template.tsx — at every width, being a long form.
+ * One Sales Taxes and Charges Template: its title, category and default, and the rows in calculation order. A
+ * page of the Setup stack — src/app/(app)/systems/[id]/setup/sales-tax-template.tsx — at every width, being a
+ * long form. What a sale gets from a saved template is Test Template's to show (./test-template.tsx), not this page's.
  */
 export function SalesTaxTemplatePage({ merchant, templateId }: { merchant: Merchant; templateId?: string }) {
   // The list this page was opened from fetched the templates and categories; the rest are cache hits once
   // Setup has been browsed, and a short load otherwise.
   const templates = useSalesTaxTemplatesQuery({ merchantId: merchant.id }).data;
   const accounts = useAccountsQuery({ merchantId: merchant.id }).data;
-  const costCenters = useCostCentersQuery({ merchantId: merchant.id }).data;
   const categories = useTaxCategoriesQuery({ merchantId: merchant.id }).data;
-  if (!templates || !accounts || !costCenters || !categories) return null;
+  if (!templates || !accounts || !categories) return null;
   const existing = templateId ? templates.find((template) => template.id === templateId) : undefined;
 
-  return <Form merchant={merchant} accounts={accounts} costCenters={costCenters} categories={categories} existing={existing} />;
+  return <Form merchant={merchant} accounts={accounts} categories={categories} existing={existing} />;
 }
 
 const TYPE_OPTIONS: { value: ChargeType; label: string; hint: string }[] = [
@@ -60,23 +56,12 @@ const TYPE_OPTIONS: { value: ChargeType; label: string; hint: string }[] = [
   { value: 'On Item Quantity', label: 'On Item Quantity', hint: 'An amount per unit sold' },
 ];
 
-const asChargeType = (type: string): ChargeType => TYPE_OPTIONS.find((option) => option.value === type)?.value ?? 'On Net Total';
-
 const defaults = (existing: SalesTaxTemplate | undefined): SalesTaxTemplateValues => ({
   title: existing?.title ?? '',
   tax_category_id: existing?.tax_category_id ?? '',
   is_default: existing?.is_default ?? false,
   disabled: existing?.disabled ?? false,
-  rows: (existing?.sales_tax_template_rows ?? []).map((row) => ({
-    charge_type: asChargeType(row.charge_type),
-    account: row.account,
-    description: row.description,
-    rate: String(row.rate),
-    tax_amount: String(row.tax_amount),
-    row_id: row.row_id === null ? '' : String(row.row_id),
-    included_in_print_rate: row.included_in_print_rate,
-    cost_center: row.cost_center ?? '',
-  })),
+  rows: formRows(existing?.sales_tax_template_rows ?? []),
 });
 
 /** The database's refusals in words (supabase/migrations/20261009091028_taxes.sql). */
@@ -85,7 +70,6 @@ const saveFailure = (error: Error | null) => {
   if (cause?.message.includes('one_per_category')) return 'Another enabled template already uses this tax category.';
   if (cause?.code === '23505') return 'There is already a template with this title.';
   if (cause?.message === 'tax_account_invalid') return "A row's account can't be used for taxes any more — pick it again.";
-  if (cause?.message === 'tax_cost_center_invalid') return "A row's cost center is a group or disabled — pick another.";
   if (cause?.message === 'tax_inclusive_reference') return 'An included tax is calculated on a row that is not included.';
   return failureMessage("Couldn't save this template. Try again.");
 };
@@ -93,7 +77,6 @@ const saveFailure = (error: Error | null) => {
 type FormProps = {
   merchant: Merchant;
   accounts: Account[];
-  costCenters: CostCenter[];
   categories: TaxCategory[];
   existing: SalesTaxTemplate | undefined;
 };
@@ -145,7 +128,7 @@ function TemplateHeader({ merchant, existing }: { merchant: Merchant; existing: 
   );
 }
 
-function Form({ merchant, accounts, costCenters, categories, existing }: FormProps) {
+function Form({ merchant, accounts, categories, existing }: FormProps) {
   const { colors } = useAppTheme();
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const editable = can(permissions, 'Sales Taxes and Charges Template', existing ? 'write' : 'create');
@@ -213,9 +196,7 @@ function Form({ merchant, accounts, costCenters, categories, existing }: FormPro
             <TaxRowFields
               control={control}
               index={index}
-              abbr={merchant.abbr}
               accounts={accounts}
-              costCenters={costCenters}
               getValues={getValues}
               setValue={setValue}
               disabled={!editable}
@@ -234,15 +215,12 @@ function Form({ merchant, accounts, costCenters, categories, existing }: FormPro
                 tax_amount: '',
                 row_id: '',
                 included_in_print_rate: false,
-                // ERPNext's default for a tax row: the company's cost center.
-                cost_center: merchant.cost_center ?? '',
               })
             }
           >
             Add Row
           </AddRowButton>
         ) : null}
-        <TaxPreview merchant={merchant} control={control} />
       </PageForm>
     </View>
   );
@@ -251,16 +229,14 @@ function Form({ merchant, accounts, costCenters, categories, existing }: FormPro
 type RowProps = {
   control: Control<SalesTaxTemplateValues>;
   index: number;
-  abbr: string;
   accounts: Account[];
-  costCenters: CostCenter[];
   getValues: UseFormGetValues<SalesTaxTemplateValues>;
   setValue: UseFormSetValue<SalesTaxTemplateValues>;
   disabled: boolean;
 };
 
 /** One tax row's fields: only those its type uses (docs.frappe.io/erpnext/types-in-tax-template). */
-function TaxRowFields({ control, index, abbr, accounts, costCenters, getValues, setValue, disabled }: RowProps) {
+function TaxRowFields({ control, index, accounts, getValues, setValue, disabled }: RowProps) {
   const row = useWatch({ control, name: `rows.${index}` });
   const all = useWatch({ control, name: 'rows' });
   if (!row) return null;
@@ -288,7 +264,7 @@ function TaxRowFields({ control, index, abbr, accounts, costCenters, getValues, 
         label="Account Head"
         required
         title="Account Head"
-        options={ledgerOptions(accounts, abbr, fitsTaxAccount, row.account).slice(1)}
+        options={ledgerOptions(accounts, fitsTaxAccount, row.account).slice(1)}
         onPicked={onAccountPicked}
         disabled={disabled}
       />
@@ -320,14 +296,6 @@ function TaxRowFields({ control, index, abbr, accounts, costCenters, getValues, 
         />
       ) : null}
       <ControlledText control={control} name={`rows.${index}.description`} label="Description" required span="full" placeholder="e.g. VAT @ 12" maxLength={140} disabled={disabled} />
-      <ControlledSelect
-        control={control}
-        name={`rows.${index}.cost_center`}
-        label="Cost Center"
-        title="Cost Center"
-        options={costCenterOptions(costCenters, abbr, row.cost_center)}
-        disabled={disabled}
-      />
       {row.charge_type === 'Actual' ? null : (
         <ControlledSwitch
           control={control}

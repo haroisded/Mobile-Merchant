@@ -12,7 +12,6 @@ export const itemGroupSchema = z.object({
   is_group: z.boolean(),
   default_price_list: z.string(),
   default_warehouse: z.string(),
-  selling_cost_center: z.string(),
   income_account: z.string(),
   expense_account: z.string(),
   taxes: z.array(

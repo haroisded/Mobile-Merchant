@@ -49,7 +49,7 @@ export type SaleItem = {
   item_taxes: ItemTaxRow[];
 };
 
-export type TemplateRow = TaxRow & { description: string; cost_center: string | null };
+export type TemplateRow = TaxRow & { description: string };
 
 export type SaleTemplate = { id: string; rows: TemplateRow[] };
 
@@ -294,7 +294,7 @@ function taxRows(template: SaleTemplate | null, itemTemplates: (string | null)[]
   for (const itemTemplate of itemTemplates) {
     for (const account of setup.itemTaxRates.get(itemTemplate ?? '')?.keys() ?? []) {
       if (rows.some((row) => row.account === account)) continue;
-      rows.push({ charge_type: 'On Net Total', account, rate: 0, tax_amount: 0, row_id: null, included_in_print_rate: false, description: setup.accountName(account), cost_center: null });
+      rows.push({ charge_type: 'On Net Total', account, rate: 0, tax_amount: 0, row_id: null, included_in_print_rate: false, description: setup.accountName(account) });
     }
   }
   return rows;
@@ -433,7 +433,6 @@ export function checkoutPayload(
       rate: tax.rate,
       row_id: tax.row_id,
       included_in_print_rate: tax.included_in_print_rate,
-      cost_center: tax.cost_center,
       tax_amount: tax.tax_amount,
       total: tax.total,
       item_wise_tax_detail: tax.byItem,
@@ -467,7 +466,7 @@ type SoldLine = Pick<
 >;
 
 /** A tax row of a submitted sale. `item_wise_tax_detail` is what it charged each line, in the lines' order. */
-type SoldTax = Pick<Tables<'pos_invoice_taxes'>, 'charge_type' | 'account_head' | 'description' | 'rate' | 'row_id' | 'included_in_print_rate' | 'cost_center' | 'item_wise_tax_detail'>;
+type SoldTax = Pick<Tables<'pos_invoice_taxes'>, 'charge_type' | 'account_head' | 'description' | 'rate' | 'row_id' | 'included_in_print_rate' | 'item_wise_tax_detail'>;
 
 /** A submitted sale as stored: as much of it as a return is made from. */
 export type SoldInvoice = Pick<
@@ -557,7 +556,6 @@ export function buildReturn(invoice: SoldInvoice, quantities: ReadonlyMap<string
       rate: tax.rate,
       row_id: tax.row_id,
       included_in_print_rate: tax.included_in_print_rate,
-      cost_center: tax.cost_center,
       tax_amount: amount,
       total: running,
       item_wise_tax_detail: detail,

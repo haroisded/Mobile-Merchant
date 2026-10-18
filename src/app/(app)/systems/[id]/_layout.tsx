@@ -58,7 +58,7 @@ const DESTINATIONS: Destination[] = [
   { name: 'setup', label: 'Setup', icon: 'settings', stack: true, sections: SETUP_SECTIONS },
 ];
 
-/** "Cafe 67" → "C6": the first letter of up to two words, for the system badge. */
+/** "Cafe 67" → "C6": the first letter of up to two words, for the store badge. */
 function initials(name: string) {
   return name
     .split(/\s+/)
@@ -148,7 +148,7 @@ function MissingMerchant({ merchants }: { merchants: ReturnType<typeof useMercha
   // The exit from every state below.
   const exit = (
     <Button mode="outlined" onPress={exitSystem}>
-      Back to your systems
+      Back to your stores
     </Button>
   );
 
@@ -160,14 +160,14 @@ function MissingMerchant({ merchants }: { merchants: ReturnType<typeof useMercha
           reconnects. */}
       {merchants.isPaused ? (
         <>
-          <Text variant="bodyMedium">You&apos;re offline. This system will load when you reconnect.</Text>
+          <Text variant="bodyMedium">You&apos;re offline. This store will load when you reconnect.</Text>
           {exit}
         </>
       ) : merchants.isPending ? (
         <ActivityIndicator />
       ) : merchants.isError ? (
         <>
-          <Text variant="bodyMedium">{failureMessage("Couldn't load this system. Try again.")}</Text>
+          <Text variant="bodyMedium">{failureMessage("Couldn't load this store. Try again.")}</Text>
           <Button onPress={() => merchants.refetch()}>Try again</Button>
           {exit}
         </>
@@ -175,7 +175,7 @@ function MissingMerchant({ merchants }: { merchants: ReturnType<typeof useMercha
         // The list loaded and this id is not in it: deleted, owned by someone else (RLS returns no
         // row for another user's system), or never existed. All three read the same to a user.
         <>
-          <Text variant="bodyMedium">This system is no longer available.</Text>
+          <Text variant="bodyMedium">This store is no longer available.</Text>
           {exit}
         </>
       )}
@@ -200,7 +200,7 @@ function MerchantHeader({ onMenu }: HeaderProps) {
       <BellAction color={colors.onPrimary} onPress={() => router.dismissTo('/notifications')} />
       {/* The way out of a system. Not left to Back alone: on a phone the front drawer opens from a
           left-edge swipe, the same edge iOS pops a screen from, and iOS has no back button. */}
-      <Appbar.Action icon="grid" color={colors.onPrimary} onPress={exitSystem} accessibilityLabel="Your systems" />
+      <Appbar.Action icon="grid" color={colors.onPrimary} onPress={exitSystem} accessibilityLabel="Your stores" />
     </Appbar.Header>
   );
 }
@@ -251,7 +251,7 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations }
             </Text>
             {wide ? null : (
               <Text variant="bodySmall" style={[styles.subtitle, { color: colors.onPrimary }]}>
-                POS system
+                POS store
               </Text>
             )}
           </View>

@@ -7,9 +7,11 @@ import type { AccountValues } from './schema';
 
 export type Account = Tables<'accounts'>;
 
-/** "1110 - Cash - CC": ERPNext's account name — number first when set, the company's abbreviation after. */
-export const accountLabel = (account: Account, abbr: string) =>
-  `${account.account_number ? `${account.account_number} - ` : ''}${account.account_name} - ${abbr}`;
+/**
+ * "1110 - Cash": ERPNext's account name, number first when set. No " - ABBR" after it: ERPNext's suffix tells
+ * several companies' accounts apart, and a store has one set (supabase/migrations/20261018162135_single_store.sql).
+ */
+export const accountLabel = (account: Account) => `${account.account_number ? `${account.account_number} - ` : ''}${account.account_name}`;
 
 /**
  * The accounts a default may name, as picker options with None first: enabled ledgers that `fits` lets
@@ -17,11 +19,11 @@ export const accountLabel = (account: Account, abbr: string) =>
  * `keep` stays listed even when it no longer fits (disabled since it was picked), so the field still shows
  * what is saved.
  */
-export const ledgerOptions = (accounts: Account[], abbr: string, fits: (account: Account) => boolean, keep?: string | null) => [
+export const ledgerOptions = (accounts: Account[], fits: (account: Account) => boolean, keep?: string | null) => [
   { value: '', label: 'None' },
   ...accounts
     .filter((account) => account.id === keep || (!account.is_group && !account.disabled && fits(account)))
-    .map((account) => ({ value: account.id, label: accountLabel(account, abbr), hint: account.account_type ?? account.root_type })),
+    .map((account) => ({ value: account.id, label: accountLabel(account), hint: account.account_type ?? account.root_type })),
 ];
 
 // The only file that knows the table is called `accounts` (.claude/instruction_mds/data-layer.md rules 2-3).

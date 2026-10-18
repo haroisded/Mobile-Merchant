@@ -320,7 +320,7 @@ removes.
 ## 6. The database
 
 `supabase/migrations/` holds `public.profiles` (the person) and `public.merchants` (the tenant, and
-its Company: `id`, `owner_id`, `name`, `abbr`, `country_code`, `default_currency`, `created_at`) —
+its Company — one store, no branches: `id`, `owner_id`, `name`, `country_code`, `default_currency`, `created_at`) —
 with their policies, the signup trigger, `public.delete_current_user()`,
 `private.current_merchant_ids()`, and `private.rls_auto_enable()`, the function behind an event
 trigger that hosted Supabase will not let this project install (§6.1).
@@ -334,7 +334,7 @@ ERPNext's model. That rebuild lands one ERPNext step per migration, starting wit
 User Permissions, and `private.permitted_merchant_ids()` — all but members, roles and the seam replaced on
 2026-10-14, below), `20261008151723_defaults_and_money.sql`
 (System Settings, Global Defaults, Currency), `20261008152613_chart_of_accounts.sql` (the
-`accounts` and `cost_centers` trees, `private.validate_tree()`), `20261009004357_accounting_defaults.sql`
+`accounts` and `cost_centers` trees — cost centers dropped on 2026-10-19, below — `private.validate_tree()`), `20261009004357_accounting_defaults.sql`
 (the Company's default accounts and Perpetual Inventory as `merchants` columns,
 `private.validate_company_accounts()`, `accounts_settings`), `20261009004450_modes_of_payment.sql` and
 `20261009091028_taxes.sql` (Tax Categories, Sales Taxes and Charges and Item Tax Templates with their rows,
@@ -416,6 +416,11 @@ performance).
 Then the product scan's key: `20261015000059_item_barcodes.sql` (`items.barcode`, `items_barcode_shape` and the
 partial unique index `items_barcode_unique` on `(merchant_id, barcode)`; `save_item` re-created to take it — an update
 only when the payload names the key, so an older build cannot clear one).
+Then one store, no branches: `20261018162135_single_store.sql` drops Cost Centers — the table, its doctype and rules,
+the 13 columns that named one — and `merchants.abbr`, rows included; 23 functions re-created without them (signatures
+unchanged; `private.post_gl` merges per account only), and the texts the database writes say store. Identifiers stay
+(`merchants`, `merchant_id`, the doctype `'Company'`, `/systems/[id]`). Do not add a branch concept back — a cost
+center, an abbreviation, a second company per store — without the human (ARCHITECTURE.md, One store).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

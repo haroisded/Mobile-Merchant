@@ -45,7 +45,7 @@ export function CurrencyScreen({ merchant }: { merchant: Merchant }) {
       ) : (
         <View style={styles.state}>
           <QueryState query={currency} offline="You're offline. The currency will load when you reconnect." failure="Couldn't load the currency. Try again.">
-            <Text variant="bodyMedium">This currency has no settings yet. Save the Company again to create them.</Text>
+            <Text variant="bodyMedium">This currency has no settings yet. Save the Store page again to create them.</Text>
           </QueryState>
         </View>
       )}

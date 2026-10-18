@@ -78,7 +78,7 @@ export function useCreateSystemMutation() {
         .from('merchants')
         // merchants_insert_own checks owner_id against auth.uid(); sending anyone else's id is
         // rejected by the database, not merely by this line. The insert is the whole of the setup:
-        // the merchants_seed_* triggers create the company's first fiscal year in the same
+        // the merchants_seed_* triggers create the store's first fiscal year in the same
         // transaction, as ERPNext's setup wizard does.
         .insert({ owner_id: userId, ...values })
         .select()
@@ -97,17 +97,15 @@ export function useCreateSystemMutation() {
   });
 }
 
-/** The Company form's account fields hold '' for none; the row holds null. */
+/** The Store form's account fields hold '' for none; the row holds null. */
 const companyRow = (values: CompanyFormValues) => ({
   ...values,
   default_cash_account: values.default_cash_account || null,
   default_bank_account: values.default_bank_account || null,
   default_income_account: values.default_income_account || null,
   default_expense_account: values.default_expense_account || null,
-  cost_center: values.cost_center || null,
   write_off_account: values.write_off_account || null,
   round_off_account: values.round_off_account || null,
-  round_off_cost_center: values.round_off_cost_center || null,
   default_discount_account: values.default_discount_account || null,
   default_inventory_account: values.default_inventory_account || null,
   stock_adjustment_account: values.stock_adjustment_account || null,
@@ -115,10 +113,7 @@ const companyRow = (values: CompanyFormValues) => ({
   expenses_included_in_valuation: values.expenses_included_in_valuation || null,
 });
 
-/**
- * The Company screen's save: name, abbreviation, country and default currency of one system, its accounting
- * defaults and Perpetual Inventory.
- */
+/** The Store page's save: name, country and default currency of one store, its accounting defaults and Perpetual Inventory. */
 export function useUpdateCompanyMutation({ merchantId }: { merchantId: string }) {
   const queryClient = useQueryClient();
 

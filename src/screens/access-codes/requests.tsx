@@ -45,7 +45,7 @@ export function Requests() {
         columns={[
           { label: 'Name', flex: 2, cell: memberName },
           { label: 'Email', flex: 2.5, cell: (request) => request.email ?? '' },
-          { label: 'System', flex: 2, cell: (request) => request.merchant_name },
+          { label: 'Store', flex: 2, cell: (request) => request.merchant_name },
           { label: 'Code', flex: 1.2, cell: (request) => formatCode(request.code) },
           { label: 'Asked', flex: 1.6, cell: (request) => displayDateTime(request.created_at) },
           { label: 'Status', flex: 1.2, cell: () => '', node: (request) => <StatusText words={[statusOf(request)]} faint={request.status === 'declined'} /> },

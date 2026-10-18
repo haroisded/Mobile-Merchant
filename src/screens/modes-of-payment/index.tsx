@@ -28,7 +28,7 @@ export function ModesOfPayment({ merchant }: { merchant: Merchant }) {
 
   const account = (mode: ModeOfPayment) => {
     const found = accounts?.find((candidate) => candidate.id === mode.default_account);
-    return found ? accountLabel(found, merchant.abbr) : 'No default account';
+    return found ? accountLabel(found) : 'No default account';
   };
 
   return (

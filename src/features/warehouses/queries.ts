@@ -8,22 +8,21 @@ import type { WarehouseValues } from './schema';
 
 export type Warehouse = Tables<'warehouses'>;
 
-/** "Stores - CC": ERPNext's warehouse name, the company's abbreviation after. The root is every warehouse's, so it carries none. */
-export const warehouseLabel = (warehouse: Warehouse, abbr: string) =>
-  warehouse.parent_id === null ? warehouse.warehouse_name : `${warehouse.warehouse_name} - ${abbr}`;
+/** "Stores": the warehouse's own name — no " - ABBR" after it, one store's warehouses need no telling apart. */
+export const warehouseLabel = (warehouse: Warehouse) => warehouse.warehouse_name;
 
 /** Enabled ledger warehouses as picker options, None first; `keep` as in accounts' ledgerOptions. */
-export const warehouseOptions = (warehouses: Warehouse[], abbr: string, keep?: string | null) => [
+export const warehouseOptions = (warehouses: Warehouse[], keep?: string | null) => [
   { value: '', label: 'None' },
   ...warehouses
     .filter((warehouse) => warehouse.id === keep || (!warehouse.is_group && !warehouse.disabled))
-    .map((warehouse) => ({ value: warehouse.id, label: warehouseLabel(warehouse, abbr) })),
+    .map((warehouse) => ({ value: warehouse.id, label: warehouseLabel(warehouse) })),
 ];
 
 /**
  * The Stock ledger a warehouse's stock value posts to (docs "Linking stock warehouse and accounts"): its own
- * account, else the nearest parent's, else the Company's Default Inventory Account. `from` is the warehouse
- * that set it — undefined when it is the Company's. Null when none of them names one.
+ * account, else the nearest parent's, else the store's Default Inventory Account. `from` is the warehouse
+ * that set it — undefined when it is the store's. Null when none of them names one.
  */
 export function inventoryAccount(warehouses: Warehouse[], warehouseId: string, companyDefault: string | null) {
   const from = pathTo(warehouses, warehouseId).findLast((warehouse) => warehouse.account !== null);

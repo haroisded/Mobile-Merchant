@@ -57,7 +57,7 @@ export function EnterAccessCodeForm({ onDismiss }: { onDismiss: () => void }) {
       asPage
       onDismiss={onDismiss}
       dismissable={!inFlight}
-      kicker="Join a system"
+      kicker="Join a store"
       title="Employee Access Code"
       notice={mutationNotice(claim, failureMessage("Couldn't check the code. Try again."))}
       actions={

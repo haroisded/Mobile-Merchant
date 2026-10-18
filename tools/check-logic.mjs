@@ -215,7 +215,7 @@ assert.equal(rateOf([price(60), price(55, { price_list_id: 'wholesale' })], { fa
 
 // src/features/pos-invoices/cart.ts — the sale a cart becomes. The Philippine case the database probe posted:
 // 2 at 80 with VAT 12 % on top is 160 + 19.20.
-const VAT_ROW = { charge_type: 'On Net Total', account: 'vat', rate: 12, tax_amount: 0, row_id: null, included_in_print_rate: false, description: 'VAT @ 12', cost_center: null };
+const VAT_ROW = { charge_type: 'On Net Total', account: 'vat', rate: 12, tax_amount: 0, row_id: null, included_in_print_rate: false, description: 'VAT @ 12' };
 const ENGINES = {
   resolvePrice,
   resolveTaxRule,
@@ -315,7 +315,7 @@ const stored = (sale, id) => ({
   additional_discount_percentage: sale.additionalDiscountPercentage,
   discount_amount: sale.discountAmount,
   pos_invoice_items: sale.lines.map((line, index) => ({ id: `${id}-${index}`, item_id: line.itemId, item_name: line.itemName, qty: line.qty, uom_id: line.uomId, conversion_factor: line.conversionFactor, price_list_rate: line.priceListRate, rate: line.rate, amount: line.amount, net_rate: line.netRate, net_amount: line.netAmount, item_tax_template_id: line.itemTaxTemplateId, discount_percentage: line.discountPercentage, discount_amount: line.discountAmount, distributed_discount_amount: line.distributed, pricing_rule_id: line.pricingRule?.id ?? null })),
-  pos_invoice_taxes: sale.taxes.map((tax) => ({ charge_type: tax.charge_type, account_head: tax.account, description: tax.description, rate: tax.rate, row_id: tax.row_id, included_in_print_rate: tax.included_in_print_rate, cost_center: tax.cost_center, item_wise_tax_detail: tax.byItem })),
+  pos_invoice_taxes: sale.taxes.map((tax) => ({ charge_type: tax.charge_type, account_head: tax.account, description: tax.description, rate: tax.rate, row_id: tax.row_id, included_in_print_rate: tax.included_in_print_rate, item_wise_tax_detail: tax.byItem })),
 });
 const PESO = { round: cents, cashRound: (value) => cashRound(value, null, 2, BANKERS), roundedTotalDisabled: false };
 const sold = stored(saleOf(cartOf(['coffee', 2], ['cake', 1])), 'sale');

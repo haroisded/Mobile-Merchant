@@ -14,7 +14,6 @@ import { useDeleteItemTaxTemplateMutation, useItemTaxTemplatesQuery, useSaveItem
 import type { ItemTaxTemplate } from '../../features/item-tax-templates/queries';
 import { itemTaxTemplateSchema } from '../../features/item-tax-templates/schema';
 import type { ItemTaxTemplateValues } from '../../features/item-tax-templates/schema';
-import { useMerchantsQuery } from '../../features/merchants/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice, postgrestError, usedElsewhere } from '../../lib/errors';
@@ -26,11 +25,10 @@ export function ItemTaxTemplateForm({ merchantId, templateId, onDismiss }: Props
   // The list this form was opened from fetched the same keys, so these are cache hits.
   const templates = useItemTaxTemplatesQuery({ merchantId }).data;
   const accounts = useAccountsQuery({ merchantId }).data;
-  const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === merchantId);
-  if (!templates || !accounts || !merchant) return null;
+  if (!templates || !accounts) return null;
   const existing = templateId ? templates.find((template) => template.id === templateId) : undefined;
 
-  return <Form merchantId={merchantId} abbr={merchant.abbr} accounts={accounts} existing={existing} onDismiss={onDismiss} />;
+  return <Form merchantId={merchantId} accounts={accounts} existing={existing} onDismiss={onDismiss} />;
 }
 
 const EMPTY_ROW = { account: '', tax_rate: '', not_applicable: false };
@@ -51,9 +49,9 @@ const saveFailure = (error: Error | null) => {
   return failureMessage("Couldn't save this item tax template. Try again.");
 };
 
-type FormProps = { merchantId: string; abbr: string; accounts: Account[]; existing: ItemTaxTemplate | undefined; onDismiss: () => void };
+type FormProps = { merchantId: string; accounts: Account[]; existing: ItemTaxTemplate | undefined; onDismiss: () => void };
 
-function Form({ merchantId, abbr, accounts, existing, onDismiss }: FormProps) {
+function Form({ merchantId, accounts, existing, onDismiss }: FormProps) {
   const wide = useShellWide();
   const save = useSaveItemTaxTemplateMutation({ merchantId, templateId: existing?.id });
   const remove = useDeleteItemTaxTemplateMutation();
@@ -111,7 +109,7 @@ function Form({ merchantId, abbr, accounts, existing, onDismiss }: FormProps) {
                 required
                 span="full"
                 title="Tax"
-                options={ledgerOptions(accounts, abbr, fitsTaxAccount, values[index]?.account).slice(1)}
+                options={ledgerOptions(accounts, fitsTaxAccount, values[index]?.account).slice(1)}
               />
               <ControlledText
                 control={control}

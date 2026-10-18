@@ -13,7 +13,6 @@ import type { SalesDefaultsRecords } from '../../components/sales-defaults-field
 import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
 import { ledgerOptions } from '../../features/accounts/queries';
-import { costCenterOptions } from '../../features/cost-centers/queries';
 import { useItemGroupsQuery } from '../../features/item-groups/queries';
 import type { ItemGroup } from '../../features/item-groups/queries';
 import { useLetterHeadsQuery } from '../../features/letter-heads/queries';
@@ -89,11 +88,9 @@ const BLANK: PosProfileValues = {
   letter_head: '',
   account_for_change_amount: '',
   write_off_account: '',
-  write_off_cost_center: '',
   write_off_limit: '',
   income_account: '',
   expense_account: '',
-  cost_center: '',
   hide_unavailable_items: false,
   allow_rate_change: false,
   set_grand_total_to_default_mop: true,
@@ -116,10 +113,8 @@ const LINKS = [
   'letter_head',
   'account_for_change_amount',
   'write_off_account',
-  'write_off_cost_center',
   'income_account',
   'expense_account',
-  'cost_center',
   'discount_account',
 ] as const;
 
@@ -222,8 +217,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
     if (!paymentsGap(values.payments)) send(values);
   });
 
-  const { accounts, costCenters, priceLists, warehouses } = records.sales;
-  const abbr = merchant.abbr;
+  const { accounts, priceLists, warehouses } = records.sales;
   const memberOptions = records.members.map((member) => ({ value: member.id, label: memberName(member), hint: member.full_name ? (member.email ?? undefined) : undefined }));
   // Every enabled mode is offered, and the saved ones stay listed; one with no account yet says so, and the save names it.
   const savedModes = new Set(existing?.pos_profile_payments.map((row) => row.mode_of_payment_id));
@@ -253,7 +247,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             required
             hint="Where its sales take stock from"
             title="Warehouse"
-            options={warehouseOptions(warehouses, abbr, existing?.warehouse).filter((option) => option.value !== '')}
+            options={warehouseOptions(warehouses, existing?.warehouse).filter((option) => option.value !== '')}
             disabled={!editable}
           />
           <ControlledSelect
@@ -399,7 +393,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         </RepeatableList>
 
         {/* docs.frappe.io/erpnext/pos-profile, Accounting */}
-        <SectionHeading title="Accounting" hint="Where set, they win over the item's and the company's" />
+        <SectionHeading title="Accounting" hint="Where set, they win over the item's and the store's" />
         <FieldGrid>
           <ControlledSelect
             control={control}
@@ -407,7 +401,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             label="Account for Change Amount"
             hint="A Cash or Bank ledger"
             title="Account for Change Amount"
-            options={ledgerOptions(accounts, abbr, (account) => account.account_type === 'Cash' || account.account_type === 'Bank', existing?.account_for_change_amount)}
+            options={ledgerOptions(accounts, (account) => account.account_type === 'Cash' || account.account_type === 'Bank', existing?.account_for_change_amount)}
             disabled={!editable}
           />
           <ControlledSelect
@@ -416,15 +410,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             label="Write Off Account"
             hint="An Expense ledger"
             title="Write Off Account"
-            options={ledgerOptions(accounts, abbr, (account) => account.root_type === 'Expense', existing?.write_off_account)}
-            disabled={!editable}
-          />
-          <ControlledSelect
-            control={control}
-            name="write_off_cost_center"
-            label="Write Off Cost Center"
-            title="Write Off Cost Center"
-            options={costCenterOptions(costCenters, abbr, existing?.write_off_cost_center)}
+            options={ledgerOptions(accounts, (account) => account.root_type === 'Expense', existing?.write_off_account)}
             disabled={!editable}
           />
           <ControlledText
@@ -443,7 +429,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             label="Income Account"
             hint="An Income ledger"
             title="Income Account"
-            options={ledgerOptions(accounts, abbr, (account) => account.root_type === 'Income', existing?.income_account)}
+            options={ledgerOptions(accounts, (account) => account.root_type === 'Income', existing?.income_account)}
             disabled={!editable}
           />
           <ControlledSelect
@@ -452,24 +438,16 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
             label="Expense Account"
             hint="An Expense ledger, such as Cost of Goods Sold"
             title="Expense Account"
-            options={ledgerOptions(accounts, abbr, (account) => account.root_type === 'Expense', existing?.expense_account)}
-            disabled={!editable}
-          />
-          <ControlledSelect
-            control={control}
-            name="cost_center"
-            label="Cost Center"
-            title="Cost Center"
-            options={costCenterOptions(costCenters, abbr, existing?.cost_center)}
+            options={ledgerOptions(accounts, (account) => account.root_type === 'Expense', existing?.expense_account)}
             disabled={!editable}
           />
           <ControlledSelect
             control={control}
             name="discount_account"
             label="Discount Account"
-            hint="Under Discount Accounting, where this register's additional discounts post. None: the company's"
+            hint="Under Discount Accounting, where this register's additional discounts post. None: the store's"
             title="Discount Account"
-            options={ledgerOptions(accounts, abbr, (account) => account.root_type === 'Income' || account.root_type === 'Expense', existing?.discount_account)}
+            options={ledgerOptions(accounts, (account) => account.root_type === 'Income' || account.root_type === 'Expense', existing?.discount_account)}
             disabled={!editable}
           />
         </FieldGrid>

@@ -129,7 +129,7 @@ function SettingsForm({ merchant, saved, records }: { merchant: Merchant; saved:
           label="Default Warehouse"
           hint="Where a new item's stock is kept"
           title="Default Warehouse"
-          options={warehouseOptions(records.warehouses, merchant.abbr, saved.default_warehouse)}
+          options={warehouseOptions(records.warehouses, saved.default_warehouse)}
           disabled={!editable}
         />
         <ControlledSelect

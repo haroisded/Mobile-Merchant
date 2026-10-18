@@ -31,7 +31,7 @@ export function codeStatus(
   return pending > 0 && approved + pending >= code.max_uses ? 'claimed' : 'active';
 }
 
-/** The new-code form's Expires choices. Custom is the end of a picked day, where the system is. */
+/** The new-code form's Expires choices. Custom is the end of a picked day, where the store is. */
 export const EXPIRY_CHOICES = [
   { value: '5', label: '5 min' },
   { value: '30', label: '30 min' },
@@ -80,9 +80,9 @@ export type ClaimStatus =
   | 'declined'
   | 'too_many_attempts';
 
-/** The words for each answer. The system's name comes only with the answers that know which system it is. */
+/** The words for each answer. The store's name comes only with the answers that know which store it is. */
 export function claimMessage(status: ClaimStatus, merchantName: string | null) {
-  const system = merchantName ?? 'this system';
+  const system = merchantName ?? 'this store';
   switch (status) {
     case 'requested':
       return `Request sent. You'll be let into ${system} once its owner approves.`;
@@ -93,7 +93,7 @@ export function claimMessage(status: ClaimStatus, merchantName: string | null) {
     case 'used_up':
       return 'That code has already been used. Ask for a new one.';
     case 'own_system':
-      return `${system} is your own system.`;
+      return `${system} is your own store.`;
     case 'already_member':
       return `You're already in ${system}. Open it from Home.`;
     case 'already_requested':

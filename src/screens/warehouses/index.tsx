@@ -25,7 +25,7 @@ export function Warehouses({ merchant }: { merchant: Merchant }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const { parent, open } = useFolder('/systems/[id]/setup/warehouses', merchant.id);
   const folder = warehouses.data?.find((warehouse) => warehouse.id === parent);
-  const label = (warehouse: Warehouse) => warehouseLabel(warehouse, merchant.abbr);
+  const label = (warehouse: Warehouse) => warehouseLabel(warehouse);
   const edit = can(permissions, 'Warehouse', 'write')
     ? (warehouse: Warehouse) => openForm({ merchantId: merchant.id, warehouseId: warehouse.id })
     : undefined;
@@ -35,8 +35,8 @@ export function Warehouses({ merchant }: { merchant: Merchant }) {
     const resolved = inventoryAccount(warehouses.data ?? [], warehouse.id, merchant.default_inventory_account);
     if (!resolved) return 'No inventory account';
     const found = accounts?.find((account) => account.id === resolved.account);
-    const name = found ? accountLabel(found, merchant.abbr) : '…';
-    if (!resolved.from) return `${name} (company default)`;
+    const name = found ? accountLabel(found) : '…';
+    if (!resolved.from) return `${name} (store default)`;
     return resolved.from.id === warehouse.id ? name : `${name} (from ${label(resolved.from)})`;
   };
 

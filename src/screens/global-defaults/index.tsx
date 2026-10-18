@@ -19,7 +19,7 @@ import { spacing } from '../../themes';
 
 /**
  * Global Defaults (docs.frappe.io/erpnext/global-defaults). ERPNext's Default Company, Country and Currency
- * are this system's Company — one company per system — so they are shown, and changed on the Company page.
+ * are this store's own — ERPNext's Company, one per store — so they are shown, and changed on the Store page.
  * What is left are the receipt's two switches.
  */
 export function GlobalDefaultsScreen({ merchant }: { merchant: Merchant }) {
@@ -56,7 +56,7 @@ function DefaultsForm({ merchant, saved }: { merchant: Merchant; saved: GlobalDe
   return (
     <PageForm editable={editable} readOnly="Changing it needs Global Defaults write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
       <FieldGrid>
-        <Field label="Default Company" hint="Changed on the Company page" span="full">
+        <Field label="Default Store" hint="Changed on the Store page" span="full">
           <Text variant="bodyMedium">{merchant.name}</Text>
         </Field>
         <Field label="Default Country">

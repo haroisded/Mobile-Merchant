@@ -11,9 +11,6 @@ import { useBrandsQuery, useDeleteBrandMutation, useSaveBrandMutation } from '..
 import type { Brand } from '../../features/brands/queries';
 import { brandSchema } from '../../features/brands/schema';
 import type { BrandValues } from '../../features/brands/schema';
-import { costCenterOptions, useCostCentersQuery } from '../../features/cost-centers/queries';
-import type { CostCenter } from '../../features/cost-centers/queries';
-import { useMerchantsQuery } from '../../features/merchants/queries';
 import { priceListOptions, usePriceListsQuery } from '../../features/price-lists/queries';
 import type { PriceList } from '../../features/price-lists/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
@@ -30,21 +27,11 @@ export function BrandForm({ merchantId, brandId, onDismiss }: Props) {
   const brands = useBrandsQuery({ merchantId }).data;
   const warehouses = useWarehousesQuery({ merchantId }).data;
   const priceLists = usePriceListsQuery({ merchantId }).data;
-  const costCenters = useCostCentersQuery({ merchantId }).data;
   const accounts = useAccountsQuery({ merchantId }).data;
-  const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === merchantId);
-  if (!brands || !warehouses || !priceLists || !costCenters || !accounts || !merchant) return null;
+  if (!brands || !warehouses || !priceLists || !accounts) return null;
   const existing = brandId ? brands.find((brand) => brand.id === brandId) : undefined;
 
-  return (
-    <Form
-      merchantId={merchantId}
-      abbr={merchant.abbr}
-      options={{ warehouses, priceLists, costCenters, accounts }}
-      existing={existing}
-      onDismiss={onDismiss}
-    />
-  );
+  return <Form merchantId={merchantId} options={{ warehouses, priceLists, accounts }} existing={existing} onDismiss={onDismiss} />;
 }
 
 const defaults = (existing: Brand | undefined): BrandValues => ({
@@ -52,7 +39,6 @@ const defaults = (existing: Brand | undefined): BrandValues => ({
   description: existing?.description ?? '',
   default_warehouse: existing?.default_warehouse ?? '',
   default_price_list: existing?.default_price_list ?? '',
-  selling_cost_center: existing?.selling_cost_center ?? '',
   income_account: existing?.income_account ?? '',
 });
 
@@ -63,11 +49,11 @@ const saveFailure = (error: Error | null) => {
   return failureMessage("Couldn't save this brand. Try again.");
 };
 
-type Options = { warehouses: Warehouse[]; priceLists: PriceList[]; costCenters: CostCenter[]; accounts: Account[] };
+type Options = { warehouses: Warehouse[]; priceLists: PriceList[]; accounts: Account[] };
 
-type FormProps = { merchantId: string; abbr: string; options: Options; existing: Brand | undefined; onDismiss: () => void };
+type FormProps = { merchantId: string; options: Options; existing: Brand | undefined; onDismiss: () => void };
 
-function Form({ merchantId, abbr, options, existing, onDismiss }: FormProps) {
+function Form({ merchantId, options, existing, onDismiss }: FormProps) {
   const wide = useShellWide();
   const save = useSaveBrandMutation({ merchantId, brandId: existing?.id });
   const remove = useDeleteBrandMutation();
@@ -115,7 +101,7 @@ function Form({ merchantId, abbr, options, existing, onDismiss }: FormProps) {
             label="Default Warehouse"
             hint="Where its items are sold from"
             title="Default Warehouse"
-            options={warehouseOptions(options.warehouses, abbr, existing?.default_warehouse)}
+            options={warehouseOptions(options.warehouses, existing?.default_warehouse)}
           />
           <ControlledSelect
             control={control}
@@ -126,18 +112,11 @@ function Form({ merchantId, abbr, options, existing, onDismiss }: FormProps) {
           />
           <ControlledSelect
             control={control}
-            name="selling_cost_center"
-            label="Default Selling Cost Center"
-            title="Default Selling Cost Center"
-            options={costCenterOptions(options.costCenters, abbr, existing?.selling_cost_center)}
-          />
-          <ControlledSelect
-            control={control}
             name="income_account"
             label="Default Income Account"
             hint="An Income ledger"
             title="Default Income Account"
-            options={ledgerOptions(options.accounts, abbr, (account) => account.root_type === 'Income', existing?.income_account)}
+            options={ledgerOptions(options.accounts, (account) => account.root_type === 'Income', existing?.income_account)}
           />
         </FieldGrid>
       </AdaptiveDialog>

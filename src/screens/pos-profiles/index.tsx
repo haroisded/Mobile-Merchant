@@ -30,7 +30,7 @@ export function PosProfiles({ merchant }: { merchant: Merchant }) {
 
   const warehouse = (profile: PosProfile) => {
     const found = warehouses?.find((candidate) => candidate.id === profile.warehouse);
-    return found ? warehouseLabel(found, merchant.abbr) : '';
+    return found ? warehouseLabel(found) : '';
   };
   // "Cash, GCash": what it takes at checkout, the default first as saved.
   const payments = (profile: PosProfile) =>

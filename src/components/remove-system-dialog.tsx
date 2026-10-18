@@ -24,7 +24,7 @@ type Props = {
 type Notice = { type: 'error' | 'info'; text: string };
 
 /**
- * The destructive confirmation for removing a POS system.
+ * The destructive confirmation for removing a store.
  *
  * Hosted by the Home screen rather than by SystemCard, even though the card carries the trigger.
  * FlashList recycles its cells, so state owned by a cell can outlive the row it belonged to and
@@ -66,7 +66,7 @@ export function RemoveSystemDialog({ merchant, inSheet, onDismiss }: Props) {
       ? // Not `deleteMerchant.error.message`: a PostgREST string names columns and policies, which
         // tells the user nothing they can act on. failureMessage swaps in the offline copy when
         // that is the better explanation.
-        { type: 'error', text: failureMessage("Couldn't remove this system. Try again.") }
+        { type: 'error', text: failureMessage("Couldn't remove this store. Try again.") }
       : null;
 
   return (
@@ -76,7 +76,7 @@ export function RemoveSystemDialog({ merchant, inSheet, onDismiss }: Props) {
       dismissable={!inFlight}
       // A kicker in `error` marks the destructive confirm, as every other delete does
       // (.claude/instruction_mds/frontend.md §5). The title starts at the left edge: nothing is centred (rule 8).
-      kicker="Remove system"
+      kicker="Remove store"
       kickerTone="error"
       title={`Remove ${merchant.name}?`}
       actions={
@@ -108,7 +108,7 @@ export function RemoveSystemDialog({ merchant, inSheet, onDismiss }: Props) {
       }
     >
       <Text variant="bodyMedium">
-        This action is permanent and can&apos;t be reversed. Everything stored in this system will be
+        This action is permanent and can&apos;t be reversed. Everything kept in this store will be
         deleted.
       </Text>
 

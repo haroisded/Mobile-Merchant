@@ -22,7 +22,7 @@ export function AccessRequestForm({ requestId, onDismiss }: { requestId: string;
   return <Decide request={request} onDismiss={onDismiss} />;
 }
 
-/** The copy for a decision the database refused: decided elsewhere meanwhile, or gone with its system. */
+/** The copy for a decision the database refused: decided elsewhere meanwhile, or gone with its store. */
 function decideFailure(error: Error | null) {
   const message = postgrestError(error)?.message;
   if (message === 'request_decided') return 'This request was already approved or declined.';
@@ -71,7 +71,7 @@ function Decide({ request, onDismiss }: { request: AccessRequest; onDismiss: () 
         </View>
       </View>
       <FieldGrid>
-        <Field label="System">
+        <Field label="Store">
           <Text variant="bodyMedium">{request.merchant_name}</Text>
         </Field>
         <Field label="Code Used">

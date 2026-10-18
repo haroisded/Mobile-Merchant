@@ -32,28 +32,28 @@ together and explained inline.
 - **Session handling** in one zustand store — restore, auto-refresh, sign-out
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
-- **A systems list and a merchant shell** — create a system (a company: name, abbreviation, country,
+- **A stores list and a merchant shell** — create a store (one business, no branches: name, country,
   currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with seven
   destinations — Home, Dashboard, Sell, Stock, Accounts, Employees and Setup — each listed only for someone whose
   permissions reach something in it (Employees for the owner alone)
-- **Access Codes, the only way into someone else's system** — a tab beside Home: the owner makes codes (one to
+- **Access Codes, the only way into someone else's store** — a tab beside Home: the owner makes codes (one to
   twenty at a time; 5 min, 30 min, 1 hour, to the end of a day, or never; one person or many) and sends them from
   the phone's share sheet. Whoever enters one on Home waits under Waiting for approval; the owner approves or
   declines them on Requests, and Members lists who got in, each with Revoke. Wrong codes are rate-limited, and a
-  code never names its system until it is valid. **Notifications** (a tab with an unread count, and a bell
-  inside every system) tells each side what happened — no push yet: the count is asked for every minute and
+  code never names its store until it is valid. **Notifications** (a tab with an unread count, and a bell
+  inside every store) tells each side what happened — no push yet: the count is asked for every minute and
   whenever the app comes back
 - **Employees, Discord-style** — the owner's own destination inside a system: everyone let in with an
-  access code, each holding one **role** (Cashier, Stock Clerk and Store Manager come with every system, and
+  access code, each holding one **role** (Cashier, Stock Clerk and Store Manager come with every store, and
   the owner makes more — a name, a colour and the permissions it carries, such as Process Sales, Apply Discounts,
   View Stock Levels or Taxes) and, where the role does not fit, their own exceptions, which win. Someone with no
   role sees Home only; a change reaches their open app within a minute, with an **Access changed**
   notification. All enforced by RLS: the permissions are spelled out as ERPNext's doctype rules underneath
-- **Setup, the POS foundation on ERPNext's model** — the Company and its Fiscal Years; Global Defaults, System Settings and the Currency
-  (ERPNext's rounding, number formats and amount in words); the Chart of Accounts and Cost Centers as
-  folders; the Company's default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment;
+- **Setup, the POS foundation on ERPNext's model** — the Store and its Fiscal Years; Global Defaults, System Settings and the Currency
+  (ERPNext's rounding, number formats and amount in words); the Chart of Accounts as folders; the Store's
+  default accounts, Perpetual Inventory and Accounts Settings; Modes of Payment;
   Taxes — Tax Categories, Sales Taxes and Charges Templates (rows on the net total, on an earlier row, fixed
-  or per unit, inside or on top of the price, with a live preview) and Item Tax Templates; Stock — Warehouses
+  or per unit, inside or on top of the price; **Test Template** runs a saved one on a sample sale) and Item Tax Templates; Stock — Warehouses
   as folders (each showing the stock account its value posts to), UOMs and their conversions, Price Lists,
   Brands with their sales defaults, Item Groups as folders (their defaults and Item Tax rows) and Stock Settings
   (what a new item starts with, FIFO or Moving Average); Tax Rules choosing a sale's template by tax category,
@@ -209,14 +209,14 @@ keyed to `auth.users` and carries its RLS policies, a trigger that creates the p
 and `delete_current_user()` — the function behind the **Delete account** button, since the App Store
 requires in-app account deletion (Guideline 5.1.1(v)) and no client-side key may write to
 `auth.users`. `merchants` is the tenant table — one business per row: its owner, and its Company
-fields (name, abbreviation, country, default currency) — with its own policies and
+fields (name, country, default currency) — with its own policies and
 `private.current_merchant_ids()` — the systems a person owns or is a member of — with
 `private.permitted_merchant_ids(doctype, permission)` built on it, the function every business
 table's policies call. `countries` and `currency_presets` are read-only reference data seeded from
 frappe's country list; `fiscal_years` holds each company's accounting years. Users & Access adds
 `merchant_members`, `roles` and the global `doctypes` (its role profiles, permission matrix and User Permissions
 were replaced on 2026-10-14, below); Defaults & Money adds `system_settings`, `global_defaults`
-and `currencies`; Step 3 adds the `accounts` and `cost_centers` trees; Step 4 the Company's default accounts
+and `currencies`; Step 3 adds the `accounts` tree (and `cost_centers`, dropped since); Step 4 the Company's default accounts
 and Perpetual Inventory (columns of `merchants`) and `accounts_settings`; Step 5 `modes_of_payment`; Step 6
 `tax_categories`, `sales_tax_templates`, `item_tax_templates` with their rows, and the read-only
 `tax_presets` the country's tax is seeded from; Step 8 `warehouses`, `uoms`, `uom_conversion_factors`,
@@ -237,7 +237,8 @@ uses. Access Codes adds `access_codes`, `access_requests` and `notifications`; E
 global, read-only `permissions` and `permission_rules` — the abilities an owner hands out, and the doctype rules
 each one stands for — and the owner-only `role_grants` and `member_overrides`, with `merchant_members.role_id`
 (one role each); Item barcodes adds `items.barcode`, unique within a system — the key the Register's scan
-finds an item by. Triggers named
+finds an item by; One store drops `cost_centers`, every column that named one, and `merchants.abbr` — a store is
+one business with no branches. Triggers named
 `merchants_seed_NN_<area>` fill each new system. An earlier business schema is in the history and
 dropped by a later migration — `ARCHITECTURE.md` describes each.
 

@@ -30,7 +30,7 @@ const USES = [
   { value: 'many' as const, label: 'Many people' },
 ];
 
-/** The system's share sheet, with what a person needs to use the codes — ready to send in any app. */
+/** The phone's share sheet, with what a person needs to use the codes — ready to send in any app. */
 export function share(codes: Created[], system: string) {
   const expiry = codes[0]?.expires_at ? ` It works until ${displayDateTime(codes[0].expires_at)}.` : '';
   const list = codes.map((created) => formatCode(created.code)).join(', ');
@@ -38,7 +38,7 @@ export function share(codes: Created[], system: string) {
   return Share.share({ message });
 }
 
-/** Make codes for one of the owner's systems — the body of src/app/(app)/forms/new-access-code.tsx (page narrow, Dialog wide). */
+/** Make codes for one of the owner's stores — the body of src/app/(app)/forms/new-access-code.tsx (page narrow, Dialog wide). */
 export function NewAccessCodeForm({ onDismiss }: { onDismiss: () => void }) {
   const userId = useSession()?.user.id;
   const owned = useMerchantsQuery().data?.filter((merchant) => merchant.owner_id === userId);
@@ -78,7 +78,7 @@ function Form({ owned, onDismiss }: { owned: Merchant[]; onDismiss: () => void }
     >
       <FieldGrid>
         <ControlledText control={control} name="label" label="Label" hint="Who it's for" span="full" placeholder="Front desk" maxLength={40} />
-        <ChoiceChips control={control} name="merchant_id" label="System" options={owned.map((merchant) => ({ value: merchant.id, label: merchant.name }))} />
+        <ChoiceChips control={control} name="merchant_id" label="Store" options={owned.map((merchant) => ({ value: merchant.id, label: merchant.name }))} />
         <Quantity control={control} />
         <ChoiceChips control={control} name="expiry" label="Expires" options={EXPIRY_CHOICES} />
         {expiry === 'custom' ? <ControlledDate control={control} name="expires_on" label="Last Day It Works" required span="full" /> : null}
@@ -95,7 +95,7 @@ type ChipsProps = {
   options: readonly { value: string; label: string }[];
 };
 
-/** One choice of a few, as chips in a wrapping row (frontend.md §5, Tags): a system, an expiry. */
+/** One choice of a few, as chips in a wrapping row (frontend.md §5, Tags): a store, an expiry. */
 function ChoiceChips({ control, name, label, options }: ChipsProps) {
   const { field, fieldState } = useController({ control, name });
 

@@ -55,7 +55,7 @@ function Form({ merchant, warehouses, accounts, existing, parentId, onDismiss }:
   const save = useSaveWarehouseMutation({ merchantId: merchant.id, warehouseId: existing?.id });
   const remove = useDeleteWarehouseMutation();
   const confirm = useConfirm();
-  const label = (warehouse: Warehouse) => warehouseLabel(warehouse, merchant.abbr);
+  const label = (warehouse: Warehouse) => warehouseLabel(warehouse);
   // All Warehouses keeps its place: it is where New Warehouse starts, so the form offers no Delete for it.
   const deletable = existing?.parent_id && can(usePermissions({ merchantId: merchant.id }).data, 'Warehouse', 'delete');
   const notice = mutationNotice(save, treeFailure(save.error, "Couldn't save this warehouse. Try again."));
@@ -124,9 +124,9 @@ function WarehouseFields({ control, merchant, warehouses, accounts, existing, la
         control={control}
         name="account"
         label="Account"
-        hint={account ? 'Stock ledger' : `Empty: uses ${fallbackAccount ? accountLabel(fallbackAccount, merchant.abbr) : 'none'}`}
+        hint={account ? 'Stock ledger' : `Empty: uses ${fallbackAccount ? accountLabel(fallbackAccount) : 'none'}`}
         title="Account"
-        options={ledgerOptions(accounts, merchant.abbr, (candidate) => candidate.account_type === 'Stock', account)}
+        options={ledgerOptions(accounts, (candidate) => candidate.account_type === 'Stock', account)}
       />
       {root ? null : (
         <>

@@ -4,7 +4,6 @@ import { StyleSheet, View } from 'react-native';
 
 import { accountLabel, useAccountsQuery } from '../features/accounts/queries';
 import { itemLabel, useItemsQuery } from '../features/items/queries';
-import { useMerchantsQuery } from '../features/merchants/queries';
 import { useWarehousesQuery, warehouseLabel } from '../features/warehouses/queries';
 import { displayDate } from '../lib/dates';
 import { LEDGER_PAGE } from '../lib/query';
@@ -41,18 +40,17 @@ const fieldsOf = (report: LedgerReport): FilterName[] => REPORTS[report].fields;
  * read its names. All three load whichever report asks: each is a short list the other screens already hold.
  */
 export function useLedgerNames(merchantId: string) {
-  const abbr = useMerchantsQuery().data?.find((merchant) => merchant.id === merchantId)?.abbr ?? '';
   const accounts = useAccountsQuery({ merchantId }).data ?? [];
   const items = useItemsQuery({ merchantId }).data ?? [];
   const warehouses = useWarehousesQuery({ merchantId }).data ?? [];
 
   return {
-    account: accounts.filter((account) => !account.is_group).map((account): PickOption => ({ value: account.id, label: accountLabel(account, abbr) })),
+    account: accounts.filter((account) => !account.is_group).map((account): PickOption => ({ value: account.id, label: accountLabel(account) })),
     // Disabled items too: a ledger keeps the movements of an item that was disabled since.
     item: items.filter((item) => item.is_stock_item).map((item): PickOption => ({ value: item.id, label: itemLabel(item) })),
     warehouse: warehouses
       .filter((warehouse) => !warehouse.is_group)
-      .map((warehouse): PickOption => ({ value: warehouse.id, label: warehouseLabel(warehouse, abbr) })),
+      .map((warehouse): PickOption => ({ value: warehouse.id, label: warehouseLabel(warehouse) })),
   };
 }
 

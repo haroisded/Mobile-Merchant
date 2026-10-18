@@ -8,10 +8,9 @@ import { ControlledDate, ControlledText, FieldGrid } from '../../components/form
 import { RepeatableList } from '../../components/repeatable-rows';
 import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
-import { PostedAmount, QuantityField, StockDocumentAccounting, useStockDocumentRecords } from '../../components/stock-document';
+import { ItemField, PostedAmount, QuantityField, StockDocumentAccounting, useStockDocumentRecords } from '../../components/stock-document';
 import type { StockDocumentRecords } from '../../components/stock-document';
 import { useMoney } from '../../features/currencies/queries';
-import { stockItemOptions } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import {
   invalidateStockReconciliations,
@@ -57,7 +56,6 @@ const defaults = (existing: StockReconciliationDocument | undefined, today: stri
   purpose: existing?.purpose ?? 'Stock Reconciliation',
   posting_date: existing?.posting_date ?? today,
   difference_account: existing?.difference_account ?? '',
-  cost_center: existing?.cost_center ?? '',
   // A new one starts with a row to fill.
   items: existing?.stock_reconciliation_items.map((row) => ({
     item_id: row.item_id,
@@ -105,7 +103,7 @@ function Form({ merchant, records, existing, save }: FormProps) {
           name="purpose"
           label="Purpose"
           required
-          hint={opening ? "A system's first stock" : 'A count against the books'}
+          hint={opening ? "A store's first stock" : 'A count against the books'}
           title="Purpose"
           options={STOCK_RECONCILIATION_PURPOSES.map((value) => ({ value, label: value }))}
           disabled={!editable}
@@ -115,11 +113,10 @@ function Form({ merchant, records, existing, save }: FormProps) {
       <Rows control={control} merchant={merchant} records={records} existing={existing} disabled={!editable} />
       <StockDocumentAccounting
         control={control}
-        names={{ account: 'difference_account', costCenter: 'cost_center' }}
+        name="difference_account"
         records={records}
-        abbr={merchant.abbr}
         saved={existing}
-        accountDefault={opening ? 'Temporary Opening' : "the company's Stock Adjustment Account"}
+        accountDefault={opening ? 'Temporary Opening' : "the store's Stock Adjustment Account"}
         // An Opening Stock's is an asset or liability account (private.validate_stock_document).
         fits={(account) => !opening || account.root_type === 'Asset' || account.root_type === 'Liability'}
         disabled={!editable}
@@ -162,15 +159,7 @@ function Rows({ control, merchant, records, existing, disabled }: RowsProps) {
       >
         {(index) => (
           <FieldGrid>
-            <ControlledSelect
-              control={control}
-              name={`items.${index}.item_id`}
-              label="Item"
-              required
-              title="Item"
-              options={stockItemOptions(records.items, items[index]?.item_id)}
-              disabled={disabled}
-            />
+            <ItemField control={control} name={`items.${index}.item_id`} records={records} itemId={items[index]?.item_id} disabled={disabled} />
             <ControlledSelect
               control={control}
               name={`items.${index}.warehouse_id`}
@@ -178,7 +167,7 @@ function Rows({ control, merchant, records, existing, disabled }: RowsProps) {
               required
               title="Warehouse"
               // Without None: a count is always of somewhere.
-              options={warehouseOptions(records.warehouses, merchant.abbr, items[index]?.warehouse_id).slice(1)}
+              options={warehouseOptions(records.warehouses, items[index]?.warehouse_id).slice(1)}
               disabled={disabled}
             />
             <QuantityField control={control} name={`items.${index}.qty`} records={records} itemId={items[index]?.item_id} disabled={disabled} />

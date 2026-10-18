@@ -279,7 +279,6 @@ export type Database = {
           id: string
           income_account: string | null
           merchant_id: string
-          selling_cost_center: string | null
         }
         Insert: {
           brand: string
@@ -290,7 +289,6 @@ export type Database = {
           id?: string
           income_account?: string | null
           merchant_id: string
-          selling_cost_center?: string | null
         }
         Update: {
           brand?: string
@@ -301,16 +299,8 @@ export type Database = {
           id?: string
           income_account?: string | null
           merchant_id?: string
-          selling_cost_center?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "brands_cost_center_fk"
-            columns: ["selling_cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
-            referencedColumns: ["id", "merchant_id"]
-          },
           {
             foreignKeyName: "brands_income_account_fk"
             columns: ["income_account", "merchant_id"]
@@ -337,54 +327,6 @@ export type Database = {
             columns: ["default_warehouse", "merchant_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
-            referencedColumns: ["id", "merchant_id"]
-          },
-        ]
-      }
-      cost_centers: {
-        Row: {
-          cost_center_name: string
-          cost_center_number: string | null
-          created_at: string
-          disabled: boolean
-          id: string
-          is_group: boolean
-          merchant_id: string
-          parent_id: string | null
-        }
-        Insert: {
-          cost_center_name: string
-          cost_center_number?: string | null
-          created_at?: string
-          disabled?: boolean
-          id?: string
-          is_group?: boolean
-          merchant_id: string
-          parent_id?: string | null
-        }
-        Update: {
-          cost_center_name?: string
-          cost_center_number?: string | null
-          created_at?: string
-          disabled?: boolean
-          id?: string
-          is_group?: boolean
-          merchant_id?: string
-          parent_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cost_centers_merchant_id_fkey"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cost_centers_parent_fk"
-            columns: ["parent_id", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
         ]
@@ -570,7 +512,6 @@ export type Database = {
       gl_entries: {
         Row: {
           account_id: string
-          cost_center_id: string | null
           created_at: string
           credit: number
           debit: number
@@ -585,7 +526,6 @@ export type Database = {
         }
         Insert: {
           account_id: string
-          cost_center_id?: string | null
           created_at?: string
           credit?: number
           debit?: number
@@ -600,7 +540,6 @@ export type Database = {
         }
         Update: {
           account_id?: string
-          cost_center_id?: string | null
           created_at?: string
           credit?: number
           debit?: number
@@ -619,13 +558,6 @@ export type Database = {
             columns: ["account_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "gl_entries_cost_center_fk"
-            columns: ["cost_center_id", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -740,7 +672,6 @@ export type Database = {
           item_group_name: string
           merchant_id: string
           parent_id: string | null
-          selling_cost_center: string | null
         }
         Insert: {
           created_at?: string
@@ -753,7 +684,6 @@ export type Database = {
           item_group_name: string
           merchant_id: string
           parent_id?: string | null
-          selling_cost_center?: string | null
         }
         Update: {
           created_at?: string
@@ -766,16 +696,8 @@ export type Database = {
           item_group_name?: string
           merchant_id?: string
           parent_id?: string | null
-          selling_cost_center?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "item_groups_cost_center_fk"
-            columns: ["selling_cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
-            referencedColumns: ["id", "merchant_id"]
-          },
           {
             foreignKeyName: "item_groups_expense_account_fk"
             columns: ["expense_account", "merchant_id"]
@@ -1099,7 +1021,6 @@ export type Database = {
           merchant_id: string
           reorder_level: number | null
           sales_uom: string | null
-          selling_cost_center: string | null
           stock_uom: string
           valuation_method: string | null
         }
@@ -1124,7 +1045,6 @@ export type Database = {
           merchant_id: string
           reorder_level?: number | null
           sales_uom?: string | null
-          selling_cost_center?: string | null
           stock_uom: string
           valuation_method?: string | null
         }
@@ -1149,7 +1069,6 @@ export type Database = {
           merchant_id?: string
           reorder_level?: number | null
           sales_uom?: string | null
-          selling_cost_center?: string | null
           stock_uom?: string
           valuation_method?: string | null
         }
@@ -1159,13 +1078,6 @@ export type Database = {
             columns: ["brand_id", "merchant_id"]
             isOneToOne: false
             referencedRelation: "brands"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "items_cost_center_fk"
-            columns: ["selling_cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -1363,8 +1275,6 @@ export type Database = {
       }
       merchants: {
         Row: {
-          abbr: string
-          cost_center: string | null
           country_code: string
           created_at: string
           default_bank_account: string | null
@@ -1380,14 +1290,11 @@ export type Database = {
           name: string
           owner_id: string
           round_off_account: string | null
-          round_off_cost_center: string | null
           stock_adjustment_account: string | null
           stock_received_but_not_billed: string | null
           write_off_account: string | null
         }
         Insert: {
-          abbr: string
-          cost_center?: string | null
           country_code: string
           created_at?: string
           default_bank_account?: string | null
@@ -1403,14 +1310,11 @@ export type Database = {
           name: string
           owner_id: string
           round_off_account?: string | null
-          round_off_cost_center?: string | null
           stock_adjustment_account?: string | null
           stock_received_but_not_billed?: string | null
           write_off_account?: string | null
         }
         Update: {
-          abbr?: string
-          cost_center?: string | null
           country_code?: string
           created_at?: string
           default_bank_account?: string | null
@@ -1426,19 +1330,11 @@ export type Database = {
           name?: string
           owner_id?: string
           round_off_account?: string | null
-          round_off_cost_center?: string | null
           stock_adjustment_account?: string | null
           stock_received_but_not_billed?: string | null
           write_off_account?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "merchants_cost_center_fk"
-            columns: ["cost_center", "id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
-            referencedColumns: ["id", "merchant_id"]
-          },
           {
             foreignKeyName: "merchants_country_fk"
             columns: ["country_code"]
@@ -1507,13 +1403,6 @@ export type Database = {
             columns: ["round_off_account", "id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "merchants_round_off_cost_center_fk"
-            columns: ["round_off_cost_center", "id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -1880,7 +1769,6 @@ export type Database = {
         Row: {
           amount: number
           conversion_factor: number
-          cost_center: string | null
           discount_account: string | null
           discount_amount: number
           discount_percentage: number
@@ -1908,7 +1796,6 @@ export type Database = {
         Insert: {
           amount: number
           conversion_factor?: number
-          cost_center?: string | null
           discount_account?: string | null
           discount_amount?: number
           discount_percentage?: number
@@ -1936,7 +1823,6 @@ export type Database = {
         Update: {
           amount?: number
           conversion_factor?: number
-          cost_center?: string | null
           discount_account?: string | null
           discount_amount?: number
           discount_percentage?: number
@@ -1962,13 +1848,6 @@ export type Database = {
           valuation_rate?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "pos_invoice_items_cost_center_fk"
-            columns: ["cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
-            referencedColumns: ["id", "merchant_id"]
-          },
           {
             foreignKeyName: "pos_invoice_items_discount_account_fk"
             columns: ["discount_account", "merchant_id"]
@@ -2104,7 +1983,6 @@ export type Database = {
         Row: {
           account_head: string
           charge_type: string
-          cost_center: string | null
           description: string
           id: string
           idx: number
@@ -2120,7 +1998,6 @@ export type Database = {
         Insert: {
           account_head: string
           charge_type: string
-          cost_center?: string | null
           description: string
           id?: string
           idx: number
@@ -2136,7 +2013,6 @@ export type Database = {
         Update: {
           account_head?: string
           charge_type?: string
-          cost_center?: string | null
           description?: string
           id?: string
           idx?: number
@@ -2155,13 +2031,6 @@ export type Database = {
             columns: ["account_head", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "pos_invoice_taxes_cost_center_fk"
-            columns: ["cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -2590,7 +2459,6 @@ export type Database = {
           allow_discount_change: boolean
           allow_rate_change: boolean
           apply_discount_on: string
-          cost_center: string | null
           created_at: string
           disabled: boolean
           discount_account: string | null
@@ -2610,7 +2478,6 @@ export type Database = {
           taxes_and_charges: string | null
           warehouse: string
           write_off_account: string | null
-          write_off_cost_center: string | null
           write_off_limit: number
         }
         Insert: {
@@ -2618,7 +2485,6 @@ export type Database = {
           allow_discount_change?: boolean
           allow_rate_change?: boolean
           apply_discount_on?: string
-          cost_center?: string | null
           created_at?: string
           disabled?: boolean
           discount_account?: string | null
@@ -2638,7 +2504,6 @@ export type Database = {
           taxes_and_charges?: string | null
           warehouse: string
           write_off_account?: string | null
-          write_off_cost_center?: string | null
           write_off_limit?: number
         }
         Update: {
@@ -2646,7 +2511,6 @@ export type Database = {
           allow_discount_change?: boolean
           allow_rate_change?: boolean
           apply_discount_on?: string
-          cost_center?: string | null
           created_at?: string
           disabled?: boolean
           discount_account?: string | null
@@ -2666,7 +2530,6 @@ export type Database = {
           taxes_and_charges?: string | null
           warehouse?: string
           write_off_account?: string | null
-          write_off_cost_center?: string | null
           write_off_limit?: number
         }
         Relationships: [
@@ -2675,13 +2538,6 @@ export type Database = {
             columns: ["account_for_change_amount", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "pos_profiles_cost_center_fk"
-            columns: ["cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -2759,13 +2615,6 @@ export type Database = {
             columns: ["write_off_account", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "pos_profiles_write_off_cost_center_fk"
-            columns: ["write_off_cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
         ]
@@ -3128,7 +2977,6 @@ export type Database = {
         Row: {
           account: string
           charge_type: string
-          cost_center: string | null
           description: string
           id: string
           idx: number
@@ -3142,7 +2990,6 @@ export type Database = {
         Insert: {
           account: string
           charge_type: string
-          cost_center?: string | null
           description: string
           id?: string
           idx: number
@@ -3156,7 +3003,6 @@ export type Database = {
         Update: {
           account?: string
           charge_type?: string
-          cost_center?: string | null
           description?: string
           id?: string
           idx?: number
@@ -3173,13 +3019,6 @@ export type Database = {
             columns: ["account", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "sales_tax_template_rows_cost_center_fk"
-            columns: ["cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -3284,7 +3123,6 @@ export type Database = {
       }
       stock_entries: {
         Row: {
-          cost_center: string | null
           created_at: string
           difference_account: string | null
           docstatus: number
@@ -3297,7 +3135,6 @@ export type Database = {
           to_warehouse: string | null
         }
         Insert: {
-          cost_center?: string | null
           created_at?: string
           difference_account?: string | null
           docstatus?: number
@@ -3310,7 +3147,6 @@ export type Database = {
           to_warehouse?: string | null
         }
         Update: {
-          cost_center?: string | null
           created_at?: string
           difference_account?: string | null
           docstatus?: number
@@ -3328,13 +3164,6 @@ export type Database = {
             columns: ["difference_account", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "stock_entries_cost_center_fk"
-            columns: ["cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {
@@ -3567,7 +3396,6 @@ export type Database = {
       }
       stock_reconciliations: {
         Row: {
-          cost_center: string | null
           created_at: string
           difference_account: string | null
           docstatus: number
@@ -3578,7 +3406,6 @@ export type Database = {
           purpose: string
         }
         Insert: {
-          cost_center?: string | null
           created_at?: string
           difference_account?: string | null
           docstatus?: number
@@ -3589,7 +3416,6 @@ export type Database = {
           purpose?: string
         }
         Update: {
-          cost_center?: string | null
           created_at?: string
           difference_account?: string | null
           docstatus?: number
@@ -3605,13 +3431,6 @@ export type Database = {
             columns: ["difference_account", "merchant_id"]
             isOneToOne: false
             referencedRelation: "accounts"
-            referencedColumns: ["id", "merchant_id"]
-          },
-          {
-            foreignKeyName: "stock_reconciliations_cost_center_fk"
-            columns: ["cost_center", "merchant_id"]
-            isOneToOne: false
-            referencedRelation: "cost_centers"
             referencedColumns: ["id", "merchant_id"]
           },
           {

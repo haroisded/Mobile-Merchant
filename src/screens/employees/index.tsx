@@ -29,14 +29,14 @@ export function OwnerOnly({ title }: { title: string }) {
     <View style={styles.fill}>
       <PageHeader kicker="Employees" title={title} onBack={() => router.back()} />
       <Text variant="bodyMedium" style={styles.state}>
-        Only the owner of this system manages its employees.
+        Only the owner of this store manages its employees.
       </Text>
     </View>
   );
 }
 
 /**
- * Employees: the people let into this system and the role each holds. The owner's alone — the rail lists it for
+ * Employees: the people let into this store and the role each holds. The owner's alone — the rail lists it for
  * them only. Roles and, wide, Permissions open from the header; a row opens that employee's permissions.
  */
 export function EmployeesScreen({ merchant, isOwner }: { merchant: Merchant; isOwner: boolean }) {

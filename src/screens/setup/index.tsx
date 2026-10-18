@@ -11,7 +11,6 @@ type SetupRoute =
   | 'system-settings'
   | 'currency'
   | 'chart-of-accounts'
-  | 'cost-centers'
   | 'accounts-settings'
   | 'modes-of-payment'
   | 'tax-categories'
@@ -37,10 +36,10 @@ type SetupRoute =
 // groups it. A section appears once its first screen exists; the rest arrive step by step.
 export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   {
-    title: 'Company & Calendar',
-    hint: 'Who the books belong to, and the years they are kept in',
+    title: 'Store & Calendar',
+    hint: 'Whose books these are, and the years they are kept in',
     entries: [
-      { label: 'Company', hint: 'Name, currency, default accounts, stock', doctype: 'Company', route: 'company' },
+      { label: 'Store', hint: 'Name, currency, default accounts, stock', doctype: 'Company', route: 'company' },
       { label: 'Fiscal Years', hint: 'The accounting years every sale is dated in', doctype: 'Fiscal Year', route: 'fiscal-years' },
     ],
   },
@@ -58,7 +57,6 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
     hint: 'Where every sale, purchase and payment is recorded',
     entries: [
       { label: 'Chart of Accounts', hint: 'Cash, stock, sales and the groups they sit in', doctype: 'Account', route: 'chart-of-accounts' },
-      { label: 'Cost Centers', hint: 'Branches or counters to tag income and expenses by', doctype: 'Cost Center', route: 'cost-centers' },
       {
         label: 'Accounts Settings',
         hint: 'Cancellation, discounts, frozen dates',
@@ -149,7 +147,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
 ];
 
-/** Setup: the index of a system's foundation records, the rail's last destination. */
+/** Setup: the index of a store's foundation records, the rail's last destination. */
 export function SetupIndex({ merchantId, merchantName, isOwner }: { merchantId: string; merchantName: string; isOwner: boolean }) {
   return (
     <RecordIndex

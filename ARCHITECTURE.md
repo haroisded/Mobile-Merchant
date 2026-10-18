@@ -57,7 +57,7 @@ src/features/<resource>/   data only — queries.ts and schema.ts for merchants 
                            the colour palette's keys), permissions (the catalog; access.ts: can, has, a
                            destination's rule, requirements and exceptions, import-free), role-permissions
                            (usePermissions, which every screen imports); system-settings, global-defaults, currencies;
-                           accounts (ledgerOptions), cost-centers, accounts-settings,
+                           accounts (ledgerOptions), accounts-settings,
                            modes-of-payment; tax-categories, sales-tax-templates (+ calculate.ts,
                            ERPNext's taxes_and_totals), item-tax-templates; warehouses
                            (inventoryAccount), uoms, uom-conversion-factors, price-lists, brands;
@@ -87,11 +87,11 @@ src/screens/<screen>/      UI by screen — home (the systems list, its slot car
                            no role sees Home only), employees (the list, an employee's permissions, the
                            roles and a role's page, a tablet's two panes; editor/ holds the role and access
                            editors they share), company, fiscal-years, global-defaults, system-settings,
-                           currency, chart-of-accounts, cost-centers, accounts-settings,
+                           currency, chart-of-accounts, accounts-settings,
                            modes-of-payment, tax-categories, item-tax-templates, warehouses, uoms,
                            uom-conversion-factors, price-lists, brands (each list + form),
-                           sales-tax-templates (list, a full-page template with its rows, the tax
-                           preview), item-groups (folders, a full-page group with its Item Tax rows),
+                           sales-tax-templates (list, a full-page template with its rows, Test
+                           Template), item-groups (folders, a full-page group with its Item Tax rows),
                            tax-rules (list, form, Which Template?), selling-settings, pricing-rules
                            (the list, a full-page rule with what it applies on),
                            stock-settings, document-naming-settings (the list, a document's series,
@@ -143,8 +143,8 @@ src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer
                            documents and reports), accounts/ (the index, general-ledger; each re-exports
                            the other's document and report pages, so Back returns), employees/ (the
                            owner's: index, employee, roles, role, permissions) and setup/ (the
-                           index and one route per Setup page; chart-of-accounts, cost-centers,
-                           warehouses and item-groups push themselves once per folder, `parent`)
+                           index and one route per Setup page; chart-of-accounts, warehouses and
+                           item-groups push themselves once per folder, `parent`)
 app.config.ts              derives the Google iOS URL scheme from .env
 supabase/migrations/       profiles, merchants, current_merchant_ids, the signup trigger,
                            delete_current_user and rls_auto_enable — whose event trigger hosted
@@ -381,7 +381,8 @@ one migration per ERPNext step: the Company and its fiscal years, Users & Access
 the Chart of Accounts with Cost Centers, Accounting Defaults, Modes of Payment, Taxes, the Stock
 Building Blocks, Item Groups with Selling Settings, Tax Rules, Stock Settings, Naming Series, and Printing;
 the second batch (Steps 13–23); Access Codes; Employees & permissions, which replaced Users & Access's
-ERPNext roles; and a backend-performance pass before deployment (the last sections).
+ERPNext roles; a backend-performance pass before deployment; item barcodes; and One store, which took
+Cost Centers and the Abbreviation back out (the last sections).
 
 `public.profiles` has `id` referencing `auth.users` with `on delete cascade`, `display_name`,
 `avatar_url`, `created_at` — plus its policies, a trigger that fills the row on signup, and the
@@ -394,8 +395,8 @@ trigger to keep in step.
 ### `public.merchants` — the tenant
 
 `id`, `owner_id` referencing `auth.users` with `on delete cascade`, `name` (1–80 characters once
-trimmed, a check constraint), `created_at`, and the Company's own fields: `abbr`, `country_code`,
-`default_currency` (last section). The 2026-10-08 teardown dropped its category, address, contact
+trimmed, a check constraint), `created_at`, and the Company's own fields: `country_code`,
+`default_currency` (last section) — `abbr` went with One store (below). The 2026-10-08 teardown dropped its category, address, contact
 email, phone and currency columns. The cascade is what lets `delete_current_user()` stay one
 statement: deleting the `auth.users` row takes the profile and every merchant with it.
 
@@ -508,7 +509,8 @@ Company fields are `merchants` columns (tenancy.md rule 9):
 
 - `abbr` — 1–10 characters, no spaces (`merchants_abbr_shape`). ERPNext appends it to account, cost
   center and warehouse names; here it will be *displayed* after them, never stored in them, so
-  editing it renames nothing. Systems that already existed got their name's initials.
+  editing it renames nothing. Systems that already existed got their name's initials. **Dropped on
+  2026-10-19** (One store, below).
 - `country_code` → `public.countries`, `default_currency` → `public.currency_presets`. Existing
   systems got the Philippines and the peso, this app's defaults before the teardown.
 
@@ -603,6 +605,9 @@ not know it), its number format. The arithmetic itself is the client's: `src/lib
 
 ### Step 3, Chart of Accounts and Cost Centers — `20261008152613_chart_of_accounts.sql`
 
+> **Cost centers removed on 2026-10-19** by One store (below): the table, every column that named one and every
+> rule about them. The later step sections still mention them as they were; this one is what the migration did.
+
 Two trees (docs.frappe.io/erpnext/chart-of-accounts, /cost-center), each row a group (a folder) or a
 ledger, with a composite `(parent_id, merchant_id)` foreign key so a parent is always of the same
 system:
@@ -693,8 +698,8 @@ backfilled.
 
 The arithmetic is `src/features/sales-tax-templates/calculate.ts`, ERPNext's `taxes_and_totals` without
 discounts: inclusive back-calculation, the five types per item, an Item Tax Template's rate by account, an
-Actual amount spread by net amount, running totals. The template page's Preview runs it on a sample line; the
-POS Invoice will run the same module.
+Actual amount spread by net amount, running totals. Test Template (beside New Template on the list) runs a saved
+template on a sample line; the POS Invoice runs the same module.
 
 ### Step 8, Stock Building Blocks — `20261009171705_stock_building_blocks.sql`
 
@@ -1301,8 +1306,8 @@ removed, not rebuilt).
 | | Receive Shipments | Stock Entry read/write/create/delete/submit |
 | | Adjust Inventory | Stock Reconciliation in full, cancel included; Stock Entry read/cancel |
 | Accounting | View General Ledger | GL Entry read |
-| Setup | Company & Calendar | Company, Global Defaults, System Settings, Currency read/write; Fiscal Year in full |
-| | Accounting & Payments | Account, Cost Center, Mode of Payment in full; Accounts Settings read/write |
+| Setup | Store & Calendar | Company, Global Defaults, System Settings, Currency read/write; Fiscal Year in full |
+| | Accounting & Payments | Account, Mode of Payment in full; Accounts Settings read/write |
 | | Taxes | the four tax doctypes in full |
 | | Stock Setup | Warehouse, UOM, UOM Conversion Factor, Brand, Item Group in full; Stock Settings read/write |
 | | Selling & Pricing | Price List, Pricing Rule in full; Selling Settings read/write |
@@ -1434,6 +1439,57 @@ Rejected: **the Item Code as the barcode** — a shop's codes are its own (`NOTE
 them from a series; **ERPNext's Item Barcode child table** (several barcodes, a type per row) — one per item covers a
 shop's packs, and a unit's own barcode can come with the units when asked; **matching the scanned label's name** to
 find an item — a guess at the till charges the wrong product.
+
+### One store — `20261018162135_single_store.sql`
+
+What a person creates is **one store**: a single business with no branches (the human's call, 2026-10-19). Two
+ERPNext things exist only to tell several companies or branches apart, and both went, data included:
+
+- **Cost Centers** (docs.frappe.io/erpnext/cost-center: "which team, branch, project, or business unit") — the
+  `cost_centers` table, its doctype row and permission rules, and the 13 columns that named one:
+  `merchants.cost_center` and `round_off_cost_center`, `sales_tax_template_rows.cost_center`, the
+  `selling_cost_center` of brands, item groups and items, `gl_entries.cost_center_id`, the two stock documents'
+  `cost_center`, the POS Profile's `cost_center` and `write_off_cost_center`, and `cost_center` on a sale's items
+  and taxes — each with its foreign key and index.
+- **The Abbreviation** (docs.frappe.io/erpnext/company: "short suffix used to distinguish company-specific accounts,
+  cost centers, and warehouses") — `merchants.abbr` and `merchants_abbr_shape`. Nothing in the database read it;
+  the app showed it after account and warehouse names, and no longer does.
+
+23 functions were re-created from their latest bodies without a cost center, signatures unchanged.
+`private.post_gl` merges rows **per account** and needs no cost center on a Profit and Loss row
+(`cost_center_unusable` is gone); `cancel_gl` copies rows without one; `validate_tree` lost the cost-center root's
+delete lock, its only delete rule; `validate_company_accounts`, `validate_tax_account`, `validate_defaults`,
+`validate_stock_document` and `validate_pos_profile` lost their cost-center checks; the seeds no longer make a
+cost-center tree or default; the posters and the `save_*` RPCs no longer read or write one. Five triggers were
+re-created first, since an `UPDATE OF` list naming a column blocks dropping it. A build that still sends a
+cost-center key is ignored (`jsonb_to_recordset` skips undeclared keys); one that still selects `abbr` or a
+cost-center column is refused by PostgREST, so the app change ships with it.
+
+Words only, identifiers kept: the database's texts say store — the permission **Store & Calendar** ("The store, its
+fiscal years, currency and defaults."), the Store Manager's "Every permission in the store." (only where the owner
+had not edited it), "People join a store by using one of its access codes.", "…nor the store names an inventory
+account." The app says store wherever it said system or company; `merchants`, `merchant_id`, `/systems/[id]`, the
+doctype `'Company'` and the error codes stay. **Account Head** (a tax row's ledger), **Round Off Account** and
+**Warehouses** stay: they are not branch concepts — a store may keep a stockroom and a shelf.
+
+Applied through the Supabase MCP as the migration file's statements, with 15 of its 23 function bodies derived on the
+server from their live definitions by edits each asserted to match — so a drifted body would have stopped it. After:
+all 23 `prosrc` bodies equal the file's byte for byte (md5), no column, table, function body or registry row names a
+cost center or `abbr`, and every store's per-account GL balance equals the snapshot taken before. Checked in
+rolled-back blocks as owners (2026-10-19): a sale with tax, a line and an additional discount (Discount Accounting
+on), rounding and a write-off, voided; a sale returned in full; a Material Receipt and a Stock Reconciliation
+submitted and cancelled; a session closed; a pre-migration Stock Reconciliation cancelled — every voucher balanced;
+a new store seeded exactly like one made before (34 accounts, a tax template with its account, three roles);
+`save_item_with_opening_stock` and `import_items` posting their openings. The revert's 23 function blocks are byte
+for byte their latest earlier definitions; its other statements ran rolled back and restored the table, its
+policies, the columns, keys, indexes, triggers and texts, initials as abbreviations, every store on "Main", and a
+stock entry posted with its cost center under the old functions. The revert cannot bring back a deleted cost center,
+a cost center a row named, or an abbreviation an owner chose.
+
+Rejected: **keeping cost centers hidden** with one "Main" per store — every posting would still carry a column
+nobody sees, and a P&L row would still be refused without it; **renaming the identifiers** (`merchants` → `stores`,
+`/systems` → `/stores`) — every table's foreign key, policy and route for no change a person sees; **dropping
+Warehouses** with the branches — a store's stockroom and shelf are places, not branches.
 
 ---
 

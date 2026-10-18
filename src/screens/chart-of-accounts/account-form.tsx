@@ -11,7 +11,6 @@ import { accountLabel, useAccountsQuery, useDeleteAccountMutation, useSaveAccoun
 import type { Account } from '../../features/accounts/queries';
 import { ACCOUNT_TYPES, accountSchema } from '../../features/accounts/schema';
 import type { AccountValues } from '../../features/accounts/schema';
-import { useMerchantsQuery } from '../../features/merchants/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useShellWide } from '../../lib/columns';
 import { mutationNotice } from '../../lib/errors';
@@ -20,13 +19,12 @@ type Props = { merchantId: string; accountId?: string; parentId?: string; onDism
 
 /** Add an account under a group, or edit one — the body of src/app/(app)/forms/account.tsx (page narrow, Dialog wide). */
 export function AccountForm({ merchantId, accountId, parentId, onDismiss }: Props) {
-  // The tree and the system this form was opened from fetched the same keys, so both are cache hits.
+  // The tree this form was opened from fetched the same key, so it is a cache hit.
   const accounts = useAccountsQuery({ merchantId }).data;
-  const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === merchantId);
-  if (!accounts || !merchant) return null;
+  if (!accounts) return null;
   const existing = accountId ? accounts.find((account) => account.id === accountId) : undefined;
 
-  return <Form merchantId={merchantId} abbr={merchant.abbr} accounts={accounts} existing={existing} parentId={parentId} onDismiss={onDismiss} />;
+  return <Form merchantId={merchantId} accounts={accounts} existing={existing} parentId={parentId} onDismiss={onDismiss} />;
 }
 
 const defaults = (existing: Account | undefined, parent: Account | undefined): AccountValues => ({
@@ -39,14 +37,14 @@ const defaults = (existing: Account | undefined, parent: Account | undefined): A
   disabled: existing?.disabled ?? false,
 });
 
-type FormProps = { merchantId: string; abbr: string; accounts: Account[]; existing: Account | undefined; parentId?: string; onDismiss: () => void };
+type FormProps = { merchantId: string; accounts: Account[]; existing: Account | undefined; parentId?: string; onDismiss: () => void };
 
-function Form({ merchantId, abbr, accounts, existing, parentId, onDismiss }: FormProps) {
+function Form({ merchantId, accounts, existing, parentId, onDismiss }: FormProps) {
   const wide = useShellWide();
   const save = useSaveAccountMutation({ merchantId, accountId: existing?.id });
   const remove = useDeleteAccountMutation();
   const confirm = useConfirm();
-  const label = (account: Account) => accountLabel(account, abbr);
+  const label = accountLabel;
   const parent = accounts.find((account) => account.id === parentId);
   // A root stays: there is no way to add one back.
   const deletable = existing?.parent_id && can(usePermissions({ merchantId }).data, 'Account', 'delete');

@@ -7,7 +7,6 @@ export const brandSchema = z.object({
   description: z.string().trim().max(1000, 'Use 1,000 characters or fewer.'),
   default_warehouse: z.string(),
   default_price_list: z.string(),
-  selling_cost_center: z.string(),
   income_account: z.string(),
 });
 

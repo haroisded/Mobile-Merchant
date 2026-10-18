@@ -12,7 +12,7 @@ import { Icon } from './icon';
 import { QueryState } from './query-state';
 import { Text } from './text';
 
-// The tree masters as folders — Chart of Accounts, Cost Centers, Warehouses and Item Groups
+// The tree masters as folders — Chart of Accounts, Warehouses and Item Groups
 // (docs.frappe.io/erpnext/chart-of-accounts). A group is a folder, a ledger a row.
 //
 // The open folder is the list route's `parent` param, and opening one pushes the same route a level deeper,
@@ -21,7 +21,6 @@ import { Text } from './text';
 
 type TreeRoute =
   | '/systems/[id]/setup/chart-of-accounts'
-  | '/systems/[id]/setup/cost-centers'
   | '/systems/[id]/setup/warehouses'
   | '/systems/[id]/setup/item-groups';
 
@@ -120,7 +119,7 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
 }
 
 /**
- * "Chart of Accounts › Application of Funds (Assets) - CC › Current Assets - CC", shown inside a folder. An
+ * "Chart of Accounts › Application of Funds (Assets) › Current Assets", shown inside a folder. An
  * earlier segment pops back to it: each folder level is one push, so it is that many screens down. Rejected:
  * router.dismissTo — every level is the same route, so it matches the screen already open.
  */
@@ -171,7 +170,6 @@ const TREE_FAILURES = new Map([
   ['tree_cycle', "It can't sit under itself, or under anything inside it."],
   ['group_has_children', 'This group has records under it, so it stays a group.'],
   ['root_type_locked', 'This group has accounts under it, so it cannot move under another root type.'],
-  ['root_locked', "The company's cost center stays as long as the company."],
   ['warehouse_account_invalid', 'That account is no longer an enabled Stock ledger — pick it again.'],
   ['default_invalid', "One of the defaults can't be used any more — pick it again."],
 ]);
@@ -182,12 +180,12 @@ export function treeFailure(error: Error | null, fallback: string) {
   // A 23503 from anything but the tree's own parent key: something else still names it — said by the
   // constraint that refused, a warehouse's or a brand's when it is theirs. (Not usedElsewhere first: an item
   // group's parent key is on item_groups too.)
-  if (cause?.code === '23503' && !/accounts_parent_fk|cost_centers_parent_fk|warehouses_parent_fk|item_groups_parent_fk/.test(cause.message)) {
+  if (cause?.code === '23503' && !/accounts_parent_fk|warehouses_parent_fk|item_groups_parent_fk/.test(cause.message)) {
     const elsewhere = usedElsewhere(error);
     if (elsewhere) return elsewhere;
     if (cause.message.includes('warehouses_account_fk')) return 'A warehouse posts its stock to it. Give that warehouse another account first, or disable this one.';
     if (cause.message.includes('brands_')) return "It's a brand's default. Clear it on the brand first, or disable this one.";
-    return "It's in use — as a company default, a mode of payment's account or in a tax template. Disable it instead.";
+    return "It's in use — as a store default, a mode of payment's account or in a tax template. Disable it instead.";
   }
   return TREE_FAILURES.get(cause?.message ?? '') ?? TREE_FAILURES.get(cause?.code ?? '') ?? failureMessage(fallback);
 }

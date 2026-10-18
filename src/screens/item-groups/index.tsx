@@ -18,7 +18,7 @@ const label = (group: ItemGroup) => group.item_group_name;
 
 // "2 defaults · 1 item tax": what the group hands its items, at a glance.
 const status = (group: ItemGroup) => {
-  const defaults = [group.default_price_list, group.default_warehouse, group.selling_cost_center, group.income_account, group.expense_account].filter(Boolean).length;
+  const defaults = [group.default_price_list, group.default_warehouse, group.income_account, group.expense_account].filter(Boolean).length;
   const taxes = group.item_group_taxes.length;
   return [defaults ? `${defaults} ${defaults === 1 ? 'default' : 'defaults'}` : null, taxes ? `${taxes} item ${taxes === 1 ? 'tax' : 'taxes'}` : null];
 };

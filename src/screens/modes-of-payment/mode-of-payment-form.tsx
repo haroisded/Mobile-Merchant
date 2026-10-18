@@ -8,7 +8,6 @@ import { NoteCallout } from '../../components/note-callout';
 import { ControlledSelect } from '../../components/search-select';
 import { ledgerOptions, useAccountsQuery } from '../../features/accounts/queries';
 import type { Account } from '../../features/accounts/queries';
-import { useMerchantsQuery } from '../../features/merchants/queries';
 import { useDeleteModeOfPaymentMutation, useModesOfPaymentQuery, useSaveModeOfPaymentMutation } from '../../features/modes-of-payment/queries';
 import type { ModeOfPayment } from '../../features/modes-of-payment/queries';
 import { fitsPaymentType, modeOfPaymentSchema, PAYMENT_TYPES } from '../../features/modes-of-payment/schema';
@@ -24,11 +23,10 @@ export function ModeOfPaymentForm({ merchantId, modeId, onDismiss }: Props) {
   // The list this form was opened from fetched the same keys, so these are cache hits.
   const modes = useModesOfPaymentQuery({ merchantId }).data;
   const accounts = useAccountsQuery({ merchantId }).data;
-  const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === merchantId);
-  if (!modes || !accounts || !merchant) return null;
+  if (!modes || !accounts) return null;
   const existing = modeId ? modes.find((mode) => mode.id === modeId) : undefined;
 
-  return <Form merchantId={merchantId} abbr={merchant.abbr} accounts={accounts} existing={existing} onDismiss={onDismiss} />;
+  return <Form merchantId={merchantId} accounts={accounts} existing={existing} onDismiss={onDismiss} />;
 }
 
 const TYPE_OPTIONS: { value: PaymentType; label: string; hint: string }[] = [
@@ -62,9 +60,9 @@ const saveFailure = (error: Error | null) => {
   return failureMessage("Couldn't save this mode of payment. Try again.");
 };
 
-type FormProps = { merchantId: string; abbr: string; accounts: Account[]; existing: ModeOfPayment | undefined; onDismiss: () => void };
+type FormProps = { merchantId: string; accounts: Account[]; existing: ModeOfPayment | undefined; onDismiss: () => void };
 
-function Form({ merchantId, abbr, accounts, existing, onDismiss }: FormProps) {
+function Form({ merchantId, accounts, existing, onDismiss }: FormProps) {
   const wide = useShellWide();
   const save = useSaveModeOfPaymentMutation({ merchantId, modeId: existing?.id });
   const remove = useDeleteModeOfPaymentMutation();
@@ -126,7 +124,7 @@ function Form({ merchantId, abbr, accounts, existing, onDismiss }: FormProps) {
             label="Default Account"
             hint={ACCOUNT_HINTS[type]}
             title="Default Account"
-            options={ledgerOptions(accounts, abbr, fitsPaymentType(type), account)}
+            options={ledgerOptions(accounts, fitsPaymentType(type), account)}
           />
           <ControlledSwitch control={control} name="enabled" label="Enabled" span="full" on="Can be chosen at checkout" off="Hidden from new sales" />
         </FieldGrid>

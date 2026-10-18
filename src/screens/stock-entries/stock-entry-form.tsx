@@ -8,10 +8,9 @@ import { ControlledDate, ControlledText, FieldGrid } from '../../components/form
 import { RepeatableList } from '../../components/repeatable-rows';
 import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
-import { PostedAmount, QuantityField, StockDocumentAccounting, useStockDocumentRecords } from '../../components/stock-document';
+import { ItemField, PostedAmount, QuantityField, StockDocumentAccounting, useStockDocumentRecords } from '../../components/stock-document';
 import type { StockDocumentRecords } from '../../components/stock-document';
 import { useMoney } from '../../features/currencies/queries';
-import { stockItemOptions } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { invalidateStockEntries, useDeleteStockEntryMutation, useSaveStockEntryMutation, useStockEntryQuery } from '../../features/stock-entries/queries';
 import type { StockEntryDocument } from '../../features/stock-entries/queries';
@@ -53,7 +52,6 @@ const blank = (today: string): StockEntryValues => ({
   from_warehouse: '',
   to_warehouse: '',
   difference_account: '',
-  cost_center: '',
   items: [{ item_id: '', qty: '', basic_rate: '' }],
 });
 
@@ -66,7 +64,6 @@ const saved = (entry: StockEntryDocument): StockEntryValues => ({
   from_warehouse: text(entry.from_warehouse),
   to_warehouse: text(entry.to_warehouse),
   difference_account: text(entry.difference_account),
-  cost_center: text(entry.cost_center),
   items: entry.stock_entry_items.map((row) => ({ item_id: row.item_id, qty: String(row.qty), basic_rate: text(row.basic_rate) })),
 });
 
@@ -101,11 +98,10 @@ function Form({ merchant, records, existing, save }: FormProps) {
       <Rows {...section} draft={draft} />
       <StockDocumentAccounting
         control={control}
-        names={{ account: 'difference_account', costCenter: 'cost_center' }}
+        name="difference_account"
         records={records}
-        abbr={merchant.abbr}
         saved={existing}
-        accountDefault="the company's Stock Adjustment Account"
+        accountDefault="the store's Stock Adjustment Account"
         fits={() => true}
         disabled={!editable}
       />
@@ -122,7 +118,7 @@ type SectionProps = {
 };
 
 /** What kind of movement it is, when, and between which warehouses (docs.frappe.io/erpnext/stock-entry-purpose). */
-function Details({ control, merchant, records, existing, disabled }: SectionProps) {
+function Details({ control, records, existing, disabled }: SectionProps) {
   const purpose = useWatch({ control, name: 'purpose' });
 
   return (
@@ -145,7 +141,7 @@ function Details({ control, merchant, records, existing, disabled }: SectionProp
           required
           hint="Where the stock leaves"
           title="Source Warehouse"
-          options={warehouseOptions(records.warehouses, merchant.abbr, existing?.from_warehouse)}
+          options={warehouseOptions(records.warehouses, existing?.from_warehouse)}
           disabled={disabled}
         />
       ) : null}
@@ -157,7 +153,7 @@ function Details({ control, merchant, records, existing, disabled }: SectionProp
           required
           hint="Where the stock goes"
           title="Target Warehouse"
-          options={warehouseOptions(records.warehouses, merchant.abbr, existing?.to_warehouse)}
+          options={warehouseOptions(records.warehouses, existing?.to_warehouse)}
           disabled={disabled}
         />
       ) : null}
@@ -188,15 +184,7 @@ function Rows({ control, merchant, records, existing, disabled, draft }: Section
       >
         {(index) => (
           <FieldGrid>
-            <ControlledSelect
-              control={control}
-              name={`items.${index}.item_id`}
-              label="Item"
-              required
-              title="Item"
-              options={stockItemOptions(records.items, items[index]?.item_id)}
-              disabled={disabled}
-            />
+            <ItemField control={control} name={`items.${index}.item_id`} records={records} itemId={items[index]?.item_id} disabled={disabled} />
             <QuantityField control={control} name={`items.${index}.qty`} records={records} itemId={items[index]?.item_id} disabled={disabled} />
             {receipt || !draft ? (
               <ControlledText

@@ -51,7 +51,6 @@ const defaults = (existing: ItemGroup | undefined, parentId: string | undefined)
   is_group: existing?.is_group ?? false,
   default_price_list: existing?.default_price_list ?? '',
   default_warehouse: existing?.default_warehouse ?? '',
-  selling_cost_center: existing?.selling_cost_center ?? '',
   income_account: existing?.income_account ?? '',
   expense_account: existing?.expense_account ?? '',
   taxes: (existing?.item_group_taxes ?? []).map((row) => ({
@@ -160,10 +159,9 @@ function Form({ merchant, records, existing, parentId }: FormProps) {
         <SectionHeading title="Defaults" hint="What its items start with when they are sold" />
         <SalesDefaultsFields
           control={control}
-          names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', costCenter: 'selling_cost_center', income: 'income_account', expense: 'expense_account' }}
+          names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', income: 'income_account', expense: 'expense_account' }}
           saved={existing}
           records={records.sales}
-          abbr={merchant.abbr}
           disabled={!editable}
         />
         <SectionHeading title="Item Tax" hint="The Item Tax Template its items take — for a tax category, from a date, within a net rate" />

@@ -8,7 +8,7 @@ export const STOCK_RECONCILIATION_PURPOSES = ['Stock Reconciliation', 'Opening S
 
 /**
  * Form input, so Zod (.claude/instruction_mds/data-layer.md §3); save_stock_reconciliation takes the same
- * object. Which warehouse, account and cost center it may name are the database's rules
+ * object. Which warehouse and account it may name are the database's rules
  * (private.validate_stock_document) — a draft saves without them and Submit checks.
  */
 export const stockReconciliationSchema = z
@@ -19,7 +19,6 @@ export const stockReconciliationSchema = z
     // "YYYY-MM-DD".
     posting_date: z.string().min(1, 'Pick a date.'),
     difference_account: z.string(),
-    cost_center: z.string(),
     items: z.array(
       z.object({
         item_id: z.string().min(1, 'Pick an item.'),

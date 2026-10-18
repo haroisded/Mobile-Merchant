@@ -28,7 +28,7 @@ export function StockEntries({ merchant }: { merchant: Merchant }) {
 
   const warehouse = (id: string | null) => {
     const found = warehouses?.find((candidate) => candidate.id === id);
-    return found ? warehouseLabel(found, merchant.abbr) : null;
+    return found ? warehouseLabel(found) : null;
   };
   // "Stores - CC → Back Room - CC" for a transfer; the one warehouse a receipt or an issue has otherwise.
   const route = (entry: StockEntry) => [warehouse(entry.from_warehouse), warehouse(entry.to_warehouse)].filter((name) => name !== null).join(' → ');

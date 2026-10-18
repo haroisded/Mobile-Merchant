@@ -28,10 +28,10 @@ const SHEETS = ['sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal
 const DIALOG_ROUTES = [
   'forms/fiscal-year',
   'forms/account',
-  'forms/cost-center',
   'forms/mode-of-payment',
   'forms/tax-category',
   'forms/item-tax-template',
+  'forms/test-sales-tax-template',
   'forms/warehouse',
   'forms/uom',
   'forms/uom-conversion-factor',

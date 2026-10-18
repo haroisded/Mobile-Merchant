@@ -104,7 +104,6 @@ const blank = ({ groups, stockSettings }: Records): ItemValues => ({
   sales_uom: '',
   default_warehouse: stockSettings.default_warehouse ?? '',
   default_price_list: '',
-  selling_cost_center: '',
   income_account: '',
   expense_account: '',
   max_discount: '',
@@ -134,7 +133,6 @@ const saved = (item: Item): ItemValues => ({
   sales_uom: text(item.sales_uom),
   default_warehouse: text(item.default_warehouse),
   default_price_list: text(item.default_price_list),
-  selling_cost_center: text(item.selling_cost_center),
   income_account: text(item.income_account),
   expense_account: text(item.expense_account),
   // 0 is "no limit", shown as the empty field it is saved from.
@@ -271,16 +269,15 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         {existing && isStockItem && can(permissions, 'Bin', 'read') ? <StockLevels merchant={merchant} item={existing} records={records} /> : null}
         <Units {...section} savedUom={existing?.stock_uom} />
         {/* docs.frappe.io/erpnext/item 3.9 */}
-        <SectionHeading title="Defaults" hint="What a sale of it starts with; an empty one comes from its item group, its brand, then the company" />
+        <SectionHeading title="Defaults" hint="What a sale of it starts with; an empty one comes from its item group, its brand, then the store" />
         <SalesDefaultsFields
           control={control}
-          names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', costCenter: 'selling_cost_center', income: 'income_account', expense: 'expense_account' }}
+          names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', income: 'income_account', expense: 'expense_account' }}
           saved={existing}
           records={records.sales}
-          abbr={merchant.abbr}
           disabled={!editable}
         />
-        <Discounts {...section} abbr={merchant.abbr} savedAccount={existing?.discount_account} />
+        <Discounts {...section} savedAccount={existing?.discount_account} />
         <Taxes {...section} />
       </PageForm>
     </View>
@@ -290,7 +287,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
 type SectionProps = { control: Control<ItemValues>; records: Records; disabled: boolean };
 
 /** 20.3 and 20.5: the most a line of this item may be discounted, and where its discounts post. */
-function Discounts({ control, records, disabled, abbr, savedAccount }: SectionProps & { abbr: string; savedAccount: string | null | undefined }) {
+function Discounts({ control, records, disabled, savedAccount }: SectionProps & { savedAccount: string | null | undefined }) {
   return (
     <>
       <SectionHeading title="Discounts" hint="What a sale may take off it, and where that shows in the books" />
@@ -309,9 +306,9 @@ function Discounts({ control, records, disabled, abbr, savedAccount }: SectionPr
           control={control}
           name="discount_account"
           label="Discount Account"
-          hint="Under Discount Accounting, where its discounts post. None: the company's"
+          hint="Under Discount Accounting, where its discounts post. None: the store's"
           title="Discount Account"
-          options={ledgerOptions(records.sales.accounts, abbr, (account) => account.root_type === 'Income' || account.root_type === 'Expense', savedAccount)}
+          options={ledgerOptions(records.sales.accounts, (account) => account.root_type === 'Income' || account.root_type === 'Expense', savedAccount)}
           disabled={disabled}
         />
       </FieldGrid>
@@ -442,7 +439,7 @@ function StockLevels({ merchant, item, records }: { merchant: Merchant; item: It
   const unit = records.uoms.find((uom) => uom.id === item.stock_uom)?.uom_name ?? '';
   const warehouse = (id: string) => {
     const found = records.sales.warehouses.find((candidate) => candidate.id === id);
-    return found ? warehouseLabel(found, merchant.abbr) : '…';
+    return found ? warehouseLabel(found) : '…';
   };
 
   // The section appears once its balances have loaded: a form is not the place for a second spinner.

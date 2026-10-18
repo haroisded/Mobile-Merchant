@@ -32,7 +32,6 @@ const row = (values: BrandValues) => ({
   description: values.description || null,
   default_warehouse: values.default_warehouse || null,
   default_price_list: values.default_price_list || null,
-  selling_cost_center: values.selling_cost_center || null,
   income_account: values.income_account || null,
 });
 

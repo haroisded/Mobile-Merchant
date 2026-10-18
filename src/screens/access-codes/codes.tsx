@@ -49,7 +49,7 @@ export function usesText(code: AccessCode) {
   return `${code.access_requests.filter((request) => request.status === 'approved').length} of ${code.max_uses} used`;
 }
 
-/** The codes of every system the owner has, newest first: searched, filtered by status, opened to share or delete. */
+/** The codes of every store the owner has, newest first: searched, filtered by status, opened to share or delete. */
 export function Codes({ owned }: { owned: Merchant[] }) {
   const { colors } = useAppTheme();
   const wide = useShellWide();
@@ -84,7 +84,7 @@ export function Codes({ owned }: { owned: Merchant[] }) {
       dense
       value={search}
       onChangeText={setSearch}
-      placeholder="Search by label, code or system"
+      placeholder="Search by label, code or store"
       accessibilityLabel="Search codes"
       left={<TextInput.Icon icon="search" />}
       style={wide ? styles.grow : undefined}
@@ -112,7 +112,7 @@ export function Codes({ owned }: { owned: Merchant[] }) {
         keyOf={(code) => code.id}
         columns={[
           { label: 'Code', flex: 2, cell: (code) => code.label ?? formatCode(code.code) },
-          { label: 'System', flex: 2, cell: (code) => code.merchants?.name ?? '' },
+          { label: 'Store', flex: 2, cell: (code) => code.merchants?.name ?? '' },
           {
             label: 'Status',
             flex: 1,

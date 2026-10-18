@@ -77,7 +77,7 @@ export function useSaleSetup(merchant: Merchant, profile: PosProfile) {
   const listOf = (id: string | null) => records.priceLists.find((list) => list.id === id && list.enabled) ?? null;
   const defaultList = listOf(selling.default_price_list);
   const templates = records.templates.filter((template) => !template.disabled);
-  const accountNames = new Map(records.accounts.map((account) => [account.id, accountLabel(account, merchant.abbr)]));
+  const accountNames = new Map(records.accounts.map((account) => [account.id, accountLabel(account)]));
 
   const setup: SaleSetup = {
     date: todayIn(system.time_zone),

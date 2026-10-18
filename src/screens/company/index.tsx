@@ -14,8 +14,6 @@ import { ControlledSelect } from '../../components/search-select';
 import { SectionHeading } from '../../components/section-heading';
 import { ledgerOptions, useAccountsQuery } from '../../features/accounts/queries';
 import type { Account } from '../../features/accounts/queries';
-import { costCenterOptions, useCostCentersQuery } from '../../features/cost-centers/queries';
-import type { CostCenter } from '../../features/cost-centers/queries';
 import { useCountriesQuery } from '../../features/countries/queries';
 import type { Country } from '../../features/countries/queries';
 import { useCurrencyPresetsQuery } from '../../features/currency-presets/queries';
@@ -31,29 +29,28 @@ import { spacing } from '../../themes';
 type Props = { merchant: Merchant };
 
 /**
- * Company (ERPNext's Company, docs.frappe.io/erpnext/company-setup): the legal entity whose books this
- * system keeps — one per system, the system's name is the company's name — with its accounting defaults
- * (/company-accounting-defaults) and Perpetual Inventory (/perpetual-inventory).
+ * Store (ERPNext's Company, docs.frappe.io/erpnext/company-setup): the one store whose books these are — no
+ * branches, so no abbreviation and no cost centers (supabase/migrations/20261018162135_single_store.sql) — with
+ * its accounting defaults (/company-accounting-defaults) and Perpetual Inventory (/perpetual-inventory).
  */
 export function CompanyScreen({ merchant }: Props) {
   const countries = useCountriesQuery();
   const currencies = useCurrencyPresetsQuery();
   const accounts = useAccountsQuery({ merchantId: merchant.id });
-  const costCenters = useCostCentersQuery({ merchantId: merchant.id });
-  // The first of the four still missing decides the loading, offline or failure line.
-  const missing = [countries, currencies, accounts, costCenters].find((query) => !query.data);
+  // The first of the three still missing decides the loading, offline or failure line.
+  const missing = [countries, currencies, accounts].find((query) => !query.data);
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Company" meta={merchant.name} onBack={() => router.back()} />
-      {countries.data && currencies.data && accounts.data && costCenters.data ? (
-        <CompanyForm merchant={merchant} countries={countries.data} currencies={currencies.data} accounts={accounts.data} costCenters={costCenters.data} />
+      <PageHeader kicker="Setup" title="Store" meta={merchant.name} onBack={() => router.back()} />
+      {countries.data && currencies.data && accounts.data ? (
+        <CompanyForm merchant={merchant} countries={countries.data} currencies={currencies.data} accounts={accounts.data} />
       ) : (
         <View style={styles.state}>
           <QueryState
             query={missing ?? countries}
-            offline="You're offline. The company will load when you reconnect."
-            failure="Couldn't load the company. Try again."
+            offline="You're offline. The store will load when you reconnect."
+            failure="Couldn't load the store. Try again."
           />
         </View>
       )}
@@ -76,7 +73,7 @@ type AccountField = {
     | 'expenses_included_in_valuation';
   label: string;
   hint: string;
-  /** ERPNext's filter on the Company form, and private.validate_company_accounts's check. */
+  /** ERPNext's filter on its Company form, and private.validate_company_accounts's check. */
   fits: (account: Account) => boolean;
 };
 
@@ -122,21 +119,18 @@ const STOCK: AccountField[] = [
 const saveFailure = (error: Error | null) =>
   ['company_account_invalid', 'default_invalid'].includes(postgrestError(error)?.message ?? '')
     ? "One of the accounts can't be used there any more — it was disabled or changed. Pick it again."
-    : failureMessage("Couldn't save the company. Try again.");
+    : failureMessage("Couldn't save the store. Try again.");
 
 const defaults = (merchant: Merchant): CompanyFormValues => ({
   name: merchant.name,
-  abbr: merchant.abbr,
   country_code: merchant.country_code,
   default_currency: merchant.default_currency,
   default_cash_account: merchant.default_cash_account ?? '',
   default_bank_account: merchant.default_bank_account ?? '',
   default_income_account: merchant.default_income_account ?? '',
   default_expense_account: merchant.default_expense_account ?? '',
-  cost_center: merchant.cost_center ?? '',
   write_off_account: merchant.write_off_account ?? '',
   round_off_account: merchant.round_off_account ?? '',
-  round_off_cost_center: merchant.round_off_cost_center ?? '',
   default_discount_account: merchant.default_discount_account ?? '',
   enable_perpetual_inventory: merchant.enable_perpetual_inventory,
   default_inventory_account: merchant.default_inventory_account ?? '',
@@ -145,11 +139,11 @@ const defaults = (merchant: Merchant): CompanyFormValues => ({
   expenses_included_in_valuation: merchant.expenses_included_in_valuation ?? '',
 });
 
-type FormProps = Props & { countries: Country[]; currencies: CurrencyPreset[]; accounts: Account[]; costCenters: CostCenter[] };
+type FormProps = Props & { countries: Country[]; currencies: CurrencyPreset[]; accounts: Account[] };
 
-function CompanyForm({ merchant, countries, currencies, accounts, costCenters }: FormProps) {
+function CompanyForm({ merchant, countries, currencies, accounts }: FormProps) {
   const update = useUpdateCompanyMutation({ merchantId: merchant.id });
-  // Read-only without Company write (System Manager and Accounts Manager have it; the owner always does).
+  // Read-only without Company write (Store & Calendar grants it; the owner always has it).
   const editable = can(usePermissions({ merchantId: merchant.id }).data, 'Company', 'write');
   const notice = mutationNotice(update, saveFailure(update.error));
 
@@ -162,18 +156,6 @@ function CompanyForm({ merchant, countries, currencies, accounts, costCenters }:
   const inventoryAccount = useWatch({ control, name: 'default_inventory_account' });
   const save = handleSubmit(saveOnce(update, reset));
 
-  const costCenterSelect = (name: 'cost_center' | 'round_off_cost_center', label: string) => (
-    <ControlledSelect
-      control={control}
-      name={name}
-      label={label}
-      hint="Cost center"
-      title={label}
-      options={costCenterOptions(costCenters, merchant.abbr, merchant[name])}
-      disabled={!editable}
-    />
-  );
-
   const accountSelect = (field: AccountField) => (
     <ControlledSelect
       key={field.name}
@@ -182,35 +164,20 @@ function CompanyForm({ merchant, countries, currencies, accounts, costCenters }:
       label={field.label}
       hint={field.hint}
       title={field.label}
-      options={ledgerOptions(accounts, merchant.abbr, field.fits, merchant[field.name])}
+      options={ledgerOptions(accounts, field.fits, merchant[field.name])}
       disabled={!editable}
     />
   );
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Company write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Store & Calendar." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
       <FieldGrid>
-        <ControlledText control={control} name="name" label="Company Name" required placeholder="e.g. Corner Cafe" maxLength={80} disabled={!editable} />
-        <ControlledText
-          control={control}
-          name="abbr"
-          label="Abbreviation"
-          required
-          hint="Shown after account and warehouse names"
-          autoCapitalize="characters"
-          maxLength={10}
-          disabled={!editable}
-        />
+        <ControlledText control={control} name="name" label="Store Name" required placeholder="e.g. Corner Cafe" maxLength={80} disabled={!editable} />
         <CountryCurrencyFields control={control} countries={countries} currencies={currencies} disabled={!editable} />
       </FieldGrid>
 
       <SectionHeading title="Accounts" hint="Used when an item, payment or line names no account of its own" />
-      <FieldGrid>
-        {ACCOUNTS.slice(0, 4).map(accountSelect)}
-        {costCenterSelect('cost_center', 'Default Cost Center')}
-        {ACCOUNTS.slice(4).map(accountSelect)}
-        {costCenterSelect('round_off_cost_center', 'Round Off Cost Center')}
-      </FieldGrid>
+      <FieldGrid>{ACCOUNTS.map(accountSelect)}</FieldGrid>
 
       <SectionHeading title="Stock" hint="How stock shows in the books" />
       {/* ERPNext only warns here: a warehouse's own inventory account can still serve (docs …/accounting-of-inventory-stock). */}

@@ -31,7 +31,7 @@ export function EmployeePage({ merchant, isOwner, memberId }: { merchant: Mercha
         <View style={styles.state}>
           <QueryState query={employees} offline="You're offline. Their permissions will load when you reconnect." failure="Couldn't load their permissions. Try again.">
             {/* Loaded, and the employee is not there: revoked, or a stale link. */}
-            <Text variant="bodyMedium">This employee is no longer in this system.</Text>
+            <Text variant="bodyMedium">This employee is no longer in this store.</Text>
           </QueryState>
         </View>
       )}

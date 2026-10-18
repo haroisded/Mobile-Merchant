@@ -6,7 +6,7 @@ import { EXPIRY_CHOICES } from './code';
 // expiry into create_access_codes' arguments, and the database works out the instant.
 export const newAccessCodeSchema = z
   .object({
-    merchant_id: z.string().min(1, 'Pick a system.'),
+    merchant_id: z.string().min(1, 'Pick a store.'),
     label: z.string().trim().max(40, 'Use 40 characters or fewer.'),
     quantity: z.number().int().min(1, 'Make at least 1 code.').max(20, 'Make 20 codes or fewer at a time.'),
     expiry: z.enum(EXPIRY_CHOICES.map((choice) => choice.value)),

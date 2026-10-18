@@ -13,7 +13,7 @@ export const bringsTo = (purpose: string) => purpose !== 'Material Issue';
 
 /**
  * Form input, so Zod (.claude/instruction_mds/data-layer.md §3); save_stock_entry takes the same object. Which
- * warehouse, account and cost center it may name, and whether the stock is there to move, are the database's
+ * warehouse and account it may name, and whether the stock is there to move, are the database's
  * rules (private.validate_stock_document, private.post_sle) — a draft saves without them and Submit checks.
  */
 export const stockEntrySchema = z
@@ -26,7 +26,6 @@ export const stockEntrySchema = z
     from_warehouse: z.string(),
     to_warehouse: z.string(),
     difference_account: z.string(),
-    cost_center: z.string(),
     items: z.array(
       z.object({
         item_id: z.string().min(1, 'Pick an item.'),

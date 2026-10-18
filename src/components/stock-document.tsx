@@ -2,9 +2,7 @@ import type { Control, FieldPathByValue, FieldValues } from 'react-hook-form';
 
 import { ledgerOptions, useAccountsQuery } from '../features/accounts/queries';
 import type { Account } from '../features/accounts/queries';
-import { costCenterOptions, useCostCentersQuery } from '../features/cost-centers/queries';
-import type { CostCenter } from '../features/cost-centers/queries';
-import { useItemsQuery } from '../features/items/queries';
+import { stockItemOptions, useItemsQuery } from '../features/items/queries';
 import type { Item } from '../features/items/queries';
 import { useSystemSettingsQuery } from '../features/system-settings/queries';
 import { useUomsQuery } from '../features/uoms/queries';
@@ -25,7 +23,6 @@ export type StockDocumentRecords = {
   uoms: Uom[];
   warehouses: Warehouse[];
   accounts: Account[];
-  costCenters: CostCenter[];
   /** Today where the business is ("YYYY-MM-DD"): a new document's Posting Date. */
   today: string;
 };
@@ -40,22 +37,14 @@ export function useStockDocumentRecords(merchantId: string) {
   const uoms = useUomsQuery({ merchantId });
   const warehouses = useWarehousesQuery({ merchantId });
   const accounts = useAccountsQuery({ merchantId });
-  const costCenters = useCostCentersQuery({ merchantId });
   const settings = useSystemSettingsQuery({ merchantId });
 
   const records: StockDocumentRecords | undefined =
-    items.data && uoms.data && warehouses.data && accounts.data && costCenters.data && settings.data
-      ? {
-          items: items.data,
-          uoms: uoms.data,
-          warehouses: warehouses.data,
-          accounts: accounts.data,
-          costCenters: costCenters.data,
-          today: todayIn(settings.data.time_zone),
-        }
+    items.data && uoms.data && warehouses.data && accounts.data && settings.data
+      ? { items: items.data, uoms: uoms.data, warehouses: warehouses.data, accounts: accounts.data, today: todayIn(settings.data.time_zone) }
       : undefined;
 
-  return { records, loading: [items, uoms, warehouses, accounts, costCenters, settings].find((query) => !query.data) };
+  return { records, loading: [items, uoms, warehouses, accounts, settings].find((query) => !query.data) };
 }
 
 type QuantityProps<T extends FieldValues> = {
@@ -66,6 +55,21 @@ type QuantityProps<T extends FieldValues> = {
   itemId: string | undefined;
   disabled: boolean;
 };
+
+/** A row's Item: a stock item, or the one the row already names. */
+export function ItemField<T extends FieldValues>({ control, name, records, itemId, disabled }: QuantityProps<T>) {
+  return (
+    <ControlledSelect
+      control={control}
+      name={name}
+      label="Item"
+      required
+      title="Item"
+      options={stockItemOptions(records.items, itemId)}
+      disabled={disabled}
+    />
+  );
+}
 
 /** A row's Quantity. Both documents count in the item's stock unit, so the field says which that is. */
 export function QuantityField<T extends FieldValues>({ control, name, records, itemId, disabled }: QuantityProps<T>) {
@@ -101,14 +105,12 @@ export function PostedAmount({ label, hint, value, money }: PostedProps) {
 
 type AccountingProps<T extends FieldValues> = {
   control: Control<T>;
-  /** The form's field for each. */
-  names: Record<'account' | 'costCenter', FieldPathByValue<T, string>>;
+  /** The form's Difference Account field. */
+  name: FieldPathByValue<T, string>;
   records: StockDocumentRecords;
-  /** The company's abbreviation, shown after account and cost center names. */
-  abbr: string;
   /** The saved document: what it names stays listed once disabled. A new one says what an empty field takes. */
-  saved: { difference_account: string | null; cost_center: string | null } | undefined;
-  /** What an empty Difference Account becomes on a new document ("the company's Stock Adjustment Account"). */
+  saved: { difference_account: string | null } | undefined;
+  /** What an empty Difference Account becomes on a new document ("the store's Stock Adjustment Account"). */
   accountDefault: string;
   /** The ledgers the Difference Account may be. */
   fits: (account: Account) => boolean;
@@ -117,30 +119,21 @@ type AccountingProps<T extends FieldValues> = {
 
 /**
  * Where a stock document's change in stock value goes in the books (docs.frappe.io/erpnext/perpetual-inventory):
- * its Difference Account and Cost Center. On a new document an empty one is filled by the database
+ * its Difference Account. On a new document an empty one is filled by the database
  * (private.validate_stock_document), so the field says with what.
  */
-export function StockDocumentAccounting<T extends FieldValues>({ control, names, records, abbr, saved, accountDefault, fits, disabled }: AccountingProps<T>) {
+export function StockDocumentAccounting<T extends FieldValues>({ control, name, records, saved, accountDefault, fits, disabled }: AccountingProps<T>) {
   return (
     <>
       <SectionHeading title="Accounting" hint="With Perpetual Inventory on, where the change in stock value goes in the books" />
       <FieldGrid>
         <ControlledSelect
           control={control}
-          name={names.account}
+          name={name}
           label="Difference Account"
           hint={saved ? undefined : `Empty: ${accountDefault}`}
           title="Difference Account"
-          options={ledgerOptions(records.accounts, abbr, fits, saved?.difference_account)}
-          disabled={disabled}
-        />
-        <ControlledSelect
-          control={control}
-          name={names.costCenter}
-          label="Cost Center"
-          hint={saved ? undefined : "Empty: the company's Cost Center"}
-          title="Cost Center"
-          options={costCenterOptions(records.costCenters, abbr, saved?.cost_center)}
+          options={ledgerOptions(records.accounts, fits, saved?.difference_account)}
           disabled={disabled}
         />
       </FieldGrid>

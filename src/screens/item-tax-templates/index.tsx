@@ -31,7 +31,7 @@ export function ItemTaxTemplates({ merchant }: { merchant: Merchant }) {
     template.item_tax_template_rows
       .map((row) => {
         const account = accounts?.find((candidate) => candidate.id === row.account);
-        return `${account ? accountLabel(account, merchant.abbr) : '…'} ${row.not_applicable ? 'not applicable' : `${row.tax_rate}%`}`;
+        return `${account ? accountLabel(account) : '…'} ${row.not_applicable ? 'not applicable' : `${row.tax_rate}%`}`;
       })
       .join(', ') || 'No rates';
 

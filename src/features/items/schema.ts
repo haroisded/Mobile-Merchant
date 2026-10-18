@@ -37,7 +37,6 @@ export const itemSchema = (codeTyped: boolean) =>
       sales_uom: z.string(),
       default_warehouse: z.string(),
       default_price_list: z.string(),
-      selling_cost_center: z.string(),
       income_account: z.string(),
       expense_account: z.string(),
       // items_max_discount: a percentage; blank or 0 is no limit.

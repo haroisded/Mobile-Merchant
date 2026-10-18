@@ -9,8 +9,9 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useSalesTaxTemplatesQuery } from '../../features/sales-tax-templates/queries';
 import type { SalesTaxTemplate } from '../../features/sales-tax-templates/queries';
 import { useTaxCategoriesQuery } from '../../features/tax-categories/queries';
+import { spacing } from '../../themes';
 
-// A long form with its rows and a preview: a page of the Setup stack at every width, not a forms/ Dialog
+// A long form with its rows: a page of the Setup stack at every width, not a forms/ Dialog
 // (.claude/instruction_mds/frontend.md §4.4).
 const openTemplate = (merchantId: string, templateId?: string) =>
   router.push({ pathname: '/systems/[id]/setup/sales-tax-template', params: templateId ? { id: merchantId, templateId } : { id: merchantId } });
@@ -40,11 +41,19 @@ export function SalesTaxTemplates({ merchant }: { merchant: Merchant }) {
         meta={templates.data ? (fallback ? `Default: ${fallback}` : 'No default template') : undefined}
         onBack={() => router.back()}
         actions={
-          can(permissions, 'Sales Taxes and Charges Template', 'create') ? (
-            <Button mode="contained" icon="add" onPress={() => openTemplate(merchant.id)} contentStyle={styles.leading}>
-              New Template
-            </Button>
-          ) : null
+          <View style={styles.actions}>
+            {/* Left of New Template: a saved template on a sample line (./test-template.tsx), as Tax Rules' Which Template? */}
+            {templates.data && templates.data.length > 0 ? (
+              <Button mode="outlined" icon="search" onPress={() => router.push({ pathname: '/forms/test-sales-tax-template', params: { merchantId: merchant.id } })} contentStyle={styles.leading}>
+                Test Template
+              </Button>
+            ) : null}
+            {can(permissions, 'Sales Taxes and Charges Template', 'create') ? (
+              <Button mode="contained" icon="add" onPress={() => openTemplate(merchant.id)} contentStyle={styles.leading}>
+                New Template
+              </Button>
+            ) : null}
+          </View>
         }
       />
       <RecordList
@@ -72,4 +81,5 @@ export function SalesTaxTemplates({ merchant }: { merchant: Merchant }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   leading: { justifyContent: 'flex-start' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

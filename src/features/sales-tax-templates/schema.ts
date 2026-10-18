@@ -12,7 +12,6 @@ const rowSchema = z.object({
   // Reference Row #, "1", "2" …; '' unless the type reads an earlier row.
   row_id: z.string(),
   included_in_print_rate: z.boolean(),
-  cost_center: z.string(),
 });
 
 export type SalesTaxRowValues = z.infer<typeof rowSchema>;
@@ -67,6 +66,31 @@ export const salesTaxTemplateSchema = z
   });
 
 export type SalesTaxTemplateValues = z.infer<typeof salesTaxTemplateSchema>;
+
+type SavedRow = {
+  charge_type: string;
+  account: string;
+  description: string;
+  rate: number;
+  tax_amount: number;
+  row_id: number | null;
+  included_in_print_rate: boolean;
+};
+
+/**
+ * A saved template's rows as form rows: what its page edits, and what Test Template runs through calculate.ts
+ * (src/screens/sales-tax-templates/test-template.tsx). An unknown type reads as On Net Total.
+ */
+export const formRows = (rows: SavedRow[]): SalesTaxRowValues[] =>
+  rows.map((row) => ({
+    charge_type: CHARGE_TYPES.find((type) => type === row.charge_type) ?? 'On Net Total',
+    account: row.account,
+    description: row.description,
+    rate: String(row.rate),
+    tax_amount: String(row.tax_amount),
+    row_id: row.row_id === null ? '' : String(row.row_id),
+    included_in_print_rate: row.included_in_print_rate,
+  }));
 
 /** A form row as calculate.ts and save_sales_tax_template take it: numbers, and a reference only where it applies. */
 export const taxRow = (row: SalesTaxRowValues) => ({

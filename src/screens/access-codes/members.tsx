@@ -19,7 +19,7 @@ import { spacing } from '../../themes';
 /** "via A4F-7K2" — the code they joined with. */
 const via = (member: OwnedMember) => (member.access_code ? `via ${formatCode(member.access_code)}` : '');
 
-/** Everyone let into the owner's systems, newest first. A row asks to revoke. */
+/** Everyone let into the owner's stores, newest first. A row asks to revoke. */
 export function Members() {
   const { colors } = useAppTheme();
   const wide = useShellWide();
@@ -54,7 +54,7 @@ export function Members() {
       title: `Revoke ${memberName(member)}?`,
       body: [
         `They lose ${member.merchants.name} at once and are told so. To come back they need a new code.`,
-        opened.length > 0 ? `They're the only user of ${opened.join(', ')}: without them, anyone in the system can use ${opened.length === 1 ? 'it' : 'those'}.` : null,
+        opened.length > 0 ? `They're the only user of ${opened.join(', ')}: without them, anyone in the store can use ${opened.length === 1 ? 'it' : 'those'}.` : null,
       ]
         .filter(Boolean)
         .join(' '),
@@ -76,7 +76,7 @@ export function Members() {
           dense
           value={search}
           onChangeText={setSearch}
-          placeholder="Search by name, email or system"
+          placeholder="Search by name, email or store"
           accessibilityLabel="Search members"
           left={<TextInput.Icon icon="search" />}
         />
@@ -87,7 +87,7 @@ export function Members() {
         columns={[
           { label: 'Name', flex: 2, cell: memberName },
           { label: 'Email', flex: 2.5, cell: (member) => member.email ?? '' },
-          { label: 'System', flex: 2, cell: (member) => member.merchants.name },
+          { label: 'Store', flex: 2, cell: (member) => member.merchants.name },
           { label: 'Code', flex: 1.2, cell: (member) => (member.access_code ? formatCode(member.access_code) : '') },
           { label: 'Joined', flex: 1.6, cell: (member) => displayDateTime(member.created_at) },
           { label: '', flex: 1, cell: () => '', node: () => revokeWord },

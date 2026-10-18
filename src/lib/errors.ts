@@ -95,7 +95,6 @@ const POSTING_REFUSALS = new Map([
   ['posting_outside_fiscal_year', 'No enabled fiscal year covers the posting date. Add or enable one in Fiscal Years.'],
   ['accounts_frozen', 'Accounts are frozen up to this date (Accounts Settings). Pick a later date, or ask someone who may post into a frozen period.'],
   ['account_unusable', "An account this posts to is a group or disabled. Check the document's accounts and the warehouse's account."],
-  ['cost_center_unusable', 'The cost center is a group or disabled. Pick another.'],
   ['gl_unbalanced', "The debits and credits don't balance, so nothing was posted."],
   ['item_unusable', 'One of the items is disabled or keeps no stock. Remove it, or change the item.'],
   ['warehouse_unusable', 'One of the warehouses is a group or disabled. Pick another.'],
@@ -104,11 +103,11 @@ const POSTING_REFUSALS = new Map([
   ['rate_required', 'One of the items has no rate to value it at. Enter a rate, or receive it first.'],
   ['insufficient_stock', "There isn't enough stock in the warehouse for this. Receive more first, or allow negative stock."],
   ['cancel_blocked', "Later stock movements build on this one, so it can't be reversed. Reverse those first."],
-  ['document_link_invalid', "A warehouse, account or cost center on it can't be used any more — pick it again."],
+  ['document_link_invalid', "A warehouse or account on it can't be used any more — pick it again."],
   ['opening_account_invalid', "An Opening Stock's Difference Account is an asset or liability account, such as Temporary Opening."],
   ['difference_account_required', 'Pick a Difference Account first: the change in stock value needs somewhere to go.'],
   ['valuation_rate_required', 'Every row with a quantity needs a Valuation Rate above 0.'],
-  ['no_inventory_account', 'The warehouse has no account, and the company has no Default Inventory Account. Set one first.'],
+  ['no_inventory_account', 'The warehouse has no account, and the store has no Default Inventory Account. Set one first.'],
   ['nothing_to_reconcile', 'Nothing would change: every row already matches the books.'],
   ['no_rows', 'Add at least one item first.'],
   ['stock_entry_not_found', "It no longer exists, or you can't change it."],
@@ -183,7 +182,7 @@ export function itemRefusal(cause: Error | null): string | null {
 const ACCESS_REFUSALS = new Map([
   ['permission_requires', 'A permission is on without the one it needs. Turn that one on too.'],
   ['role_not_found', 'That role no longer exists. Go back and open Roles again.'],
-  ['member_not_found', 'That employee is no longer in this system.'],
+  ['member_not_found', 'That employee is no longer in this store.'],
 ]);
 
 /** The words for a role or an employee's access the database refused to save — null for any other failure. */

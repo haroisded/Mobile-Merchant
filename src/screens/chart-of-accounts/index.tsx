@@ -22,7 +22,7 @@ export function ChartOfAccounts({ merchant }: { merchant: Merchant }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const { parent, open } = useFolder('/systems/[id]/setup/chart-of-accounts', merchant.id);
   const folder = accounts.data?.find((account) => account.id === parent);
-  const label = (account: Account) => accountLabel(account, merchant.abbr);
+  const label = (account: Account) => accountLabel(account);
   const edit = can(permissions, 'Account', 'write') ? (account: Account) => openForm({ merchantId: merchant.id, accountId: account.id }) : undefined;
 
   return (
