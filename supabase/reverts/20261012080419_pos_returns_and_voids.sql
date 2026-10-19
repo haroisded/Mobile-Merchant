@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261012080419_pos_returns_and_voids.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every return (a POS Invoice with is_return) with its rows, and what each tax row charged
 -- each line. It does NOT take back what the returns posted: their gl_entries and stock_ledger_entries stay,

@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261012085548_pos_invoice_discounts.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: what every sale kept of its discounts — on a line its Discount (%), Discount Amount, its
 -- share of the additional discount, its Pricing Rule and the account its discount posted to; on the sale

@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261009091028_taxes.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Tax Categories, Sales Taxes and Charges Templates and Item Tax Templates, with
 -- their rows, and their rules in role_permissions. The tax ledgers the seed added under Duties and Taxes stay

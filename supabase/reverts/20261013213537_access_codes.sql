@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261013213537_access_codes.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every access code, access request and notification, and the members who joined without an
 -- email (a Facebook account may have none). The members left go back to being invited by email.

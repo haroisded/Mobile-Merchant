@@ -8,7 +8,7 @@
 -- The app expects the scoped shape (src/features/products/resources.ts, the three Resources screens),
 -- so regenerate src/lib/database.types.ts after running this.
 --
--- Newest revert, so nothing has to run before it (.claude/instruction_mds/migrations.md rule 6).
+-- Newest revert, so nothing has to run before it (.claude/instruction-mds/migrations.md rule 6).
 
 drop trigger if exists set_product_scope on public.products;
 drop function if exists private.set_product_scope();

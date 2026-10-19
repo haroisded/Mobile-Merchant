@@ -7,7 +7,7 @@
 --
 -- Fails on purpose while a stock item has no category: give it one first rather than lose the item.
 --
--- Run 20260929100100_stock_ledger.sql's revert first (.claude/instruction_mds/migrations.md rule 6). The app
+-- Run 20260929100100_stock_ledger.sql's revert first (.claude/instruction-mds/migrations.md rule 6). The app
 -- expects the new shape — src/features/products and src/lib/database.types.ts — so regenerate the types
 -- after running this.
 

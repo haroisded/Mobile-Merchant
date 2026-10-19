@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261009171705_stock_building_blocks.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Warehouses, Units of Measure, UOM Conversion Factors, Price Lists and Brands,
 -- the Warehouse User Permissions, and their rules in role_permissions. Regenerate src/lib/database.types.ts

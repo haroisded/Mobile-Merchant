@@ -13,7 +13,7 @@
 -- What stays: public.profiles with its signup trigger and delete_current_user; public.merchants as
 -- id, owner_id, name and created_at, with its four owner policies; private.rls_auto_enable; and
 -- private.current_merchant_ids() WITH its two grants to `authenticated` — the tenancy seam the next
--- business tables call (.claude/instruction_mds/tenancy.md §4). It goes back to having no caller, which is
+-- business tables call (.claude/instruction-mds/tenancy.md §4). It goes back to having no caller, which is
 -- how it started.
 --
 -- The order is the dependency order, because nothing here uses `cascade`: a dependent this file
@@ -26,7 +26,7 @@
 -- `if exists` everywhere, so a clone pointed at a fresh project — which runs every earlier
 -- migration first — and a project where some of this is already gone both succeed.
 --
--- No revert file (.claude/instruction_mds/migrations.md rule 2): reverting would rebuild a schema no screen
+-- No revert file (.claude/instruction-mds/migrations.md rule 2): reverting would rebuild a schema no screen
 -- uses, and the rows it held would not come back with it.
 -- no-revert: drop-only; its revert would recreate a schema no screen uses, without its data
 

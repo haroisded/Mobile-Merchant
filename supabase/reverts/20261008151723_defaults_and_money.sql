@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261008151723_defaults_and_money.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's System Settings, Global Defaults and Currency rows. Regenerate
 -- src/lib/database.types.ts afterwards — the Defaults & Money screens read these tables.

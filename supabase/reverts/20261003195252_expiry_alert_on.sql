@@ -1,13 +1,8 @@
--- Reverts 20261001110000_group_category.sql.
+-- Reverts 20261003195252_expiry_alert_on.sql.
 --
--- Items keep the category §2 and §3 gave them; only the group's own category and the triggers go.
+-- DESTROYS DATA: every Inventory item's Expiry alert date. Regenerate src/lib/database.types.ts after.
 
-drop trigger if exists product_groups_category_to_items on public.product_groups;
-drop trigger if exists products_group_category on public.products;
-drop function if exists private.group_category_to_items();
-drop function if exists private.group_category_to_item();
-
--- save_stock_item as 20260929100000_stock_items.sql §7.
+-- save_stock_item as 20261001052003_group_category.sql §4.
 create or replace function public.save_stock_item(payload jsonb)
 returns uuid
 language plpgsql
@@ -27,6 +22,12 @@ begin
     insert into public.product_groups (merchant_id, name) values (p.merchant_id, v_group_name)
     on conflict (merchant_id, name) do update set name = excluded.name
     returning id into v_group;
+  end if;
+
+  if v_group is not null and p.category_id is not null then
+    update public.product_groups
+    set category_id = p.category_id, subcategory_id = p.subcategory_id
+    where id = v_group and category_id is null;
   end if;
 
   if p.id is null then
@@ -73,12 +74,4 @@ $$;
 revoke execute on function public.save_stock_item(jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.save_stock_item(jsonb) to authenticated;
 
-drop index if exists public.product_groups_subcategory_id_idx;
-drop index if exists public.product_groups_category_id_idx;
-alter table if exists public.product_groups drop constraint if exists product_groups_subcategory_fk;
-alter table if exists public.product_groups drop constraint if exists product_groups_category_fk;
-alter table if exists public.product_groups drop constraint if exists product_groups_scope_inventory;
-alter table if exists public.product_groups
-  drop column if exists scope,
-  drop column if exists subcategory_id,
-  drop column if exists category_id;
+alter table public.products drop column if exists expiry_alert_on;

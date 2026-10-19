@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261008152613_chart_of_accounts.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Chart of Accounts and Cost Centers, and the Account and Cost Center
 -- rules in role_permissions and user_permissions. Regenerate src/lib/database.types.ts afterwards — the

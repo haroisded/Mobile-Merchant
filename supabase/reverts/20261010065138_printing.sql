@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261010065138_printing.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's print formats, letter heads and Print Settings, and their rules in
 -- role_permissions. Regenerate src/lib/database.types.ts afterwards — the Print Formats, Letter Heads and

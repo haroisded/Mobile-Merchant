@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261012004616_pos_shift_and_sale.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's POS Opening Entries, POS Invoices and POS Closing Entries with their rows,
 -- their rules in role_permissions, and the two entries' naming series and counters. It does NOT take back

@@ -2,7 +2,7 @@
 -- (expiry_alert_days, warn N days before each lot expires); the human chose a date on 2026-10-04.
 --
 -- 1. products.expiry_alert_on, a date. Null is no alert; a lot past its own expiry still reads Expired.
--- 2. save_stock_item: as 20261001110000_group_category.sql §4, writing expiry_alert_on in place of
+-- 2. save_stock_item: as 20261001052003_group_category.sql §4, writing expiry_alert_on in place of
 --    expiry_alert_days.
 --
 -- expiry_alert_days stays. The Assets product form still writes it, and nothing backfills a date from it:

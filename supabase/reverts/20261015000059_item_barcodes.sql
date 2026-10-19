@@ -1,5 +1,5 @@
 -- Revert of the item-barcodes migration (same filename under supabase/migrations/). Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS EVERY ITEM'S BARCODE: the column goes with its values. public.save_item goes back to the body
 -- 20261014170428_backend_performance.sql gave it. Regenerate src/lib/database.types.ts afterwards (items loses

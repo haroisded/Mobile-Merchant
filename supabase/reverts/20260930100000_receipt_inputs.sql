@@ -6,7 +6,7 @@
 -- FAILS while any receipt has no supplier or any lot has no lot number: the not null constraints cannot
 -- come back over those rows. Give them a supplier and a lot number, or void and remove them, first.
 --
--- Run this before 20260929100100_stock_ledger.sql's revert (.claude/instruction_mds/migrations.md rule 6), and
+-- Run this before 20260929100100_stock_ledger.sql's revert (.claude/instruction-mds/migrations.md rule 6), and
 -- regenerate src/lib/database.types.ts after.
 
 -- One lot, its cases and a row per pack, and a receive movement per pack. Shared by save_receipt,

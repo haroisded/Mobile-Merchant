@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261010064803_naming_series.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's naming series and the counters behind them — the next document under a
 -- series would start from 1 again — and their rules in role_permissions. Regenerate

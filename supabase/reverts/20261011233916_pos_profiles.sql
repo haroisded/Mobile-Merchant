@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261011233916_pos_profiles.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's POS Profiles with their users, payment methods and item groups, and their
 -- rules in role_permissions. Regenerate src/lib/database.types.ts afterwards — the POS Profiles screens read

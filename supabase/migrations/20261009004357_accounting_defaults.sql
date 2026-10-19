@@ -3,7 +3,7 @@
 -- /perpetual-inventory, /accounting-of-inventory-stock, /accounts-settings).
 --
 -- 1. The Company's accounting defaults, as merchants columns (a system IS its company,
---    .claude/instruction_mds/tenancy.md rule 10): the fallback Cash, Bank, Income and Expense accounts, Cost
+--    .claude/instruction-mds/tenancy.md rule 10): the fallback Cash, Bank, Income and Expense accounts, Cost
 --    Center, Write Off and Round Off — used when an item, warehouse, mode of payment or row gives none.
 -- 2. Perpetual Inventory, also on the Company: on by default, with the four accounts every stock movement
 --    posts to. ERPNext only warns when it is on without a Default Inventory Account, and so does this app.

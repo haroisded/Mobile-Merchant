@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261008101635_company_and_fiscal_year.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every fiscal year, and every system's abbreviation, country and default currency.
 -- Regenerate src/lib/database.types.ts afterwards — Create System and Company still send those fields.

@@ -7,7 +7,7 @@
 -- 2. Per system: roles, role profiles, members (ERPNext's User), their roles, the editable role matrix
 --    (Role Permissions Manager) and User Permissions.
 -- 3. The engine the policies call. private.permitted_merchant_ids(doctype, ptype) is the seam
---    (.claude/instruction_mds/tenancy.md): every business table's policy asks it, and only its body
+--    (.claude/instruction-mds/tenancy.md): every business table's policy asks it, and only its body
 --    changes as access grows.
 -- 4. Claiming an invite: a member row attaches to the account with that confirmed email, whichever of
 --    the two arrives first.

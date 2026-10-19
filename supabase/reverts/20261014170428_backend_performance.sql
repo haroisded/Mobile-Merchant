@@ -1,5 +1,5 @@
 -- Revert of the backend-performance migration (same filename under supabase/migrations/). Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- Destroys no data: function bodies, three indexes and two tables' storage settings. The nine functions are
 -- put back exactly as the database held them before (as pg_dump prints them); their signatures never changed,

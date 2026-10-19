@@ -5,7 +5,7 @@
 -- holds survives. The code counters go too, so a re-apply starts SUP, SKU, RC and LOT numbering over.
 --
 -- Run 20260928100100_stock_items.sql's revert first: its SKU trigger calls private.assign_code()
--- (.claude/instruction_mds/migrations.md rule 6). The app expects the new shape — src/features/suppliers and
+-- (.claude/instruction-mds/migrations.md rule 6). The app expects the new shape — src/features/suppliers and
 -- src/lib/database.types.ts — so regenerate the types after running this.
 
 drop trigger if exists suppliers_assign_code on public.suppliers;

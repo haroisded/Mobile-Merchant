@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261011134357_item_prices.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Item Prices, and their rules in role_permissions. Regenerate
 -- src/lib/database.types.ts afterwards — the Item Prices screens read this table.

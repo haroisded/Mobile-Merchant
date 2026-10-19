@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261011170112_stock_in_and_adjustments.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6), and before the revert of 20261011165554_ledgers.sql.
+-- (.claude/instruction-mds/migrations.md rule 6), and before the revert of 20261011165554_ledgers.sql.
 --
 -- DESTROYS DATA: EVERY STOCK RECONCILIATION AND STOCK ENTRY OF EVERY SYSTEM, their rules in
 -- role_permissions, and their rows in Document Naming Settings. The General Ledger and Stock Ledger entries

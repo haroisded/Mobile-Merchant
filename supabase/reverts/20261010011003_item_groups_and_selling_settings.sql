@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261010011003_item_groups_and_selling_settings.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Item Groups with their Item Tax rows, its Selling Settings, the Item Group
 -- User Permissions, and their rules in role_permissions. Regenerate src/lib/database.types.ts afterwards — the

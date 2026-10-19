@@ -5,7 +5,7 @@
 -- so what is on hand survives as a number with no lot, expiry or history behind it. Re-applying turns
 -- those numbers back into Inventory-added stock.
 --
--- Run this before 20260929100000_stock_items.sql's revert (.claude/instruction_mds/migrations.md rule 6). The app
+-- Run this before 20260929100000_stock_items.sql's revert (.claude/instruction-mds/migrations.md rule 6). The app
 -- expects the new shape — src/features and src/lib/database.types.ts — so regenerate the types after.
 
 drop function if exists public.void_receipt(uuid, text);

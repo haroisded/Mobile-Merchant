@@ -8,7 +8,7 @@
 --    issuing country's definition (USD from the United States), else the one most countries use.
 -- 2. merchants becomes the Company: abbreviation, country, default currency. Multi-company is out of
 --    scope, so a system IS its company, and there is no second tenant table
---    (.claude/instruction_mds/tenancy.md rule 5).
+--    (.claude/instruction-mds/tenancy.md rule 5).
 -- 3. fiscal_years.
 -- 4. The seed trigger that gives every new system its first fiscal year, as ERPNext's setup wizard does.
 --

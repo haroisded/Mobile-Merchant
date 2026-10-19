@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261011134250_items.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Items with their UOMs and Item Tax rows, and their rules in role_permissions.
 -- Regenerate src/lib/database.types.ts afterwards — the Items screens read these tables.

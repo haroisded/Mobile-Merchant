@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261009004450_modes_of_payment.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Modes of Payment, and the Mode of Payment rules in role_permissions.
 -- Regenerate src/lib/database.types.ts afterwards — the Modes of Payment screens read this table.

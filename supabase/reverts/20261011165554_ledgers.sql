@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261011165554_ledgers.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6): the stock documents' revert comes before this one.
+-- (.claude/instruction-mds/migrations.md rule 6): the stock documents' revert comes before this one.
 --
 -- DESTROYS DATA: EVERY GENERAL LEDGER ENTRY, STOCK LEDGER ENTRY AND STOCK BALANCE OF EVERY SYSTEM, and the
 -- Submit and Cancel permissions in every system's Role Permissions Manager. Regenerate

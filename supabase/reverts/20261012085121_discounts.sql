@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261012085121_discounts.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every Pricing Rule with its rows, and its rules in role_permissions; each item's Max
 -- Discount and Discount Account; each POS Profile's four discount fields; the Company's Default Discount

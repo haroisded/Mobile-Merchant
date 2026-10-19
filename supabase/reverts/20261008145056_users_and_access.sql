@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261008145056_users_and_access.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every member, role, role profile, role permission and user permission of every system.
 -- Members lose the systems they were invited to; owners keep theirs. Fiscal years and merchants go back to

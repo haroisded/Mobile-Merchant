@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261010011013_stock_settings.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Stock Settings and their rules in role_permissions. Regenerate
 -- src/lib/database.types.ts afterwards — the Stock Settings screen reads this table.

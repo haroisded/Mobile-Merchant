@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261012131350_access_for_documents.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- Destroys no row of a system. It drops public.doctype_links (reference data a migration wrote), and a User
 -- Permission goes back to restricting only its own doctype's records: documents, ledgers, Items and POS

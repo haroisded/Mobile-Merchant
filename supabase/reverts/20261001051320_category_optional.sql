@@ -1,4 +1,4 @@
--- Reverts 20261001100000_category_optional.sql.
+-- Reverts 20261001051320_category_optional.sql.
 --
 -- FAILS while any product that is neither a draft nor a stock item has no category: give those a
 -- category, or set them back to draft, first.

@@ -7,7 +7,7 @@
 -- src/features/tax-classes, src/features/suppliers and src/lib/database.types.ts all name it — so
 -- regenerate the types after running this.
 --
--- Newest revert, so nothing has to run before it (.claude/instruction_mds/migrations.md rule 6).
+-- Newest revert, so nothing has to run before it (.claude/instruction-mds/migrations.md rule 6).
 
 drop function if exists public.save_product(jsonb);
 

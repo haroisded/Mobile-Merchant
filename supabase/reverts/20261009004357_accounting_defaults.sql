@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261009004357_accounting_defaults.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Accounts Settings, and the Company's accounting defaults and Perpetual
 -- Inventory switch. Regenerate src/lib/database.types.ts afterwards — the Company and Accounts Settings

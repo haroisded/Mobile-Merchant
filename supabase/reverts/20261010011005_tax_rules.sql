@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261010011005_tax_rules.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- DESTROYS DATA: every system's Tax Rules and their rules in role_permissions. Regenerate
 -- src/lib/database.types.ts afterwards — the Tax Rules screen reads this table.

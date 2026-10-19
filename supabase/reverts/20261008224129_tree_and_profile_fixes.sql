@@ -1,5 +1,5 @@
 -- Revert of the matching migration in supabase/migrations/. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- Puts back private.validate_tree() as 20261008152613_chart_of_accounts.sql wrote it — including its
 -- bug: editing a cost-center group with children fails again. Destroys no data. The backfilled

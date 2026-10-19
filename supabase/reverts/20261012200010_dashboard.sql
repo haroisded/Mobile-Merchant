@@ -1,5 +1,5 @@
 -- Revert of supabase/migrations/20261012200010_dashboard.sql. Run newest first
--- (.claude/instruction_mds/migrations.md rule 6).
+-- (.claude/instruction-mds/migrations.md rule 6).
 --
 -- Destroys no data: four read-only functions and nothing else. Regenerate src/lib/database.types.ts
 -- afterwards — the Dashboard calls all four.
