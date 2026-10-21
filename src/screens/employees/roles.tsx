@@ -23,7 +23,7 @@ import { RoleDot } from './role-chip';
 import { RoleEditor, roleValues } from './editor/role-editor';
 import { useEmployees } from './use-employees';
 import type { EmployeesData } from './use-employees';
-import { useDiscard } from './use-discard';
+import { useDiscard } from '../../components/use-discard';
 
 /**
  * Roles: each role's colour, how many hold it and how many permissions it has. On a phone a row opens the role's

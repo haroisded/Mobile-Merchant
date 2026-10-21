@@ -19,7 +19,7 @@ export const unstable_settings = { anchor: '(tabs)' };
 // with no file is ignored, and a file with no name here still routes — as an ordinary full-screen
 // push with no sheet presentation and no contentStyle, which is how delete-product shipped as a
 // top-aligned white screen (a tester's report, 2026-09-19 — commit 5076055).
-const SHEETS = ['sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/pick', 'sheets/remove-system'];
+const SHEETS = ['sheets/about', 'sheets/confirm','sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/pick', 'sheets/remove-system'];
 
 // The small forms, Setup's and Access Codes': full pages on a phone, a Dialog over the list they were opened
 // from on a tablet (.claude/instruction_mds/frontend.md §4.4). Wide they are transparentModals, so that list
@@ -48,7 +48,6 @@ const DIALOG_ROUTES = [
   'forms/access-code',
   'forms/access-request',
   'forms/enter-access-code',
-  'forms/features',
 ];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to
@@ -60,6 +59,8 @@ const DIALOG_ROUTES = [
 //   a fifth tab. It is the merchant shell: a header plus a rail or drawer of its own.
 // - `create-system` is the create form, pushed full screen over the systems list at every width.
 // - `scan` is the product scan (src/screens/scan), pushed full screen over the Item form or the Register.
+// - `features` is the Features page (src/screens/features), full screen at every width: two panes wide, a list
+//   and a screen's page narrow — its own small Stack, so the unsaved choices outlive the push between them.
 // - `forms/*` are the small Setup forms above; `sheets/*` are the native sheets above.
 export default function AppLayout() {
   const { colors } = useAppTheme();
@@ -75,6 +76,7 @@ export default function AppLayout() {
       <Stack.Screen name="systems/[id]" />
       <Stack.Screen name="create-system" />
       <Stack.Screen name="scan" />
+      <Stack.Screen name="features" />
       {DIALOG_ROUTES.map((name) => (
         <Stack.Screen
           key={name}

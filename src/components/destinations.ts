@@ -23,8 +23,12 @@ export type Destination = Omit<DestinationRule, 'sections'> & {
   label: string;
   icon: IconName;
   stack?: boolean;
-  /** What the screen is for and when to use it, in plain words, under its switch on the Features page. */
-  details: string;
+  /** One line: what the screen is, under its name on the Features page. */
+  summary: string;
+  /** What the screen is for, in plain words: the Features page's About for the screen. */
+  purpose: string;
+  /** When to use it: under Purpose in that About. */
+  useCase: string;
   core?: IndexEntry<string>;
   sections?: IndexSection<string>[];
 };
@@ -40,15 +44,18 @@ export const DESTINATIONS: Destination[] = [
     name: 'index',
     label: 'Home',
     icon: 'home',
-    details: 'The first screen of the store. It stays empty on purpose: the work is on the other screens.',
+    summary: 'The first screen of the store.',
+    purpose: 'The first screen of the store. It stays empty on purpose: the work is on the other screens.',
+    useCase: 'Open it to land in the store.',
   },
   {
     name: 'dashboard',
     label: 'Dashboard',
     icon: 'dashboard',
     permissions: ['view_sales', 'view_shift_totals', 'close_any_register', 'view_stock'],
-    details:
-      'A quick look at how the store is doing: sales, gross profit, open registers and low stock, with sales per day, the best sellers and the items running out. Use it at the start or end of a day to see where things stand without opening a list.',
+    summary: 'A quick look at how the store is doing.',
+    purpose: 'A quick look at how the store is doing: sales, gross profit, open registers and low stock, with sales per day, the best sellers and the items running out.',
+    useCase: 'Use it at the start or end of a day to see where things stand without opening a list.',
   },
   {
     name: 'sell',
@@ -57,14 +64,15 @@ export const DESTINATIONS: Destination[] = [
     stack: true,
     sections: SELL_SECTIONS,
     permissions: ['open_close_register'],
-    details:
-      'Where the store makes its sales. A cashier opens a session with the cash in the drawer, rings items up at the Register, takes payment and closes the session against a count. Use it every time you sell.',
+    summary: 'Where the store makes its sales.',
+    purpose: 'Where the store makes its sales. A cashier opens a session with the cash in the drawer, rings items up at the Register, takes payment and closes the session against a count.',
+    useCase: 'Use it every time you sell.',
     // The session box above the index (src/screens/sell/index.tsx): it shows to whoever may open a session.
     core: {
       label: 'Sessions & Register',
       hint: 'Open a session, sell at the Register, close the session',
-      details:
-        'Open a session with the cash in the drawer, ring items up at the Register, take payment in the Cart, then close the session against a count. This is what Sell is for.',
+      purpose: 'Open a session with the cash in the drawer, ring items up at the Register, take payment in the Cart, then close the session against a count.',
+      useCase: 'This is what Sell is for: use it every time you sell.',
       doctype: 'POS Opening Entry',
       ptype: 'create',
       route: 'session',
@@ -77,8 +85,9 @@ export const DESTINATIONS: Destination[] = [
     icon: 'stock',
     stack: true,
     sections: STOCK_SECTIONS,
-    details:
-      'What the store sells and what it has on hand: the items, their prices, stock coming in and going out, and what it is all worth. Use it to add products, receive deliveries, count stock and see what is running low.',
+    summary: 'What the store sells and what it has on hand.',
+    purpose: 'What the store sells and what it has on hand: the items, their prices, stock coming in and going out, and what it is all worth.',
+    useCase: 'Use it to add products, receive deliveries, count stock and see what is running low.',
   },
   {
     name: 'accounts',
@@ -86,8 +95,9 @@ export const DESTINATIONS: Destination[] = [
     icon: 'accounts',
     stack: true,
     sections: ACCOUNTS_SECTIONS,
-    details:
-      "The store's books. Every sale, return and stock change writes its money here. Use it when you or your accountant want to check where an amount went.",
+    summary: "The store's books.",
+    purpose: "The store's books. Every sale, return and stock change writes its money here.",
+    useCase: 'Use it when you or your accountant want to check where an amount went.',
   },
   {
     name: 'employees',
@@ -95,8 +105,9 @@ export const DESTINATIONS: Destination[] = [
     icon: 'group',
     stack: true,
     ownerOnly: true,
-    details:
-      "Who works in the store and what each person may do. Give each person a role, and make an exception for one person when the role doesn't fit. Use it whenever someone joins or their job changes.",
+    summary: 'Who works in the store and what each person may do.',
+    purpose: "Who works in the store and what each person may do. Give each person a role, and make an exception for one person when the role doesn't fit.",
+    useCase: 'Use it whenever someone joins or their job changes.',
   },
   {
     name: 'setup',
@@ -104,8 +115,9 @@ export const DESTINATIONS: Destination[] = [
     icon: 'settings',
     stack: true,
     sections: SETUP_SECTIONS,
-    details:
-      "The store's settings and the lists everything else picks from: its details, taxes, payment methods, warehouses, units, prices, registers and receipts. Use it when you set the store up, and whenever the way you sell changes.",
+    summary: "The store's settings and the lists everything else picks from.",
+    purpose: "The store's settings and the lists everything else picks from: its details, taxes, payment methods, warehouses, units, prices, registers and receipts.",
+    useCase: 'Use it when you set the store up, and whenever the way you sell changes.',
   },
 ];
 

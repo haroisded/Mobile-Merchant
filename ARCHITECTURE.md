@@ -1620,15 +1620,21 @@ Item Price, a count sheet into a Stock Reconciliation, a Barcode column in the C
 
 Each person can take screens (the side menu's destinations) and pages (the rows of a screen's index) out of their own
 menu in a store, each with plain words on what it is for and when to use it. The **Features** button in the store's
-header opens it (`src/screens/features/`, the route `forms/features`: a full page on a phone, a Dialog on a tablet).
+header opens it (`src/screens/features/`, the full-screen route `features/`: on a tablet the screens list beside the
+open screen, on a phone the list and then a screen's own page, `features/[screen]`). Each row has an About (i) with
+its Purpose and Use-case; the line under it is the index row's own hint, and a screen's its `summary`. Choices are a
+draft until **Save** (an unsaved bar counts them; **Reset** drops them; leaving asks first), and Save stays on the page.
+Rebuilt on 2026-10-21 to the shape of feature-toggle-garden.lovable.app, with this app's own screens, pages and words —
+Setup's 26 pages included, which the long Dialog before it had left at the bottom of a 460dp scroll.
 Hidden is not disabled: every route stays registered, a deep link or a ledger row still opens a hidden page, and RLS and
 the posters decide exactly as before — so nothing a hidden page does can break, whatever path reaches it.
 
 **Core.** A page is core when the screen's job cannot be done from its other pages: the start of the chain the others
 continue, or the record they all act on. It has no switch of its own (an "Always on" tag) and goes only with its
 screen. A screen with no core is a set of pages that each stand alone — a setting whose seeded record keeps working, or
-a read-only view — so it is shown while one of its pages is, and turning off its last page turns it off. Core counts
-only where the person may open it.
+a read-only view — so it is shown while one of its pages is, and turning off its last page turns it off (a message
+says so); turning it on again shows every page. A screen that is off locks its pages' switches (the human's call,
+2026-10-21; until then a page turned on brought a no-core screen back). Core counts only where the person may open it.
 
 | Screen | Core | Pages that can be hidden |
 | --- | --- | --- |
@@ -1640,10 +1646,12 @@ only where the person may open it.
 | Setup | none | all 26 pages — the last one takes Setup with it |
 
 The rules are `src/features/feature-preferences/visibility.ts` (import-free, in `check:logic`): `screenShown`,
-`pageShown`, and the two switches `setScreen` and `setPage`. A stored key for a core page counts for nothing, so the
-rule holds whatever the row says. The catalog is the indexes themselves — each `IndexEntry` carries `details` and
-`core`, each destination (`src/components/destinations.ts`, moved out of the shell for its second reader) its `details`
-and Sell its `core` — so there is no second list to fall out of step. The shell lists `menuOf(...)`; `RecordIndex` drops
+`pageShown`, the switches `setScreen` and `setPages` (one page, or a section's Hide all / Show all), `screenStatus`
+(the list's Shown / Some pages hidden / Hidden and its count) and `changedSwitches` (the unsaved count: a page and the
+screen its last page took with it are two). A stored key for a core page counts for nothing, so the rule holds
+whatever the row says. The catalog is the indexes themselves — each `IndexEntry` carries `purpose`, `useCase` and
+`core`, each destination (`src/components/destinations.ts`, moved out of the shell for its second reader) its
+`summary`, `purpose` and `useCase`, and Sell its `core` — so there is no second list to fall out of step. The shell lists `menuOf(...)`; `RecordIndex` drops
 a hidden row; the screen the person is on, hidden just then, sends them Home (a deep link into one hidden earlier still
 lands).
 
@@ -1665,4 +1673,6 @@ width.
 
 Rejected: SecureStore on the phone — lost on a reinstall and different per phone (the human); a column of
 `merchant_members` — the owner has no member row; hiding buttons inside pages (Scan Product, Test Template …) —
-screens and pages only, the human's call; a definer RPC — the row is the caller's own, and RLS says so.
+screens and pages only, the human's call; a definer RPC — the row is the caller's own, and RLS says so. For the
+2026-10-21 rebuild: keeping the tablet Dialog (two panes do not fit 560dp); the demo's own descriptions (several were
+wrong for this app, and it had 24 Setup pages); its full-width floating save bar (`FormFooter`, as every full-page form).

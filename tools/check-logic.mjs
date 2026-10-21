@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { codeStatus, expiryArgs, expiryText, formatCode, normalizeCode } from '../src/features/access-codes/code.ts';
 import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
-import { hasCore, pageKey, pageShown, screenKey, screenShown, setPage, setScreen } from '../src/features/feature-preferences/visibility.ts';
+import { changedSwitches, hasCore, pageKey, pageShown, screenKey, screenShown, screenStatus, setPages, setScreen } from '../src/features/feature-preferences/visibility.ts';
 import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
 import { readLabel } from '../src/features/items/label.ts';
 import { can, effective, has, overridesFor, readsAny, showsDestination, toggle } from '../src/features/permissions/access.ts';
@@ -617,15 +617,29 @@ assert.equal(screenShown(['stock/stock-ledger'], STOCKS, cashier), false);
 assert.equal(screenShown(['setup/company'], SETUPS, all), true);
 assert.equal(screenShown(['setup/company', 'setup/uoms'], SETUPS, all), false);
 assert.equal(screenShown(['sell/pos-invoices'], SELLS, all), true);
-// The switches: a screen with no core hides and shows its pages with it; a page turned on brings it back. A screen
-// with a core keeps its pages' choices while it is off.
+// The switches: a screen with no core hides and shows its pages with it. A screen with a core keeps its pages'
+// choices while it is off. Pages: one, or a section at once (Hide all / Show all), never the core.
 assert.deepEqual(setScreen([], SETUPS, false, all), ['screen:setup', 'setup/company', 'setup/uoms']);
 assert.deepEqual(setScreen(['screen:setup', 'setup/company', 'setup/uoms', 'stock/stock-ledger'], SETUPS, true, all), ['stock/stock-ledger']);
 assert.deepEqual(setScreen(['stock/import-items'], STOCKS, false, all), ['stock/import-items', 'screen:stock']);
 assert.deepEqual(setScreen(['stock/import-items', 'screen:stock'], STOCKS, true, all), ['stock/import-items']);
-assert.deepEqual(setPage(['screen:setup', 'setup/company', 'setup/uoms'], SETUPS, { route: 'uoms' }, true, all), ['setup/company']);
-assert.deepEqual(setPage([], STOCKS, { route: 'import-items' }, false, all), ['stock/import-items']);
-assert.deepEqual(setPage(['stock/import-items', 'screen:stock'], STOCKS, { route: 'import-items' }, true, all), ['screen:stock']);
-assert.deepEqual(setPage(['stock/import-items'], STOCKS, { route: 'import-items' }, false, all), ['stock/import-items']);
+assert.deepEqual(setPages([], STOCKS, [{ route: 'import-items' }], false), ['stock/import-items']);
+assert.deepEqual(setPages(['stock/import-items'], STOCKS, [{ route: 'import-items' }], false), ['stock/import-items']);
+assert.deepEqual(setPages(['stock/import-items', 'screen:stock'], STOCKS, [{ route: 'import-items' }], true), ['screen:stock']);
+assert.deepEqual(setPages([], STOCKS, STOCKS.sections[0].entries, false), ['stock/import-items', 'stock/stock-ledger']);
+assert.deepEqual(setPages(['setup/company', 'setup/uoms', 'stock/x'], SETUPS, SETUPS.sections[0].entries, true), ['stock/x']);
+// The screens list: shown, some pages hidden, hidden — with how many pages show; a hidden screen shows none.
+assert.deepEqual(screenStatus([], STOCKS, all), { state: 'shown', shown: 3, total: 3 });
+assert.deepEqual(screenStatus(['stock/import-items'], STOCKS, all), { state: 'partial', shown: 2, total: 3 });
+assert.deepEqual(screenStatus(['screen:stock'], STOCKS, all), { state: 'hidden', shown: 0, total: 3 });
+assert.deepEqual(screenStatus(['setup/company', 'setup/uoms'], SETUPS, all), { state: 'hidden', shown: 0, total: 2 });
+assert.deepEqual(screenStatus([], SELLS, all), { state: 'shown', shown: 2, total: 2 });
+assert.deepEqual(screenStatus([], DASH, all), { state: 'shown', shown: 0, total: 0 });
+// The unsaved count: a page, and the screen its last page took with it, are two.
+assert.equal(changedSwitches([], ['stock/import-items'], STOCKS, all), 1);
+assert.equal(changedSwitches([], ['setup/company'], SETUPS, all), 1);
+assert.equal(changedSwitches(['setup/company'], ['setup/company', 'setup/uoms'], SETUPS, all), 2);
+assert.equal(changedSwitches(['sell/pos-invoices'], ['sell/pos-invoices', 'screen:sell'], SELLS, all), 1);
+assert.equal(changedSwitches(['x'], ['x'], SETUPS, all), 0);
 
 console.log('check:logic — all assertions passed.');

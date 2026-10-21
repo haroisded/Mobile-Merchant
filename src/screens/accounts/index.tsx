@@ -16,8 +16,8 @@ export const ACCOUNTS_SECTIONS: IndexSection<AccountsRoute>[] = [
       {
         label: 'General Ledger',
         hint: 'Every debit and credit, by account, date and voucher',
-        details:
-          'Lists every amount the books record: each debit and credit, by account, date and document. Use it to check where the money from a sale, a return or a stock change went.',
+        purpose: 'Lists every amount the books record: each debit and credit, by account, date and document.',
+        useCase: 'Use it to check where the money from a sale, a return or a stock change went.',
         doctype: 'GL Entry',
         route: 'general-ledger',
       },

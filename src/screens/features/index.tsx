@@ -1,249 +1,243 @@
+import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useController, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
+import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../components/activity-indicator';
-import { AdaptiveDialog, FormActions, saveOnce } from '../../components/adaptive-dialog';
+import { saveOnce } from '../../components/adaptive-dialog';
+import { Button } from '../../components/button';
+import { closesForm } from '../../components/confirm-dialog';
 import { DESTINATIONS } from '../../components/destinations';
-import type { Destination } from '../../components/destinations';
-import { HelperText } from '../../components/helper-text';
+import { FormFooter } from '../../components/form-footer';
+import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
-import type { IndexEntry } from '../../components/record-index';
-import { Switch } from '../../components/switch';
+import { Snackbar } from '../../components/snackbar';
 import { Text } from '../../components/text';
+import { useDiscard } from '../../components/use-discard';
 import { useFeaturePreferencesQuery, useSaveFeaturePreferencesMutation } from '../../features/feature-preferences/queries';
-import { hasCore, pageShown, screenShown, setPage, setScreen } from '../../features/feature-preferences/visibility';
+import { changedSwitches } from '../../features/feature-preferences/visibility';
 import { useMerchantsQuery } from '../../features/merchants/queries';
 import { opens, showsDestination } from '../../features/permissions/access';
 import type { IndexRule } from '../../features/permissions/access';
 import { usePermissions } from '../../features/role-permissions/queries';
+import { FORM_MEASURE, useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
-import { radius, spacing } from '../../themes';
+import { spacing } from '../../themes';
+import { ScreenDetail } from './screen-detail';
+import { ScreenList } from './screen-list';
+import { FeaturesContext, useFeatures } from './use-features';
+import type { FeaturesValue } from './use-features';
 
-type Props = { merchantId: string; onDismiss: () => void };
+const INTRO = "Hide the screens and pages you don't use in this store. Only your own menu changes.";
 
 /**
  * Features: which of a store's screens and pages this person keeps in their own menu, with what each is for — the
- * body of src/app/(app)/forms/features.tsx (a page narrow, a Dialog wide), opened from the store's header. Hiding
- * is not refusing: nothing is turned off, the person's own choice is all that changes, and nobody else's menu.
+ * layout of src/app/(app)/features/, opened from the store's header. It holds the unsaved choices for both of its
+ * routes, the unsaved bar under them, and the messages. Hiding is not refusing: nothing is turned off, and nobody
+ * else's menu changes.
  */
-export function FeaturesForm({ merchantId, onDismiss }: Props) {
+export function FeaturesProvider({ merchantId, children }: { merchantId: string; children: ReactNode }) {
   const preferences = useFeaturePreferencesQuery({ merchantId, fresh: true });
   const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === merchantId);
   const userId = useSession()?.user.id;
   const permissions = usePermissions({ merchantId });
   const isOwner = merchant?.owner_id === userId;
-  // The switches start from what the server holds now, not the cache's copy (`fresh`); offline, from the copy —
-  // the save waits for a connection either way.
+  // The switches start from what the server holds now, not the cache's copy (`fresh`): the save writes the whole
+  // set. Offline, from the copy — the save waits for a connection either way.
   const current = preferences.isFetchedAfterMount || preferences.isPaused;
-  const ready = current && preferences.data && merchant && (isOwner || permissions.data);
 
-  if (ready) return <Form merchantId={merchantId} kicker={merchant.name} hidden={preferences.data} isOwner={isOwner} permissions={permissions.data} onDismiss={onDismiss} />;
+  if (current && preferences.data && merchant && (isOwner || permissions.data)) {
+    const opensPage = (page: IndexRule) => isOwner || opens(page, permissions.data);
+    const screens = DESTINATIONS.filter((screen) => screen.name !== 'index' && (isOwner || showsDestination(screen, permissions.data)));
+    return (
+      <Draft merchantId={merchantId} storeName={merchant.name} saved={preferences.data} screens={screens} opensPage={opensPage}>
+        {children}
+      </Draft>
+    );
+  }
 
-  // Waiting for the choices or the permissions: the same Dialog, with where they are — a spinner while the cached
-  // choices are asked for again.
+  // Waiting for the choices or the permissions: where they are — a spinner while the cached choices are asked again.
   const query = preferences.data && current ? permissions : preferences;
   return (
-    <AdaptiveDialog asPage onDismiss={onDismiss} kicker={merchant?.name} title="Features" actions={<FormActions mutation={{ isPending: false, isPaused: false }} onCancel={onDismiss} />}>
-      <QueryState query={query} offline="You're offline. Your choices will load when you reconnect." failure="Couldn't load your choices. Try again.">
-        <ActivityIndicator />
-      </QueryState>
-    </AdaptiveDialog>
+    <View style={styles.fill}>
+      <PageHeader kicker={merchant?.name ?? ''} title="Features" meta={INTRO} onBack={() => router.back()} />
+      <View style={styles.state}>
+        <QueryState query={query} offline="You're offline. Your choices will load when you reconnect." failure="Couldn't load your choices. Try again.">
+          <ActivityIndicator />
+        </QueryState>
+      </View>
+    </View>
   );
 }
 
-type FormProps = {
-  merchantId: string;
-  kicker: string;
-  hidden: string[];
-  isOwner: boolean;
-  permissions: ReturnType<typeof usePermissions>['data'];
-  onDismiss: () => void;
-};
+type DraftProps = Omit<FeaturesValue, 'notify' | 'leave'> & { children: ReactNode };
 
-function Form({ merchantId, kicker, hidden: saved, isOwner, permissions, onDismiss }: FormProps) {
+/** The unsaved choices, the bar that saves or resets them, and the guard on leaving with them. */
+function Draft({ merchantId, storeName, saved: loaded, screens, opensPage, children }: DraftProps) {
+  const { colors } = useAppTheme();
+  const wide = useShellWide();
+  const navigation = useNavigation();
+  // What was last saved: the server's answer when the page opened, then each save's own values.
+  const [saved, setSaved] = useState(loaded);
+  const [message, setMessage] = useState<string | null>(null);
+  const form = useForm<{ hidden: string[] }>({ defaultValues: { hidden: loaded } });
+  const hidden = useWatch({ control: form.control, name: 'hidden' });
   const save = useSaveFeaturePreferencesMutation({ merchantId });
-  const { control, handleSubmit } = useForm<{ hidden: string[] }>({ defaultValues: { hidden: saved } });
-  const { field } = useController({ control, name: 'hidden' });
-  const hidden = field.value;
+  const discard = useDiscard();
+  const changes = screens.reduce((sum, screen) => sum + changedSwitches(saved, hidden, screen, opensPage), 0);
   const notice = mutationNotice(save, failureMessage("Couldn't save your choices. Try again."));
-  // What the person may open, as their menu and indexes decide it: the Features page lists only that.
-  const opensPage = (page: IndexRule) => isOwner || opens(page, permissions);
-  const screens = DESTINATIONS.filter((screen) => screen.name !== 'index' && (isOwner || showsDestination(screen, permissions)));
-  const send = saveOnce(save, onDismiss);
-  const submit = handleSubmit((values) => send(values.hidden));
+
+  // While choices are unsaved, the iOS swipe does not take the page away (useHoldRoute's way); Back asks.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: changes === 0 });
+  }, [navigation, changes]);
+
+  const leave = () => {
+    if (changes === 0) {
+      router.back();
+      return;
+    }
+    // Wide the ask is a Dialog over the page; narrow a sheet over it, and both go together.
+    discard.ask(true, closesForm(wide, () => router.back()));
+  };
+  const send = saveOnce(save, (values: string[]) => {
+    setSaved(values);
+    form.reset({ hidden: values });
+    setMessage('Saved. Your menu now shows only what you chose.');
+  });
+  const submit = form.handleSubmit((values) => send(values.hidden));
 
   return (
-    <AdaptiveDialog
-      asPage
-      onDismiss={onDismiss}
-      dismissable={!(save.isPending && !save.isPaused)}
-      kicker={kicker}
-      title="Features"
-      actions={<FormActions mutation={save} onCancel={onDismiss} onSave={submit} />}
-    >
-      <Text variant="bodyMedium">
-        Hide the screens and pages you don&apos;t use in this store. They only leave your own menu: nothing is turned off, and
-        nobody else&apos;s menu changes. Turn one back on here at any time.
-      </Text>
-      {/* The write's line goes at the top, not under the body as a small form's does: the list is long, and a
-          line at its end is never seen next to Save. */}
-      {notice ? (
-        <HelperText type={notice.type} visible padding="none">
-          {notice.text}
-        </HelperText>
-      ) : null}
-      {screens.map((screen) => (
-        <ScreenGroup
-          key={screen.name}
-          screen={screen}
-          hidden={hidden}
-          opensPage={opensPage}
-          onChange={field.onChange}
-        />
-      ))}
-    </AdaptiveDialog>
-  );
-}
-
-type GroupProps = {
-  screen: Destination;
-  hidden: string[];
-  opensPage: (page: IndexRule) => boolean;
-  onChange: (next: string[]) => void;
-};
-
-/** One screen's switch, then its pages' — grouped as its index groups them. */
-function ScreenGroup({ screen, hidden, opensPage, onChange }: GroupProps) {
-  const { colors } = useAppTheme();
-  const on = screenShown(hidden, screen, opensPage);
-  const cored = hasCore(screen, opensPage);
-  const sections = (screen.sections ?? [])
-    .map((section) => ({ ...section, entries: section.entries.filter(opensPage) }))
-    .filter((section) => section.entries.length > 0);
-  const core = screen.core && opensPage(screen.core) ? screen.core : null;
-  const flipPage = (page: IndexEntry<string>, next: boolean) => onChange(setPage(hidden, screen, page, next, opensPage));
-
-  return (
-    <View style={styles.group}>
-      <View style={[styles.box, { borderColor: colors.outlineVariant }]}>
-        <SwitchRow
-          title={screen.label}
-          titleVariant="titleMedium"
-          details={screen.details}
-          note={sections.length > 0 && !cored ? `Turning off every page below turns ${screen.label} off.` : null}
-          value={on}
-          onChange={(next) => onChange(setScreen(hidden, screen, next, opensPage))}
-        />
-      </View>
-      {core ? (
-        <PageBox title={`Always on with ${screen.label}`}>
-          <SwitchRow title={core.label} details={core.details} note={`Part of ${screen.label}: it goes only when ${screen.label} does.`} value={on} core />
-        </PageBox>
-      ) : null}
-      {sections.map((section) => (
-        <PageBox key={section.title} title={section.title}>
-          {section.entries.map((page, index) => (
-            <SwitchRow
-              key={page.route}
-              first={index === 0}
-              title={page.label}
-              details={page.details}
-              note={page.core ? `Part of ${screen.label}: it goes only when ${screen.label} does.` : null}
-              value={on && pageShown(hidden, screen.name, page)}
-              core={page.core}
-              // A core page has no switch of its own; the pages of a screen that is off wait for it, unless the screen
-              // is its pages (no core), where a page turned on brings the screen back.
-              onChange={page.core || (!on && cored) ? undefined : (next) => flipPage(page, next)}
-            />
-          ))}
-        </PageBox>
-      ))}
-    </View>
-  );
-}
-
-/** A section of a screen's pages: its heading, then a box of rows, set in under the screen's own row. */
-function PageBox({ title, children }: { title: string; children: ReactNode }) {
-  const { colors } = useAppTheme();
-
-  return (
-    <View style={styles.pages}>
-      <Text variant="labelMedium" style={{ color: colors.secondary }}>
-        {title}
-      </Text>
-      <View style={[styles.box, { borderColor: colors.outlineVariant }]}>{children}</View>
-    </View>
-  );
-}
-
-type RowProps = {
-  title: string;
-  titleVariant?: 'titleMedium' | 'titleSmall';
-  details: string;
-  /** A muted line under the details: why the switch cannot move, or what it does to the screen. */
-  note?: string | null;
-  value: boolean;
-  /** Absent: the switch shows the state and cannot move. */
-  onChange?: (next: boolean) => void;
-  /** No hairline above the first row of a box. */
-  first?: boolean;
-  /** A core page: a tag saying so in the switch's place, which a disabled switch drawn grey would read as off. */
-  core?: boolean;
-};
-
-/** A name, what it is for, and its switch — the whole row pressable (.claude/instruction-mds/frontend.md §5). */
-function SwitchRow({ title, titleVariant = 'titleSmall', details, note, value, onChange, first = true, core = false }: RowProps) {
-  const { colors } = useAppTheme();
-
-  return (
-    <Pressable
-      onPress={onChange ? () => onChange(!value) : undefined}
-      disabled={!onChange}
-      // Pressable reads no theme, so the press colour is passed every time (.claude/instruction-mds/frontend.md §5).
-      android_ripple={{ color: colors.ripple }}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value, disabled: !onChange }}
-      accessibilityLabel={title}
-      style={[styles.row, first ? null : { borderTopWidth: 1, borderTopColor: colors.surfaceVariant }]}
-    >
-      <View style={styles.text}>
-        <Text variant={titleVariant}>{title}</Text>
-        <Text variant="bodyMedium">{details}</Text>
-        {note ? (
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
-            {note}
-          </Text>
-        ) : null}
-      </View>
-      {core ? (
-        <View style={[styles.tag, { borderColor: colors.outlineVariant, backgroundColor: colors.surfaceMuted }]}>
-          <Text variant="labelMedium">{value ? 'Always on' : 'Off with it'}</Text>
+    <FeaturesContext value={{ merchantId, storeName, screens, saved, opensPage, notify: setMessage, leave }}>
+      <FormProvider {...form}>
+        <View style={[styles.fill, { backgroundColor: colors.background }]}>
+          <View style={styles.fill}>
+            {children}
+            <Snackbar visible={message !== null} onDismiss={() => setMessage(null)} duration={4000}>
+              {message ?? ''}
+            </Snackbar>
+          </View>
+          {changes > 0 ? <UnsavedBar changes={changes} notice={notice} mutation={save} onReset={() => form.reset({ hidden: saved })} onSave={submit} /> : null}
         </View>
-      ) : (
-        // A switch that is on is one of the accent's places (.claude/instruction-mds/frontend.md §2.3).
-        <Switch
-          value={value}
-          onValueChange={onChange}
-          disabled={!onChange}
-          color={colors.accent}
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-        />
-      )}
-    </Pressable>
+      </FormProvider>
+      {discard.dialog}
+    </FeaturesContext>
+  );
+}
+
+type BarProps = {
+  changes: number;
+  notice: ReturnType<typeof mutationNotice>;
+  mutation: { isPending: boolean; isPaused: boolean };
+  onReset: () => void;
+  onSave: () => void;
+};
+
+/**
+ * The unsaved bar, pinned under the page while a choice differs from the saved ones (frontend.md §5, Full-page
+ * form): how many, Reset and Save. A failed or paused save keeps the choices unsaved, so its notice shows here
+ * too. Save stays disabled while the write is pending, paused included (data-layer.md §5).
+ */
+function UnsavedBar({ changes, notice, mutation, onReset, onSave }: BarProps) {
+  const wide = useShellWide();
+  const inFlight = mutation.isPending && !mutation.isPaused;
+
+  return (
+    <FormFooter notice={notice}>
+      <View style={wide ? styles.barRow : styles.barStack}>
+        <Text variant="bodyMedium" style={wide ? styles.grow : null}>
+          {changes === 1 ? '1 unsaved change' : `${changes} unsaved changes`}
+        </Text>
+        <Button mode="outlined" onPress={onReset} disabled={inFlight} contentStyle={styles.leading}>
+          Reset
+        </Button>
+        <Button mode="contained" onPress={onSave} loading={inFlight} disabled={mutation.isPending} contentStyle={styles.leading}>
+          Save
+        </Button>
+      </View>
+    </FormFooter>
+  );
+}
+
+/**
+ * The Features page itself: wide, the screens list beside the open screen (two parts in five, as Roles' panes);
+ * narrow, the list (`selected` absent) or one screen's page (`selected`, the route features/[screen]).
+ */
+export function FeaturesScreen({ selected }: { selected?: string }) {
+  const { colors } = useAppTheme();
+  const wide = useShellWide();
+  const { merchantId, storeName, screens, leave } = useFeatures();
+  const [open, setOpen] = useState(selected ?? screens[0]?.name);
+  const onList = wide || !selected;
+
+  // Android's back on the list leaves the page, asking first while choices are unsaved. On a screen's page it
+  // returns to the list, which keeps the choices.
+  useFocusEffect(
+    useCallback(() => {
+      if (!onList) return undefined;
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        leave();
+        return true;
+      });
+      return () => subscription.remove();
+    }, [onList, leave])
+  );
+
+  const shown = screens.find((screen) => screen.name === (wide ? open : selected));
+  const header = <PageHeader kicker={storeName} title="Features" meta={INTRO} onBack={onList ? leave : () => router.back()} />;
+
+  if (wide) {
+    return (
+      <View style={styles.fill}>
+        {header}
+        <View style={styles.panes}>
+          <ScrollView style={styles.listPane}>
+            <ScreenList selected={shown?.name} chevron={false} onOpen={setOpen} />
+          </ScrollView>
+          <View style={[styles.rule, { backgroundColor: colors.outlineVariant }]} />
+          <ScrollView style={styles.detailPane} contentContainerStyle={styles.measure}>
+            {shown ? <ScreenDetail key={shown.name} screen={shown} /> : null}
+          </ScrollView>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.fill}>
+      {header}
+      <ScrollView>
+        {selected ? (
+          shown ? (
+            <ScreenDetail screen={shown} />
+          ) : (
+            <Text variant="bodyMedium" style={styles.state}>
+              This screen isn&apos;t yours to show or hide in this store.
+            </Text>
+          )
+        ) : (
+          <ScreenList chevron onOpen={(name) => router.push({ pathname: '/features/[screen]', params: { screen: name, merchantId } })} />
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  group: { gap: spacing.sm },
-  // Set in one step under the screen's row, so a page reads as part of its screen.
-  pages: { gap: spacing.xs, paddingLeft: spacing.md },
-  box: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, minHeight: 56, paddingHorizontal: spacing.md, paddingVertical: spacing.ms },
-  text: { flex: 1, gap: spacing.xs },
-  // The type badge's shape (.claude/instruction-mds/frontend.md §5): a 1px box on surfaceMuted.
-  tag: { borderWidth: 1, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  fill: { flex: 1 },
+  state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
+  // The list two parts in five, the open screen three, a 1px rule between (frontend.md §5, Two panes on a tablet).
+  panes: { flex: 1, flexDirection: 'row' },
+  listPane: { flex: 2 },
+  detailPane: { flex: 3 },
+  rule: { width: 1 },
+  measure: { width: '100%', maxWidth: FORM_MEASURE },
+  barRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  barStack: { gap: spacing.sm },
+  grow: { flex: 1 },
+  // Full-width buttons put their label at the left edge (.claude/instruction-mds/frontend.md §5).
+  leading: { justifyContent: 'flex-start' },
 });

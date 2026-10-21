@@ -95,7 +95,7 @@ export default function SystemLayout() {
         layout={({ children, navigation }) => (
           <View style={styles.fill}>
             <MerchantHeader
-              onFeatures={() => router.push({ pathname: '/forms/features', params: { merchantId: id } })}
+              onFeatures={() => router.push({ pathname: '/features', params: { merchantId: id } })}
               onMenu={() => {
                 if (wide) setExpanded((open) => !open);
                 // DrawerActions is not a public export of expo-router; this is the action it builds,

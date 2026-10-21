@@ -122,7 +122,9 @@ Paper types `theme.colors` to MD3 only → read added keys through `useAppTheme(
 
 ### 2.3 Accent — only here
 
-- The icon circles on the stores list's slot cards (Create New Store, Enter Access Code)
+- The icon circles on the stores list's slot cards (Create New Store, Enter Access Code); the open screen's icon on
+  the Features page
+- The Features page's Hide all / Show all, and its dot on a screen with unsaved choices
 - Active rail / drawer item: 4px bar. Active form section row: 3px bar
 - Kickers
 - Inline text actions: "Auto-generate", "Scan", "+ Add …", "+ New …", "Clear all", "Mark all as read", "Use the
@@ -137,9 +139,9 @@ Everything else: ink on white.
 
 | Status | Colour |
 | --- | --- |
-| Active, Sealed | `onSurface` |
-| Draft | `onSurfaceMuted` |
-| Inactive, Empty | `onSurfaceFaint` |
+| Active, Sealed, Shown (Features) | `onSurface` |
+| Draft, Some pages hidden (Features) | `onSurfaceMuted` |
+| Inactive, Empty, Hidden (Features) | `onSurfaceFaint` |
 | Open (pack) | `accent` |
 | Low, Expiring, Expired (lot), Void | `error` |
 
@@ -283,6 +285,7 @@ rail is narrower than the window.
 | Multi-step flow ending in a review | stepper, Review as the last step | stepper left, Review sidebar right |
 | Stores list | Create New Store and Enter Access Code buttons + row cards | grid, the two slot cards first |
 | Register and Cart | the items page, the cart a page further (the bar at the bottom) | the items left (two parts in five), the cart right (`CartPane`, the same form) |
+| Features | the screens list, a screen a page further (`features/[screen]`) | the list left (two parts in five), the open screen right — full screen, not a Dialog: two panes need the width (2026-10-21) |
 
 Same at both widths: long forms and Create Store (full page), a record with child rows or a sample under
 its fields (a page of the Setup stack), multi-step flows (full-screen route).
@@ -420,7 +423,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Variant matrix row | one 1px `outlineVariant` box per combination: `labelLarge` label, SKU, barcode, price difference, quantity |
 | Note callout | `src/components/note-callout.tsx`: 3px left border `accent` or `error`, `surfaceMuted`, `bodySmall` |
 | Full-page form (Store, the Settings singles) | `PageForm` (`src/components/form-footer.tsx`): fields scroll at `FORM_MEASURE`, the footer — the write's notice, then Save, held to the same measure — pinned bottom, padded above the gesture bar. Its keyboard: `KeyboardAvoidingView` around both, since the edge-to-edge Android window does not resize — the last field and Save stay above it. Read-only (no write permission): a note callout, disabled fields, no footer |
-| Features page (hide screens and pages) | `src/screens/features/index.tsx` on the `forms/features` route — a full page narrow, a Dialog wide — opened by the header's Features. A `bodyMedium` intro, the write's notice under it (the list is long, so not at its end), then per screen a 1px `outlineVariant` box: `titleMedium` name, `bodyMedium` details, `Switch` in `accent`, the whole row pressable; under it, set in one step, each section's `labelMedium` heading in `secondary` over a box of page rows (`titleSmall`, `bodyMedium` details). A core page shows a boxed `labelMedium` tag "Always on" in the switch's place — a disabled switch draws grey and reads as off — and a `bodySmall` muted "Part of …" line; a screen with no core a muted "Turning off every page below turns … off." FormActions Cancel and Save. Rules: `src/features/feature-preferences/visibility.ts` |
+| Features page (hide screens and pages) | `src/screens/features/` on the full-screen route `features/` (its own `Stack`: `index`, `[screen]`), opened by the header's Features; `FeaturesProvider` (the layout) holds the unsaved choices for both routes. `PageHeader` (kicker the store, back arrow, the intro as meta). Wide: the list (two parts in five) beside the open screen (three), a 1px `outlineVariant` rule between; narrow: the list, a row pushing `features/[screen]`. **List** (`screen-list.tsx`): "Always visible" — Home and Features, `lock` icon, `titleSmall` in `onSurfaceMuted` — then "Screens", a box of rows: a 40dp `surfaceVariant` icon tile, `titleMedium` name, `bodySmall` status (§2.4, " · Owner" on Employees), `bodySmall` "shown/total" pages, a 10dp `accent` `Badge` dot while that screen's choices are unsaved, `chevron-right` narrow; the open row on `surfaceMuted`. **Screen** (`screen-detail.tsx`): a head box — 48dp `surfaceMuted` tile with the icon in `accent`, `headlineSmall` name and a `labelMedium` status, `bodyMedium` summary, an outlined `info` `IconButton` (About), the screen's `Switch` in `accent` — and `NoteCallout`s ("a single page", "every page stands on its own", "hiding only removes it from the menu"); then a "Core · Always on with …" box (rows tagged "Always on" with a `lock`, in the type badge's shape) and a box per index section, each under a `surfaceSubtle` header strip (`labelMedium` `secondary` title, `accent` text `Button` Hide all / Show all with two or more pages): rows of `titleSmall` name, `bodySmall` muted hint, About, `Switch`, the whole row pressable. A screen that is off draws its pages in `onSurfaceFaint` and locks them. About: `about.tsx` — kicker "Screen" / "Page of …", the name, `labelMedium` `accent` Purpose and Use-case over `bodyMedium`; a Dialog wide, `sheets/about` narrow. The unsaved bar while a choice differs: `FormFooter` with "n unsaved changes", outlined Reset, contained Save — stacked full width narrow, in a row wide; leaving with changes asks (`useDiscard`). Rules: `src/features/feature-preferences/visibility.ts` |
 | Small form's buttons | `FormActions` (`src/components/adaptive-dialog.tsx`): Delete in `error`, an extra action, Cancel, Save; no Save means read-only and Cancel reads Close. Submit through `saveOnce` |
 | Line under buttons | `mutationNotice(...)` (`src/lib/errors.ts`) |
 
@@ -436,6 +439,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Unsaved changes | `src/components/discard-dialog.tsx`† + `src/lib/unsaved-guard.ts`†. Stays a Paper bottom sheet narrow |
 | Create / edit form | full-page route (`src/app/(app)/create-system.tsx`). Wide, a small form is a Dialog (`src/app/(app)/forms/` with `AdaptiveDialog asPage`, §4.4); a created row returns through `src/Store/sheet-result.ts`† |
 | Multi-step flow | full-screen pushed route, every width |
+| Message (a choice saved, a screen gone with its last page) | Paper `Snackbar` (`src/components/snackbar.tsx`) at the bottom of the page's content, above any footer, 4 s; Paper draws it on `inverseSurface`. A short sentence, no action. Features only so far |
 | Request in flight | `Dialog` `dismissable={false}`, full-page form back blocked. Sheet: `gestureEnabled` off, Android back swallowed. A paused (offline) write is not in flight — but its submit stays disabled (`.claude/instruction_mds/data-layer.md` §5) |
 | Loading / error / retry | inline in the screen (`src/screens/home/index.tsx`, the shell in `src/app/(app)/systems/[id]/_layout.tsx`); the shared `src/components/query-state.tsx` |
 

@@ -17,8 +17,8 @@ export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
       {
         label: 'Items',
         hint: 'Products and services: units, defaults, tax',
-        details:
-          'Every product and service the store sells: its code, barcode, name, group, unit and price. Every other Stock page works on these items.',
+        purpose: 'Every product and service the store sells: its code, barcode, name, group, unit and price.',
+        useCase: 'Every other Stock page works on these items.',
         doctype: 'Item',
         route: 'items',
         core: true,
@@ -26,8 +26,8 @@ export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
       {
         label: 'Item Prices',
         hint: 'The rate of an item in a price list',
-        details:
-          'The selling price of an item in a price list, for one unit, with optional start and end dates. Use it to change a price, or to set a seasonal price beside the regular one.',
+        purpose: 'The selling price of an item in a price list, for one unit, with optional start and end dates.',
+        useCase: 'Use it to change a price, or to set a seasonal price beside the regular one.',
         doctype: 'Item Price',
         route: 'item-prices',
       },
@@ -35,8 +35,8 @@ export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
       {
         label: 'Import Items',
         hint: 'Add many items at once from a CSV file',
-        details:
-          'Adds many items at once from a spreadsheet file, with their prices and opening stock. Use it when you first stock the store or bring in a large range; every mistake is shown before anything is saved.',
+        purpose: 'Adds many items at once from a spreadsheet file, with their prices and opening stock.',
+        useCase: 'Use it when you first stock the store or bring in a large range; every mistake is shown before anything is saved.',
         doctype: 'Item',
         ptype: 'create',
         route: 'import-items',
@@ -50,15 +50,16 @@ export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
       {
         label: 'Stock Entries',
         hint: 'Receive, issue or transfer stock',
-        details:
-          'Records stock coming in, going out or moving between warehouses. Use it when a delivery arrives, when goods are used up or thrown away, or when you move stock from the stockroom to the shelf.',
+        purpose: 'Records stock coming in, going out or moving between warehouses.',
+        useCase: 'Use it when a delivery arrives, when goods are used up or thrown away, or when you move stock from the stockroom to the shelf.',
         doctype: 'Stock Entry',
         route: 'stock-entries',
       },
       {
         label: 'Stock Reconciliations',
         hint: 'Opening stock, and a count against the books',
-        details: 'Sets the stock you start with, or corrects the books to what you actually counted. Use it on your first day and after every stock count.',
+        purpose: 'Sets the stock you start with, or corrects the books to what you actually counted.',
+        useCase: 'Use it on your first day and after every stock count.',
         doctype: 'Stock Reconciliation',
         route: 'stock-reconciliations',
       },
@@ -71,15 +72,16 @@ export const STOCK_SECTIONS: IndexSection<StockRoute>[] = [
       {
         label: 'Stock Balance',
         hint: 'Quantity and value of each item in each warehouse',
-        details: 'Shows how much of each item is in each warehouse, and what it is worth. Use it to check what is on hand before you order more.',
+        purpose: 'Shows how much of each item is in each warehouse, and what it is worth.',
+        useCase: 'Use it to check what is on hand before you order more.',
         doctype: 'Bin',
         route: 'stock-balance',
       },
       {
         label: 'Stock Ledger',
         hint: 'Every stock movement, newest first',
-        details:
-          'Lists every stock movement behind the balance, newest first, each one opening the sale or document that made it. Use it when a quantity looks wrong and you want to know why.',
+        purpose: 'Lists every stock movement behind the balance, newest first, each one opening the sale or document that made it.',
+        useCase: 'Use it when a quantity looks wrong and you want to know why.',
         doctype: 'Stock Ledger Entry',
         route: 'stock-ledger',
       },

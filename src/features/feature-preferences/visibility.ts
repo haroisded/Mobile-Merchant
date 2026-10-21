@@ -5,7 +5,8 @@
 // A page is CORE when the screen's job cannot be done from its other pages: the start of the chain the others
 // continue (Sell's session and Register), or the record they all act on (Stock's Items). A core page has no switch
 // of its own — it goes only with its screen. A screen with no core is a set of pages that each stand alone (Setup,
-// Accounts): it is shown while one of its pages is, so hiding its last page hides it. A key no page names any more
+// Accounts): it is shown while one of its pages is, so hiding its last page hides it, and turning it on again shows
+// every page. A screen that is off locks its pages' switches. A key no page names any more
 // (a page renamed) matches nothing and counts for nothing. Core counts only where the
 // person may open it: a Sell without the session box (no POS Opening Entry create) is pages that stand alone.
 
@@ -57,9 +58,35 @@ export function setScreen<P extends FeaturePage>(hidden: readonly string[], scre
   return on ? without(hidden, keys) : withKeys(hidden, keys);
 }
 
-/** A page's switch. On a screen with no core, a page turned on brings its screen back too. */
-export function setPage<P extends FeaturePage>(hidden: readonly string[], screen: FeatureScreen<P>, page: P, on: boolean, opens: (page: P) => boolean) {
-  const key = pageKey(screen.name, page.route);
-  if (!on) return withKeys(hidden, [key]);
-  return without(hidden, hasCore(screen, opens) ? [key] : [key, screenKey(screen.name)]);
+/**
+ * Pages' switches — one page's, or a section's Hide all / Show all. A screen that is off locks its page switches, so
+ * this runs only while it is on; a core page has no switch and is skipped.
+ */
+export function setPages(hidden: readonly string[], screen: { name: string }, pages: FeaturePage[], on: boolean) {
+  const keys = pages.filter((page) => !page.core).map((page) => pageKey(screen.name, page.route));
+  return on ? without(hidden, keys) : withKeys(hidden, keys);
+}
+
+export type ScreenStatus = { state: 'shown' | 'partial' | 'hidden'; shown: number; total: number };
+
+/** What the screens list says of a screen: shown, some pages hidden, or hidden — and how many of its pages show. */
+export function screenStatus<P extends FeaturePage>(hidden: readonly string[], screen: FeatureScreen<P>, opens: (page: P) => boolean): ScreenStatus {
+  const pages = pagesOf(screen).filter(opens);
+  const on = screenShown(hidden, screen, opens);
+  const shown = on ? pages.filter((page) => pageShown(hidden, screen.name, page)).length : 0;
+  return { state: !on ? 'hidden' : shown < pages.length ? 'partial' : 'shown', shown, total: pages.length };
+}
+
+/** A screen's switch, then each of its pages' choices — what the unsaved count compares. */
+const switches = <P extends FeaturePage>(hidden: readonly string[], screen: FeatureScreen<P>, opens: (page: P) => boolean) => [
+  screenShown(hidden, screen, opens),
+  ...pagesOf(screen)
+    .filter((page) => opens(page) && !page.core)
+    .map((page) => pageShown(hidden, screen.name, page)),
+];
+
+/** How many of a screen's switches differ between two choices: a page and the screen its last page took with it are two. */
+export function changedSwitches<P extends FeaturePage>(saved: readonly string[], draft: readonly string[], screen: FeatureScreen<P>, opens: (page: P) => boolean) {
+  const before = switches(saved, screen, opens);
+  return switches(draft, screen, opens).filter((value, index) => value !== before[index]).length;
 }

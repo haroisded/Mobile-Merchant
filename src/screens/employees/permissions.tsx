@@ -19,7 +19,7 @@ import { EmployeesScreen, OwnerOnly } from './index';
 import { RoleChip } from './role-chip';
 import { useEmployees } from './use-employees';
 import type { EmployeesData } from './use-employees';
-import { useDiscard } from './use-discard';
+import { useDiscard } from '../../components/use-discard';
 
 /**
  * Permissions, a tablet's: the employees, and the open one's permissions beside them, as the Permissions mock

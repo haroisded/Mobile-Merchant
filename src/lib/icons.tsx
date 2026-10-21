@@ -44,6 +44,9 @@ export const ICONS = {
   settings: { ios: 'gearshape', android: 'settings' },
   // The store header's Features: what this person shows of the store. Checked against both sets on 2026-10-21.
   tune: { ios: 'slider.horizontal.3', android: 'tune' },
+  // The Features page: a row's About, and what is always on. Checked by the types on 2026-10-21.
+  info: { ios: 'info.circle', android: 'info' },
+  lock: { ios: 'lock.fill', android: 'lock' },
   // The shell's Dashboard destination. Checked against both sets on 2026-10-13.
   dashboard: { ios: 'chart.bar', android: 'dashboard' },
   // The shell's Sell destination: the Register and its sessions.

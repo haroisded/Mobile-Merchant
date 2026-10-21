@@ -19,8 +19,10 @@ import { Text } from './text';
 export type IndexEntry<R extends string> = {
   label: string;
   hint: string;
-  /** What the page is for and when to use it, in plain words: the Features page shows it under the page's switch. */
-  details: string;
+  /** What the page is for, in plain words: the Features page's About for the page. */
+  purpose: string;
+  /** When to use it: under Purpose in that About. */
+  useCase: string;
   /** The page the screen's job cannot be done without: it has no switch of its own, and goes only with its screen. */
   core?: true;
   /** The doctype whose permission shows this row (private.permitted_merchant_ids). */
