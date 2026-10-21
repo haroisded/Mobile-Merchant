@@ -11,6 +11,10 @@ import type { IndexRule } from '../../features/permissions/access';
 export type FeaturesValue = {
   merchantId: string;
   storeName: string;
+  /** The store's level (src/features/merchants/levels.ts): the menu a person starts from. */
+  level: number;
+  /** The owner changes the level; everyone else reads it. */
+  isOwner: boolean;
   /** The screens the person may open, Home and Features left out (`fixed`): the list, in rail order. */
   screens: Destination[];
   /** The choices as saved: what Reset returns to and the unsaved count compares with. */

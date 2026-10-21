@@ -1,13 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Appbar } from '../../components/appbar';
 import { Button } from '../../components/button';
 import { CountryCurrencyFields } from '../../components/country-currency-fields';
 import { Field, FieldGrid } from '../../components/form-fields';
 import { HelperText } from '../../components/helper-text';
+import { LevelPicker } from '../../components/level-picker';
 import { QueryState } from '../../components/query-state';
+import { StepHeader } from '../../components/step-header';
 import { Text } from '../../components/text';
 import { TextInput } from '../../components/text-input';
 import { countryForTimeZone, useCountriesQuery } from '../../features/countries/queries';
@@ -15,17 +18,18 @@ import type { Country } from '../../features/countries/queries';
 import { useCurrencyPresetsQuery } from '../../features/currency-presets/queries';
 import type { CurrencyPreset } from '../../features/currency-presets/queries';
 import { useCreateSystemMutation } from '../../features/merchants/queries';
-import { companySchema } from '../../features/merchants/schema';
-import type { CompanyValues } from '../../features/merchants/schema';
+import { createStoreSchema } from '../../features/merchants/schema';
+import type { CreateStoreValues } from '../../features/merchants/schema';
 import { FORM_MEASURE, useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
 
 /**
- * Create Store, on the full-screen route (src/app/(app)/create-system.tsx) at every width. A store is ERPNext's
- * Company with no branches, so this is its setup wizard cut to three fields: name, country and currency — no
- * abbreviation, which only tells several companies apart. Creating it sets up the rest (the store's first
- * fiscal year, its chart of accounts …) in the database.
+ * Create Store, on the full-screen route (src/app/(app)/create-system.tsx) at every width, in two steps. A store is
+ * ERPNext's Company with no branches, so step 1 is its setup wizard cut to three fields: name, country and currency —
+ * no abbreviation, which only tells several companies apart. Step 2 is its level (src/features/merchants/levels.ts):
+ * how much of the system it uses. Creating it sets up the rest (the store's first fiscal year, its chart of accounts,
+ * what its level adds …) in the database.
  */
 type Props = { onDismiss: () => void };
 
@@ -72,11 +76,27 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   // The component mounts only while its route is open, which is what makes the form fresh on every
   // open with no reset logic. onTouched: validating every keystroke while someone thumbs in a name
   // is noise.
-  const { control, handleSubmit, setValue } = useForm<CompanyValues>({
-    resolver: zodResolver(companySchema),
-    defaultValues: { name: '', country_code: home?.code ?? '', default_currency: home?.currency_code ?? '' },
+  const { control, handleSubmit, setValue, trigger } = useForm<CreateStoreValues>({
+    resolver: zodResolver(createStoreSchema),
+    // Level 1, the easiest: most shops start by selling. The owner changes it later on Features.
+    defaultValues: { name: '', country_code: home?.code ?? '', default_currency: home?.currency_code ?? '', level: 1 },
     mode: 'onTouched',
   });
+
+  // The step: 0 the store, 1 its level. Step 2 needs step 1 right first, so Next checks those three fields.
+  const [step, setStep] = useState(0);
+  const next = async () => {
+    if (await trigger(['name', 'country_code', 'default_currency'])) setStep(1);
+  };
+  // Android's back on the level returns to the store's fields, as the step's own back does; on the fields it leaves.
+  useEffect(() => {
+    if (step === 0) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setStep(0);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [step]);
 
   // mutate, not mutateAsync: it does not throw, so there is no catch block whose only job is to
   // swallow an error that is already being rendered from the notice below. Refused while a create is
@@ -87,59 +107,86 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
     if (!createSystem.isPending) createSystem.mutate(values, { onSuccess: onDismiss });
   });
 
+  if (step === 1) {
+    return (
+      <>
+        <StepHeader index={1} count={2} title="Its level" backLabel="Back to the store" onBack={() => setStep(0)} />
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text variant="headlineSmall">How much do you want to manage?</Text>
+          <Text variant="bodyMedium">
+            Pick how much of the system this store uses. A lower level sets more up for you and shows fewer screens. You can change it
+            later on Features.
+          </Text>
+          <Controller
+            control={control}
+            name="level"
+            render={({ field }) => <LevelPicker value={field.value} onChange={field.onChange} disabled={createSystem.isPending} />}
+          />
+          <Button
+            mode="contained"
+            style={buttonStyle}
+            contentStyle={styles.leading}
+            onPress={submit}
+            loading={inFlight}
+            disabled={createSystem.isPending}
+          >
+            Create Store
+          </Button>
+          {/* The write's own state, distinct from a field being invalid: a provider string is replaced by
+              copy the user can act on, and an offline wait says so. */}
+          <HelperText type={notice?.type ?? 'error'} visible={notice !== null}>
+            {notice?.text}
+          </HelperText>
+        </ScrollView>
+      </>
+    );
+  }
+
   return (
-    <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-      <Text variant="headlineSmall">Name your store</Text>
-      <Text variant="bodyMedium">One store: its name, and the country and currency its books are kept in.</Text>
-      <FieldGrid>
-        <Controller
-          control={control}
-          name="name"
-          render={({ field, fieldState }) => (
-            <Field label="Store Name" required span="full" error={fieldState.error?.message}>
-              <TextInput
-                mode="outlined"
-                dense
-                placeholder="Enter store name"
-                value={field.value}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                onSubmitEditing={submit}
-                returnKeyType="done"
-                autoFocus
-                maxLength={80}
-                error={!!fieldState.error}
-                accessibilityLabel="Store Name"
-              />
-            </Field>
-          )}
-        />
-        <CountryCurrencyFields
-          control={control}
-          countries={countries}
-          currencies={currencies}
-          // The country's own currency, as ERPNext's setup wizard proposes it.
-          onCountryPicked={(country) => {
-            if (country.currency_code) setValue('default_currency', country.currency_code, { shouldValidate: true });
-          }}
-        />
-      </FieldGrid>
-      <Button
-        mode="contained"
-        style={buttonStyle}
-        contentStyle={styles.leading}
-        onPress={submit}
-        loading={inFlight}
-        disabled={createSystem.isPending}
-      >
-        Create Store
-      </Button>
-      {/* The write's own state, distinct from a field being invalid: a provider string is replaced by
-          copy the user can act on, and an offline wait says so. */}
-      <HelperText type={notice?.type ?? 'error'} visible={notice !== null}>
-        {notice?.text}
-      </HelperText>
-    </ScrollView>
+    <>
+      {/* The first step has nothing before it: its back is greyed out, and the app bar's leaves. */}
+      <StepHeader index={0} count={2} title="Your store" backLabel="Back" onBack={() => undefined} />
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <Text variant="headlineSmall">Name your store</Text>
+        <Text variant="bodyMedium">One store: its name, and the country and currency its books are kept in.</Text>
+        <FieldGrid>
+          <Controller
+            control={control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <Field label="Store Name" required span="full" error={fieldState.error?.message}>
+                <TextInput
+                  mode="outlined"
+                  dense
+                  placeholder="Enter store name"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  onSubmitEditing={next}
+                  returnKeyType="done"
+                  autoFocus
+                  maxLength={80}
+                  error={!!fieldState.error}
+                  accessibilityLabel="Store Name"
+                />
+              </Field>
+            )}
+          />
+          <CountryCurrencyFields
+            control={control}
+            countries={countries}
+            currencies={currencies}
+            // The country's own currency, as ERPNext's setup wizard proposes it.
+            onCountryPicked={(country) => {
+              if (country.currency_code) setValue('default_currency', country.currency_code, { shouldValidate: true });
+            }}
+          />
+        </FieldGrid>
+        <Button mode="contained" style={buttonStyle} contentStyle={styles.leading} onPress={next}>
+          Next
+        </Button>
+      </ScrollView>
+    </>
   );
 }
 

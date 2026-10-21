@@ -1316,6 +1316,7 @@ export type Database = {
           enable_perpetual_inventory: boolean
           expenses_included_in_valuation: string | null
           id: string
+          level: number
           name: string
           owner_id: string
           round_off_account: string | null
@@ -1336,6 +1337,7 @@ export type Database = {
           enable_perpetual_inventory?: boolean
           expenses_included_in_valuation?: string | null
           id?: string
+          level?: number
           name: string
           owner_id: string
           round_off_account?: string | null
@@ -1356,6 +1358,7 @@ export type Database = {
           enable_perpetual_inventory?: boolean
           expenses_included_in_valuation?: string | null
           id?: string
+          level?: number
           name?: string
           owner_id?: string
           round_off_account?: string | null

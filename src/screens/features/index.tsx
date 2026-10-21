@@ -14,7 +14,7 @@ import { QueryState } from '../../components/query-state';
 import { Snackbar } from '../../components/snackbar';
 import { Text } from '../../components/text';
 import { useDiscard } from '../../components/use-discard';
-import { useFeaturePreferencesQuery, useSaveFeaturePreferencesMutation } from '../../features/feature-preferences/queries';
+import { hiddenOf, useFeaturePreferencesQuery, useSaveFeaturePreferencesMutation } from '../../features/feature-preferences/queries';
 import { changedSwitches } from '../../features/feature-preferences/visibility';
 import { useMerchantsQuery } from '../../features/merchants/queries';
 import { opens, showsDestination } from '../../features/permissions/access';
@@ -48,18 +48,29 @@ export function FeaturesProvider({ merchantId, children }: { merchantId: string;
   // set. Offline, from the copy — the save waits for a connection either way.
   const current = preferences.isFetchedAfterMount || preferences.isPaused;
 
-  if (current && preferences.data && merchant && (isOwner || permissions.data)) {
+  if (current && preferences.data !== undefined && merchant && (isOwner || permissions.data)) {
     const opensPage = (page: IndexRule) => isOwner || opens(page, permissions.data);
     const screens = DESTINATIONS.filter((screen) => !screen.fixed && (isOwner || showsDestination(screen, permissions.data)));
+    // Never saved: the store level's menu is what is saved (src/features/merchants/levels.ts). Keyed by the level, so the
+    // owner's change of it starts the choices again from the new level's menu (the change deleted everyone's).
     return (
-      <Draft merchantId={merchantId} storeName={merchant.name} saved={preferences.data} screens={screens} opensPage={opensPage}>
+      <Draft
+        key={merchant.level}
+        merchantId={merchantId}
+        storeName={merchant.name}
+        level={merchant.level}
+        isOwner={isOwner}
+        saved={hiddenOf(preferences.data, merchant.level)}
+        screens={screens}
+        opensPage={opensPage}
+      >
         {children}
       </Draft>
     );
   }
 
   // Waiting for the choices or the permissions: where they are — a spinner while the cached choices are asked again.
-  const query = preferences.data && current ? permissions : preferences;
+  const query = preferences.data !== undefined && current ? permissions : preferences;
   return (
     <View style={styles.fill}>
       <PageHeader kicker={merchant?.name ?? ''} title="Features" meta={INTRO} />
@@ -75,7 +86,7 @@ export function FeaturesProvider({ merchantId, children }: { merchantId: string;
 type DraftProps = Omit<FeaturesValue, 'notify' | 'leave'> & { children: ReactNode };
 
 /** The unsaved choices, the bar that saves or resets them, and the guard on leaving with them. */
-function Draft({ merchantId, storeName, saved: loaded, screens, opensPage, children }: DraftProps) {
+function Draft({ merchantId, storeName, level, isOwner, saved: loaded, screens, opensPage, children }: DraftProps) {
   const { colors } = useAppTheme();
   const navigation = useNavigation();
   // What was last saved: the server's answer when the page opened, then each save's own values.
@@ -110,7 +121,7 @@ function Draft({ merchantId, storeName, saved: loaded, screens, opensPage, child
   const submit = form.handleSubmit((values) => send(values.hidden));
 
   return (
-    <FeaturesContext value={{ merchantId, storeName, screens, saved, opensPage, notify: setMessage, leave }}>
+    <FeaturesContext value={{ merchantId, storeName, level, isOwner, screens, saved, opensPage, notify: setMessage, leave }}>
       <FormProvider {...form}>
         <View style={[styles.fill, { backgroundColor: colors.background }]}>
           <View style={styles.fill}>

@@ -9,6 +9,7 @@ import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
 import { changedSwitches, hasCore, pageKey, pageShown, screenKey, screenShown, screenStatus, setPages, setScreen } from '../src/features/feature-preferences/visibility.ts';
 import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
+import { itemPartShown, levelHidden, levelInfo, plainWords } from '../src/features/merchants/levels.ts';
 import { readLabel } from '../src/features/items/label.ts';
 import { can, effective, has, overridesFor, readsAny, showsDestination, toggle } from '../src/features/permissions/access.ts';
 import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
@@ -641,5 +642,55 @@ assert.equal(changedSwitches([], ['setup/company'], SETUPS, all), 1);
 assert.equal(changedSwitches(['setup/company'], ['setup/company', 'setup/uoms'], SETUPS, all), 2);
 assert.equal(changedSwitches(['sell/pos-invoices'], ['sell/pos-invoices', 'screen:sell'], SELLS, all), 1);
 assert.equal(changedSwitches(['x'], ['x'], SETUPS, all), 0);
+
+// src/features/merchants/levels.ts — a store's level: the menu a person starts from, and the New Item form's parts.
+// The screens as the app lists them (src/components/destinations.ts and the four indexes), by route.
+const routes = (screen, list, core) => {
+  const entry = { name: screen, sections: [{ entries: list.map((route) => ({ route, core: route === 'items' })) }] };
+  if (core) entry.core = { route: core, core: true };
+  return entry;
+};
+const SETUP_ROUTES = ['company', 'fiscal-years', 'global-defaults', 'system-settings', 'currency', 'chart-of-accounts', 'accounts-settings', 'modes-of-payment',
+  'sales-tax-templates', 'item-tax-templates', 'tax-categories', 'tax-rules', 'warehouses', 'uoms', 'uom-conversion-factors', 'price-lists', 'brands',
+  'item-groups', 'stock-settings', 'selling-settings', 'pricing-rules', 'pos-profiles', 'document-naming-settings', 'print-formats', 'letter-heads', 'print-settings'];
+const APP = [
+  { name: 'dashboard' },
+  routes('sell', ['pos-invoices', 'pos-opening-entries', 'pos-closing-entries'], 'session'),
+  routes('stock', ['items', 'item-prices', 'import-items', 'stock-entries', 'stock-reconciliations', 'stock-balance', 'stock-ledger']),
+  routes('accounts', ['general-ledger']),
+  { name: 'employees' },
+  routes('setup', SETUP_ROUTES),
+];
+const pagesShown = (level, screen) =>
+  screen.sections[0].entries.filter((page) => pageShown(levelHidden(level), screen.name, page)).map((page) => page.route);
+const menu = (level) => APP.filter((screen) => screenShown(levelHidden(level), screen, all)).map((screen) => screen.name);
+// Every key names a screen or a page the app has: a renamed route would otherwise stop hiding anything.
+const KNOWN = new Set(APP.flatMap((screen) => [screenKey(screen.name), ...(screen.sections?.[0].entries ?? []).map((page) => pageKey(screen.name, page.route))]));
+assert.deepEqual(levelHidden(1).filter((key) => !KNOWN.has(key)), []);
+assert.equal(SETUP_ROUTES.length, 26);
+// Level 5 is the whole system; each level shows everything the one below shows.
+assert.deepEqual(levelHidden(5), []);
+for (const level of [1, 2, 3, 4]) assert.ok(levelHidden(level + 1).every((key) => levelHidden(level).includes(key)), `level ${level + 1} hides more than ${level}`);
+// Level 1: the Dashboard, Sell's session and Register, Stock's Items — and nothing else.
+assert.deepEqual(menu(1), ['dashboard', 'sell', 'stock']);
+assert.deepEqual(pagesShown(1, APP[1]), []);
+assert.deepEqual(pagesShown(1, APP[2]), ['items']);
+assert.deepEqual(pagesShown(2, APP[1]), ['pos-invoices']);
+assert.deepEqual(pagesShown(2, APP[2]), ['items', 'item-prices', 'stock-entries', 'stock-balance']);
+assert.deepEqual(menu(2), ['dashboard', 'sell', 'stock']);
+assert.deepEqual(menu(3), ['dashboard', 'sell', 'stock', 'employees', 'setup']);
+assert.equal(pagesShown(3, APP[5]).length, 10);
+assert.deepEqual(menu(4), ['dashboard', 'sell', 'stock', 'accounts', 'employees', 'setup']);
+assert.equal(pagesShown(4, APP[5]).length, 17);
+assert.equal(pagesShown(5, APP[5]).length, 26);
+// Showing Setup again on Features (its switch) brings every page back, as for any screen with no core.
+assert.equal(setScreen(levelHidden(2), APP[5], true, all).some((key) => key.startsWith('setup')), false);
+assert.deepEqual([levelInfo(1).name, levelInfo(5).name, levelInfo(9).level], ['Just Sell', 'Everything, by Hand', 5]);
+// The New Item form: the code only from level 3, taxes only from 4; at 4 every part shows.
+assert.deepEqual([itemPartShown(1, 'item_code'), itemPartShown(2, 'item_group_id'), itemPartShown(1, 'item_group_id'), itemPartShown(3, 'taxes')], [false, true, false, false]);
+for (const part of ['item_code', 'item_group_id', 'stock_uom', 'description', 'is_stock_item', 'disabled', 'reorder_level', 'brand_id', 'units', 'inventory', 'defaults', 'discounts', 'taxes']) {
+  assert.ok(itemPartShown(4, part), part);
+}
+assert.deepEqual([plainWords(1), plainWords(2), plainWords(3)], [true, true, false]);
 
 console.log('check:logic — all assertions passed.');

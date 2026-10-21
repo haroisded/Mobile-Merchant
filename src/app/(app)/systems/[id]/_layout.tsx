@@ -15,7 +15,7 @@ import type { Destination } from '../../../../components/destinations';
 import { Icon } from '../../../../components/icon';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
-import { useFeaturePreferencesQuery } from '../../../../features/feature-preferences/queries';
+import { useHiddenFeatures } from '../../../../features/feature-preferences/queries';
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
 import { usePermissions } from '../../../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../../../features/system-settings/queries';
@@ -69,8 +69,9 @@ export default function SystemLayout() {
   // waits for its time zone, and money is formatted by it, so the first of those screens no longer asks for it
   // and only then for its own rows — one round trip less (.claude/test-report/backend-performance-test-report.md).
   useSystemSettingsQuery({ merchantId: id });
-  // What this person hid here (the Features destination). Nothing until it loads: a destination appears, never vanishes.
-  const hidden = useFeaturePreferencesQuery({ merchantId: id }).data;
+  // What this person hid here (the Features destination), else what the store's level hides. Nothing until it loads:
+  // a destination appears, never vanishes.
+  const hidden = useHiddenFeatures({ merchantId: id, level: merchant?.level });
 
   if (!merchant) return <MissingMerchant merchants={merchants} />;
 

@@ -137,12 +137,13 @@ export const DESTINATIONS: Destination[] = [
 
 /**
  * The side menu: the destinations the person may open (showsDestination), less those they hid on the Features page
- * (visibility.ts). `hiddenByChoice`, the ones hidden only by that choice, is null until the choices load.
+ * or their store's level hides (visibility.ts, src/features/merchants/levels.ts). Until that loads, only Home and
+ * Features: a destination appears, never vanishes. `hiddenByChoice`, the ones hidden only by that choice, is null till then.
  */
 export function menuOf(isOwner: boolean, permissions: Permissions | null | undefined, hidden: string[] | undefined) {
   const permitted = DESTINATIONS.filter((entry) => isOwner || showsDestination(entry, permissions));
   const opensPage = (page: IndexRule) => isOwner || opens(page, permissions);
-  const shown = permitted.filter((entry) => screenShown(hidden ?? [], entry, opensPage));
+  const shown = hidden ? permitted.filter((entry) => screenShown(hidden, entry, opensPage)) : permitted.filter((entry) => entry.fixed);
   const hiddenByChoice = hidden ? permitted.filter((entry) => !shown.includes(entry)).map((entry) => entry.name) : null;
   return { shown, hiddenByChoice };
 }

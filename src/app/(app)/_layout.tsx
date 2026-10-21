@@ -48,6 +48,7 @@ const DIALOG_ROUTES = [
   'forms/access-code',
   'forms/access-request',
   'forms/enter-access-code',
+  'forms/store-level',
 ];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to

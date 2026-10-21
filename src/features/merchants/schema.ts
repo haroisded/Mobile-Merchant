@@ -8,7 +8,7 @@ import * as z from 'zod';
 // One schema, shared by both forms that write a store — Create Store and the Store page — and by the
 // mutations behind them, so the thing validated and the thing written cannot disagree. A store is ERPNext's
 // Company, one per store and no branches (supabase/migrations/20261018162135_single_store.sql).
-export const companySchema = z.object({
+const companySchema = z.object({
   // `.trim()` before `.min(1)` so a name of pure spaces fails here rather than at the
   // merchants_name_length check constraint, which bounds the trimmed name at 1..80.
   name: z.string().trim().min(1, 'Enter a name.').max(80, 'Use 80 characters or fewer.'),
@@ -17,6 +17,11 @@ export const companySchema = z.object({
 });
 
 export type CompanyValues = z.infer<typeof companySchema>;
+
+// Create Store's two steps: the store, then its level (./levels.ts). merchants_level_range is the bound that holds.
+export const createStoreSchema = companySchema.extend({ level: z.number().int().min(1).max(5) });
+
+export type CreateStoreValues = z.infer<typeof createStoreSchema>;
 
 // The Store page's accounting defaults and Perpetual Inventory (docs.frappe.io/erpnext/company-accounting-defaults,
 // /perpetual-inventory). Each holds an account id, '' for none; the mutation sends null. Which account each may

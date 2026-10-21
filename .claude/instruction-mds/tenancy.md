@@ -39,8 +39,11 @@ them; do not rebuild them.
     on merchants` trigger per step, `merchants_seed_NN_<area>` — Postgres fires same-event triggers in
     name order, so a later step's seed can read an earlier one's rows (10 company, 20 access,
     30 defaults, 40 accounting, 50 accounting defaults, 60 payments, 70 taxes, 80 stock, 90 selling,
-    92 stock settings, 94 naming, 96 printing — two digits always: "100" would sort before "20"). Each step's migration also
-    backfills the merchants that exist.
+    92 stock settings, 94 naming, 96 printing, 98 level — two digits always: "100" would sort before "20"). Each step's
+    migration also backfills the merchants that exist. Its **level** (`merchants.level`, 1–5,
+    `20261021153337_store_levels.sql`) is a Company field too: presets, never a refusal — what the system sets up
+    (`private.apply_level`, add-only) and what the menu and the New Item form show (`src/features/merchants/levels.ts`).
+    Only the owner changes it (`merchants_guard_level`), though Store & Calendar holders write the rest of the row.
 11. The UI hides what a person may not do — `usePermissions` with `can()` for a doctype and `has()` for a
     permission (`src/features/permissions/access.ts`) — but never decides it. The policies are the
     boundary; a hidden button is a courtesy.

@@ -1,13 +1,16 @@
-import { useWatch } from 'react-hook-form';
+import { router } from 'expo-router';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Badge } from '../../components/badge';
+import { Button } from '../../components/button';
 import { DESTINATIONS } from '../../components/destinations';
 import type { Destination } from '../../components/destinations';
 import { Icon } from '../../components/icon';
 import { Text } from '../../components/text';
 import { changedSwitches, screenStatus } from '../../features/feature-preferences/visibility';
 import type { ScreenStatus } from '../../features/feature-preferences/visibility';
+import { levelHidden, levelInfo } from '../../features/merchants/levels';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
 import { useFeatures } from './use-features';
@@ -26,6 +29,7 @@ export function ScreenList({ selected, chevron, onOpen }: { selected?: string; c
 
   return (
     <View style={styles.list}>
+      <StoreLevel hidden={hidden} />
       <View style={styles.group}>
         <Text variant="labelMedium" style={{ color: colors.secondary }}>
           Always visible
@@ -57,6 +61,48 @@ export function ScreenList({ selected, chevron, onOpen }: { selected?: string; c
               onOpen={() => onOpen(screen.name)}
             />
           ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** The same keys, whatever their order: what the menu shows does not depend on it. */
+const sameKeys = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((key) => b.includes(key));
+
+/**
+ * The store's level (src/features/merchants/levels.ts): the menu everyone here starts from. The owner changes it
+ * (forms/store-level); anyone whose choices differ from it can take its menu back — an unsaved change, as any other.
+ */
+function StoreLevel({ hidden }: { hidden: string[] }) {
+  const { colors } = useAppTheme();
+  const { merchantId, level, isOwner } = useFeatures();
+  const { setValue } = useFormContext<{ hidden: string[] }>();
+  const info = levelInfo(level);
+  const preset = levelHidden(level);
+
+  return (
+    <View style={styles.group}>
+      <Text variant="labelMedium" style={{ color: colors.secondary }}>
+        Store level
+      </Text>
+      <View style={[styles.box, styles.level, { borderColor: colors.outlineVariant }]}>
+        <Text variant="titleMedium">{`Level ${info.level} · ${info.name}`}</Text>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
+          {info.summary}
+        </Text>
+        <View style={styles.actions}>
+          {isOwner ? (
+            <Button mode="outlined" onPress={() => router.push({ pathname: '/forms/store-level', params: { merchantId } })}>
+              Change Level
+            </Button>
+          ) : null}
+          {/* An inline text action in the accent (.claude/instruction-mds/frontend.md §2.3). */}
+          {sameKeys(hidden, preset) ? null : (
+            <Button mode="text" textColor={colors.accent} onPress={() => setValue('hidden', preset, { shouldDirty: true })}>
+              {`Use Level ${info.level}'s menu`}
+            </Button>
+          )}
         </View>
       </View>
     </View>
@@ -123,6 +169,8 @@ const styles = StyleSheet.create({
   group: { gap: spacing.sm },
   fixed: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, minHeight: 40, paddingHorizontal: spacing.sm },
   box: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
+  level: { gap: spacing.xs, padding: spacing.md },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingTop: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, minHeight: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.ms },
   // The icon on a thumbnail's ground (.claude/instruction-mds/frontend.md §5, Thumbnail placeholder): a size, not spacing.
   tile: { width: 40, height: 40, borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },

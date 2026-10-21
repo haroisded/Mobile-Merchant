@@ -34,7 +34,7 @@ src/
   lib/                    supabase, auth, secure-storage, query, database.types.ts, columns.ts, errors.ts, dates.ts, money.ts, tree.ts, files.ts (the device's file pickers), barcode.ts (which camera reads count)  …
   Store/                  zustand — client state only (StoreUser.ts, picker.ts, confirm.ts, ledger-filters.ts, cart.ts, scan.ts, about.ts)
   features/
-    merchants/            queries.ts  schema.ts — merchants is the Company
+    merchants/            queries.ts  schema.ts — merchants is the Company; levels.ts — what a store's level shows and fills, import-free
     countries/            queries.ts — read-only reference data
     currency-presets/     queries.ts — read-only reference data
     fiscal-years/         queries.ts  schema.ts
@@ -114,11 +114,11 @@ src/
     pos-opening-entries/  index.tsx  open-session.tsx
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     scan/                 index.tsx — the product scan: the camera, its barcodes, Read Label (the full-screen route scan.tsx)
-    features/             index.tsx (FeaturesProvider, the panes)  screen-list.tsx  screen-detail.tsx  about.tsx  use-features.ts —
+    features/             index.tsx (FeaturesProvider, the panes)  screen-list.tsx  screen-detail.tsx  about.tsx  use-features.ts  store-level-form.tsx —
                           the Features page: hide screens and pages, with what each is for (the shell destination systems/[id]/features/)
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  level-picker.tsx (Create Store and Features)  step-header.tsx  progress-bar.tsx  radio-button.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of

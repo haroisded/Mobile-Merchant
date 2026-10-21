@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useHiddenFeatures } from '../features/feature-preferences/queries';
+import { useMerchant } from '../features/merchants/queries';
 import { pageShown } from '../features/feature-preferences/visibility';
 import { opens } from '../features/permissions/access';
 import type { Permissions } from '../features/permissions/access';
@@ -68,16 +69,12 @@ const SECTION_CARD = 320;
 export function RecordIndex<R extends string>({ merchantId, screen, kicker, title, meta, isOwner, sections, onOpen, offline, failure, empty, children }: Props<R>) {
   const { columns, onLayout } = useColumns(SECTION_CARD);
   const permissions = usePermissions({ merchantId });
-  const hidden = useHiddenFeatures({ merchantId });
+  const hidden = useStoreHidden(merchantId);
   // A row shows only to whom may open it, and only while they have not hidden it; a section with none left
   // goes. The owner may read everything, and the systems list already says who that is — so the owner's rows
   // need no my_permissions, which a fresh start in airplane mode has not fetched.
-  const shown = sections
-    .map((section) => ({
-      ...section,
-      entries: section.entries.filter((entry) => listed(entry, { screen, hidden, isOwner, permissions: permissions.data })),
-    }))
-    .filter((section) => section.entries.length > 0);
+  const by = { screen, hidden, isOwner, permissions: permissions.data };
+  const shown = sections.map((section) => ({ ...section, entries: section.entries.filter((entry) => listed(entry, by)) })).filter((section) => section.entries.length > 0);
 
   return (
     <View style={styles.fill}>
@@ -89,7 +86,7 @@ export function RecordIndex<R extends string>({ merchantId, screen, kicker, titl
             <QueryState query={permissions} offline={offline} failure={failure} />
           </View>
         )}
-        {permissions.data && shown.length === 0 && empty !== null ? <Text variant="bodyMedium">{empty}</Text> : null}
+        {nothingListed(by, shown.length) && empty !== null ? <Text variant="bodyMedium">{empty}</Text> : null}
         <CellRows
           items={shown}
           columns={columns}
@@ -104,10 +101,21 @@ export function RecordIndex<R extends string>({ merchantId, screen, kicker, titl
   );
 }
 
-/** Whether a row is listed: the person may open it, and has not hidden it on the Features page. */
-function listed(entry: IndexEntry<string>, by: { screen: string; hidden: string[]; isOwner: boolean; permissions: Permissions | null | undefined }) {
-  return (by.isOwner || opens(entry, by.permissions)) && pageShown(by.hidden, by.screen, entry);
+/** What the person hides in the store, or its level's menu (src/features/merchants/levels.ts): undefined until it loads. */
+function useStoreHidden(merchantId: string) {
+  const level = useMerchant(merchantId)?.merchant.level;
+  return useHiddenFeatures({ merchantId, level });
 }
+
+type ListedBy = { screen: string; hidden: string[] | undefined; isOwner: boolean; permissions: Permissions | null | undefined };
+
+/** Whether a row is listed: the person may open it, and has not hidden it on the Features page. */
+function listed(entry: IndexEntry<string>, by: ListedBy) {
+  return (by.isOwner || opens(entry, by.permissions)) && !!by.hidden && pageShown(by.hidden, by.screen, entry);
+}
+
+/** Nothing is listed once everything the rows depend on has loaded: the moment to say why. */
+const nothingListed = (by: ListedBy, count: number) => !!by.permissions && !!by.hidden && count === 0;
 
 function SectionCard<R extends string>({ section, onOpen }: { section: IndexSection<R>; onOpen: (route: R) => void }) {
   const { colors } = useAppTheme();

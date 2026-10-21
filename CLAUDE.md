@@ -424,6 +424,10 @@ center, an abbreviation, a second company per store — without the human (ARCHI
 Then what each person hides in their own menu: `20261021004636_feature_preferences.sql` (`feature_preferences`, one
 row per person and store, own-row policies like `notifications`, not a doctype — hidden is not disabled; ARCHITECTURE.md,
 Features).
+Then how much of the system a store uses: `20261021153337_store_levels.sql` (`merchants.level`, 1–5, existing stores 5;
+`private.apply_level()`, add-only — a Main Register for 1–4, the Item series for 1–2, negative stock for 1 — behind
+`merchants_seed_98_level` and `merchants_level_changed`, which also clears the store's Features choices;
+`merchants_guard_level`, the owner's alone; ARCHITECTURE.md, Store levels).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

@@ -10,13 +10,17 @@ export const atLeastZero = numberText.refine((value) => Number(value || 0) >= 0,
  * are "none" — the RPC stores null. Which record each default may name is the database's rule
  * (private.validate_defaults), and so is the code under a naming series (private.prepare_item): `codeTyped`
  * is false when Stock Settings names items by the series, and the field is then left out of the form.
+ * `nameRequired`: where the store's level hides the code (src/features/merchants/levels.ts), the name is what the
+ * item is known by, so a blank one — which would read as the series' number — is refused.
  */
-export const itemSchema = (codeTyped: boolean) =>
+export const itemSchema = (codeTyped: boolean, nameRequired = false) =>
   z
     .object({
       item_code: codeTyped ? z.string().trim().min(1, 'Enter a code.').max(140, 'Use 140 characters or fewer.') : z.string(),
       // Blank: the code, as ERPNext fills it.
-      item_name: z.string().trim().max(140, 'Use 140 characters or fewer.'),
+      item_name: nameRequired
+        ? z.string().trim().min(1, 'Enter a name.').max(140, 'Use 140 characters or fewer.')
+        : z.string().trim().max(140, 'Use 140 characters or fewer.'),
       // What the camera reads off the pack: items_barcode_shape's printable characters, no spaces. Blank for none.
       barcode: z
         .string()

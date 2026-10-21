@@ -30,6 +30,8 @@ import type { Item } from '../../features/items/queries';
 import { readLabel } from '../../features/items/label';
 import { itemSchema } from '../../features/items/schema';
 import type { ItemValues } from '../../features/items/schema';
+import { itemPartShown, plainWords } from '../../features/merchants/levels';
+import type { ItemPart } from '../../features/merchants/levels';
 import type { Merchant } from '../../features/merchants/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useSellingSettingsQuery } from '../../features/selling-settings/queries';
@@ -57,6 +59,8 @@ type Records = {
  * One Item (docs.frappe.io/erpnext/item): what it is, how its stock is kept, the units it sells in, the
  * defaults a sale falls back on, and its Item Tax rows. A page of the Stock stack —
  * src/app/(app)/systems/[id]/stock/item.tsx — at every width, being a long form; new when there is no `itemId`.
+ * The store's level decides which parts show (src/features/merchants/levels.ts); a hidden one keeps what the system
+ * filled it with — Stock Settings' group, unit and warehouse, the Item series' code — and is never left empty.
  */
 export function ItemPage({ merchant, itemId }: { merchant: Merchant; itemId?: string }) {
   // The list this page was opened from fetched the items; the rest are cache hits once Setup has been browsed.
@@ -228,6 +232,15 @@ function ItemHeader({ merchant, existing }: { merchant: Merchant; existing: Item
   );
 }
 
+/**
+ * Which parts of the form show: from the store's level on (src/features/merchants/levels.ts) — or whenever the system has
+ * nothing to fill one with: a typed code, a group or a unit Stock Settings does not name. A saved item holds all three.
+ */
+function partsShown(level: number, unfilled: { code: boolean; group: boolean; uom: boolean }) {
+  return (part: ItemPart) =>
+    itemPartShown(level, part) || (part === 'item_code' && unfilled.code) || (part === 'item_group_id' && unfilled.group) || (part === 'stock_uom' && unfilled.uom);
+}
+
 function Form({ merchant, records, existing }: { merchant: Merchant; records: Records; existing: Item | undefined }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const editable = can(permissions, 'Item', existing ? 'write' : 'create');
@@ -235,13 +248,16 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
   // Stock Settings' Item Naming By: a typed code, or the next name of the Item series.
   const fromSeries = !existing && records.stockSettings.item_naming_by === 'Naming Series';
 
+  const initial = existing ? saved(existing) : blank(records);
+  const shows = partsShown(merchant.level, { code: !existing && !fromSeries, group: !initial.item_group_id, uom: !initial.stock_uom });
+
   const { control, handleSubmit, formState, getValues, setValue } = useForm<ItemValues>({
-    resolver: zodResolver(itemSchema(!fromSeries)),
-    defaultValues: existing ? saved(existing) : blank(records),
+    resolver: zodResolver(itemSchema(!fromSeries, !shows('item_code'))),
+    defaultValues: initial,
     mode: 'onTouched',
   });
   const isStockItem = useWatch({ control, name: 'is_stock_item' });
-  const section = { control, records, disabled: !editable };
+  const section = { control, records, disabled: !editable, shows };
   const priced = !existing && can(permissions, 'Item Price', 'create');
 
   return (
@@ -259,32 +275,50 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         {editable ? <ScanProduct form={{ getValues, setValue }} brands={records.brands} existing={existing} fromSeries={fromSeries} priced={priced} /> : null}
         <Details
           {...section}
+          plain={plainWords(merchant.level)}
           existing={existing}
           fromSeries={fromSeries}
           priced={priced}
           // The Opening Stock is a Stock Reconciliation saved and submitted as the creator.
           stocked={!existing && isStockItem && can(permissions, 'Stock Reconciliation', 'create') && can(permissions, 'Stock Reconciliation', 'submit')}
         />
-        {isStockItem ? <Inventory {...section} /> : null}
-        {existing && isStockItem && can(permissions, 'Bin', 'read') ? <StockLevels merchant={merchant} item={existing} records={records} /> : null}
-        <Units {...section} savedUom={existing?.stock_uom} />
-        {/* docs.frappe.io/erpnext/item 3.9 */}
-        <SectionHeading title="Defaults" hint="What a sale of it starts with; an empty one comes from its item group, its brand, then the store" />
-        <SalesDefaultsFields
-          control={control}
-          names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', income: 'income_account', expense: 'expense_account' }}
-          saved={existing}
-          records={records.sales}
-          disabled={!editable}
-        />
-        <Discounts {...section} savedAccount={existing?.discount_account} />
-        <Taxes {...section} />
+        <Sections {...section} merchant={merchant} existing={existing} isStockItem={isStockItem} readsStock={can(permissions, 'Bin', 'read')} />
       </PageForm>
     </View>
   );
 }
 
-type SectionProps = { control: Control<ItemValues>; records: Records; disabled: boolean };
+type SectionsProps = SectionProps & { merchant: Merchant; existing: Item | undefined; isStockItem: boolean; readsStock: boolean };
+
+/** Everything under the item's details, each section as its level shows it. */
+function Sections({ merchant, existing, isStockItem, readsStock, ...section }: SectionsProps) {
+  const { control, records, disabled, shows } = section;
+
+  return (
+    <>
+      {isStockItem && (shows('reorder_level') || shows('inventory')) ? <Inventory {...section} /> : null}
+      {existing && isStockItem && readsStock ? <StockLevels merchant={merchant} item={existing} records={records} /> : null}
+      {shows('units') ? <Units {...section} savedUom={existing?.stock_uom} /> : null}
+      {shows('defaults') ? (
+        <>
+          {/* docs.frappe.io/erpnext/item 3.9 */}
+          <SectionHeading title="Defaults" hint="What a sale of it starts with; an empty one comes from its item group, its brand, then the store" />
+          <SalesDefaultsFields
+            control={control}
+            names={{ priceList: 'default_price_list', warehouse: 'default_warehouse', income: 'income_account', expense: 'expense_account' }}
+            saved={existing}
+            records={records.sales}
+            disabled={disabled}
+          />
+        </>
+      ) : null}
+      {shows('discounts') ? <Discounts {...section} savedAccount={existing?.discount_account} /> : null}
+      {shows('taxes') ? <Taxes {...section} /> : null}
+    </>
+  );
+}
+
+type SectionProps = { control: Control<ItemValues>; records: Records; disabled: boolean; shows: (part: ItemPart) => boolean };
 
 /** 20.3 and 20.5: the most a line of this item may be discounted, and where its discounts post. */
 function Discounts({ control, records, disabled, savedAccount }: SectionProps & { savedAccount: string | null | undefined }) {
@@ -317,6 +351,8 @@ function Discounts({ control, records, disabled, savedAccount }: SectionProps & 
 }
 
 type DetailsProps = SectionProps & {
+  /** Levels 1-2: a shop's words for the price, the stock and the cost (src/features/merchants/levels.ts). */
+  plain: boolean;
   existing: Item | undefined;
   /** A new item under a naming series: its code comes from the series on Save. */
   fromSeries: boolean;
@@ -327,10 +363,24 @@ type DetailsProps = SectionProps & {
 };
 
 /** What the item is (docs.frappe.io/erpnext/item 2.1, 2.2, 3.1). */
-function Details({ control, records, disabled, existing, fromSeries, priced, stocked }: DetailsProps) {
+function Details(props: DetailsProps) {
+  // Child parts of one grid: FieldGrid hands its width down through context, so the halves still pair across them.
   return (
     <FieldGrid>
-      {fromSeries ? (
+      <Names {...props} />
+      <Kind {...props} />
+      <FirstFigures {...props} />
+    </FieldGrid>
+  );
+}
+
+/** Its code, barcode and name. Without its code, an item is known by its name, so the name is required (itemSchema). */
+function Names({ control, disabled, shows, existing, fromSeries }: DetailsProps) {
+  const named = !shows('item_code');
+
+  return (
+    <>
+      {named ? null : fromSeries ? (
         <ControlledText control={control} name="item_code" label="Item Code" hint="Stock Settings: Naming Series" placeholder="Numbered by the Item series on Save" disabled />
       ) : (
         <ControlledText
@@ -354,45 +404,104 @@ function Details({ control, records, disabled, existing, fromSeries, priced, sto
         autoCapitalize="none"
         disabled={disabled}
       />
-      <ControlledText control={control} name="item_name" label="Item Name" hint="Empty: the code" placeholder="e.g. Notebook A5" maxLength={140} disabled={disabled} />
-      <ControlledSelect
+      <ControlledText
         control={control}
-        name="item_group_id"
-        label="Item Group"
-        required
-        title="Item Group"
-        // Items go in the groups that are not groups; a saved item keeps showing its own.
-        options={records.groups.filter((group) => !group.is_group || group.id === existing?.item_group_id).map((group) => ({ value: group.id, label: group.item_group_name }))}
+        name="item_name"
+        label="Item Name"
+        required={named}
+        hint={named ? undefined : 'Empty: the code'}
+        placeholder="e.g. Notebook A5"
+        maxLength={140}
         disabled={disabled}
       />
-      <ControlledSelect
-        control={control}
-        name="stock_uom"
-        label="Default Unit of Measure"
-        required
-        hint="The unit its stock is counted in"
-        title="Default Unit of Measure"
-        options={uomOptions(records.uoms, existing?.stock_uom)}
-        disabled={disabled}
-      />
-      <ControlledSelect
-        control={control}
-        name="brand_id"
-        label="Brand"
-        title="Brand"
-        options={[{ value: '', label: 'None' }, ...records.brands.map((brand) => ({ value: brand.id, label: brand.brand }))]}
-        disabled={disabled}
-      />
-      <ControlledText control={control} name="description" label="Description" span="full" placeholder="e.g. 80 pages, ruled" maxLength={1000} multiline disabled={disabled} />
-      <ControlledSwitch control={control} name="is_stock_item" label="Maintain Stock" on="Its stock is kept and counted" off="A service: no stock is kept" disabled={disabled} />
-      {existing ? <ControlledSwitch control={control} name="disabled" label="Disabled" on="Can't be picked for a sale" off="Can be sold" disabled={disabled} /> : null}
+    </>
+  );
+}
+
+/** What kind of item it is: its group, unit, brand and description, and whether stock is kept of it. */
+function Kind({ control, records, disabled, shows, existing }: DetailsProps) {
+  return (
+    <>
+      {shows('item_group_id') ? (
+        <ControlledSelect
+          control={control}
+          name="item_group_id"
+          label="Item Group"
+          required
+          title="Item Group"
+          // Items go in the groups that are not groups; a saved item keeps showing its own.
+          options={records.groups.filter((group) => !group.is_group || group.id === existing?.item_group_id).map((group) => ({ value: group.id, label: group.item_group_name }))}
+          disabled={disabled}
+        />
+      ) : null}
+      {shows('stock_uom') ? (
+        <ControlledSelect
+          control={control}
+          name="stock_uom"
+          label="Default Unit of Measure"
+          required
+          hint="The unit its stock is counted in"
+          title="Default Unit of Measure"
+          options={uomOptions(records.uoms, existing?.stock_uom)}
+          disabled={disabled}
+        />
+      ) : null}
+      {shows('brand_id') ? (
+        <ControlledSelect
+          control={control}
+          name="brand_id"
+          label="Brand"
+          title="Brand"
+          options={[{ value: '', label: 'None' }, ...records.brands.map((brand) => ({ value: brand.id, label: brand.brand }))]}
+          disabled={disabled}
+        />
+      ) : null}
+      {shows('description') ? (
+        <ControlledText control={control} name="description" label="Description" span="full" placeholder="e.g. 80 pages, ruled" maxLength={1000} multiline disabled={disabled} />
+      ) : null}
+      {shows('is_stock_item') ? (
+        <ControlledSwitch control={control} name="is_stock_item" label="Maintain Stock" on="Its stock is kept and counted" off="A service: no stock is kept" disabled={disabled} />
+      ) : null}
+      {existing && shows('disabled') ? (
+        <ControlledSwitch control={control} name="disabled" label="Disabled" on="Can't be picked for a sale" off="Can be sold" disabled={disabled} />
+      ) : null}
+    </>
+  );
+}
+
+// The price, stock and cost fields in a shop's words (levels 1-2) or the books' (src/features/merchants/levels.ts).
+const PLAIN_WORDS = {
+  rate: 'Selling Price',
+  stock: 'Stock on Hand',
+  stockHint: 'How many you have today',
+  cost: 'Cost per Unit',
+  costHint: 'What you paid for one; empty: the selling price',
+};
+const BOOK_WORDS = {
+  rate: 'Standard Selling Rate',
+  stock: 'Opening Stock',
+  stockHint: 'What is on hand today, in its Default Warehouse',
+  cost: 'Valuation Rate',
+  costHint: 'What each unit cost; empty: the Standard Selling Rate',
+};
+
+/** Where a new item's Standard Selling Rate is written, or why it is written nowhere. */
+const rateHint = (plain: boolean, priceList: string | undefined) =>
+  plain ? 'What it sells for at the register' : priceList ? `Becomes its price in ${priceList}` : 'Selling Settings names no price list';
+
+/** A new item's first price, and the stock it starts with (docs.frappe.io/erpnext/item 2.2, /opening-stock). */
+function FirstFigures({ control, records, disabled, plain, priced, stocked }: DetailsProps) {
+  const words = plain ? PLAIN_WORDS : BOOK_WORDS;
+
+  return (
+    <>
       {/* docs.frappe.io/erpnext/item 2.2: read on creation only. */}
       {priced ? (
         <ControlledText
           control={control}
           name="standard_rate"
-          label="Standard Selling Rate"
-          hint={records.sellingPriceList ? `Becomes its price in ${records.sellingPriceList}` : 'Selling Settings names no price list'}
+          label={words.rate}
+          hint={rateHint(plain, records.sellingPriceList)}
           placeholder="0"
           keyboardType="decimal-pad"
           maxLength={14}
@@ -405,8 +514,8 @@ function Details({ control, records, disabled, existing, fromSeries, priced, sto
           <ControlledText
             control={control}
             name="opening_stock"
-            label="Opening Stock"
-            hint="What is on hand today, in its Default Warehouse"
+            label={words.stock}
+            hint={words.stockHint}
             placeholder="0"
             keyboardType="decimal-pad"
             maxLength={14}
@@ -415,8 +524,8 @@ function Details({ control, records, disabled, existing, fromSeries, priced, sto
           <ControlledText
             control={control}
             name="valuation_rate"
-            label="Valuation Rate"
-            hint="What each unit cost; empty: the Standard Selling Rate"
+            label={words.cost}
+            hint={words.costHint}
             placeholder="0"
             keyboardType="decimal-pad"
             maxLength={14}
@@ -424,7 +533,7 @@ function Details({ control, records, disabled, existing, fromSeries, priced, sto
           />
         </>
       ) : null}
-    </FieldGrid>
+    </>
   );
 }
 
@@ -467,41 +576,47 @@ function StockLevels({ merchant, item, records }: { merchant: Merchant; item: It
 }
 
 /** How its stock is valued, and when it counts as low (docs.frappe.io/erpnext/item 3.3, 3.4). */
-function Inventory({ control, records, disabled }: SectionProps) {
+function Inventory({ control, records, disabled, shows }: SectionProps) {
   return (
     <>
       <SectionHeading title="Inventory" hint="How its stock is valued, and when it counts as low" />
       <FieldGrid>
-        <ControlledSelect
-          control={control}
-          name="valuation_method"
-          label="Valuation Method"
-          title="Valuation Method"
-          options={[
-            { value: '', label: "Stock Settings' method", hint: records.stockSettings.valuation_method },
-            { value: 'FIFO', label: 'FIFO' },
-            { value: 'Moving Average', label: 'Moving Average' },
-          ]}
-          disabled={disabled}
-        />
-        <ControlledText
-          control={control}
-          name="reorder_level"
-          label="Re-order Level"
-          hint="At or below it, stock is low"
-          placeholder="None"
-          keyboardType="decimal-pad"
-          maxLength={14}
-          disabled={disabled}
-        />
-        <ControlledSwitch
-          control={control}
-          name="allow_negative_stock"
-          label="Allow Negative Stock"
-          on="Can be sold below zero, whatever Stock Settings say"
-          off="Follows Stock Settings"
-          disabled={disabled}
-        />
+        {shows('inventory') ? (
+          <ControlledSelect
+            control={control}
+            name="valuation_method"
+            label="Valuation Method"
+            title="Valuation Method"
+            options={[
+              { value: '', label: "Stock Settings' method", hint: records.stockSettings.valuation_method },
+              { value: 'FIFO', label: 'FIFO' },
+              { value: 'Moving Average', label: 'Moving Average' },
+            ]}
+            disabled={disabled}
+          />
+        ) : null}
+        {shows('reorder_level') ? (
+          <ControlledText
+            control={control}
+            name="reorder_level"
+            label="Re-order Level"
+            hint="At or below it, stock is low"
+            placeholder="None"
+            keyboardType="decimal-pad"
+            maxLength={14}
+            disabled={disabled}
+          />
+        ) : null}
+        {shows('inventory') ? (
+          <ControlledSwitch
+            control={control}
+            name="allow_negative_stock"
+            label="Allow Negative Stock"
+            on="Can be sold below zero, whatever Stock Settings say"
+            off="Follows Stock Settings"
+            disabled={disabled}
+          />
+        ) : null}
       </FieldGrid>
     </>
   );

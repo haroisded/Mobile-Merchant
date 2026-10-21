@@ -32,8 +32,8 @@ together and explained inline.
 - **Session handling** in one zustand store — restore, auto-refresh, sign-out
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
-- **A stores list and a merchant shell** — create a store (one business, no branches: name, country,
-  currency), remove it, open it onto a header and a rail (tablet) or drawer (phone) with seven
+- **A stores list and a merchant shell** — create a store in two steps (one business, no branches: name, country,
+  currency; then its level), remove it, open it onto a header and a rail (tablet) or drawer (phone) with seven
   destinations — Home, Dashboard, Sell, Stock, Accounts, Employees and Setup — each listed only for someone whose
   permissions reach something in it (Employees for the owner alone)
 - **Access Codes, the only way into someone else's store** — a tab beside Home: the owner makes codes (one to
@@ -99,6 +99,12 @@ together and explained inline.
   About for every row (its purpose and use-case), Hide all / Show all per section, and an unsaved bar with Reset and Save. Hidden is not turned off — nothing is refused, and nobody else's menu
   changes. A page the screen cannot work without (Sell's session and Register, Stock's Items) goes only with its screen;
   a screen whose pages all stand alone (Setup, Accounts) goes when its last page does. Saved per person in Supabase
+- **Store levels** — Create Store's second step: how much of the system the store uses, from **Level 1 · Just Sell**
+  (add items, sell at the register, check the Dashboard) to **Level 5 · Everything, by Hand** (the whole system, as
+  every store made before levels is). A level sets things up for the shop — a register to sell from, item codes
+  numbered for it, selling past zero stock at Level 1 — starts everyone's menu from its screens (through Features), and
+  shows only its share of the New Item form, filling the rest from Stock Settings. Nothing is turned off. The owner
+  changes it on Features; a change only ever adds, and starts everyone's menu again from the new level's
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependencies** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`

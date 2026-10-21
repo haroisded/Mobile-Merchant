@@ -4,7 +4,8 @@ import type { Tables } from '../../lib/database.types';
 import { STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../Store/StoreUser';
-import type { CompanyFormValues, CompanyValues } from './schema';
+import { resetFeaturePreferences } from '../feature-preferences/queries';
+import type { CompanyFormValues, CreateStoreValues } from './schema';
 
 // The row type comes from the generated types, not from a hand-written interface. One less thing to
 // keep in step with the migration.
@@ -70,7 +71,7 @@ export function useCreateSystemMutation() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: async (values: CompanyValues) => {
+    mutationFn: async (values: CreateStoreValues) => {
       const userId = session?.user.id;
       if (!userId) throw new Error('Not signed in.');
 
@@ -79,7 +80,7 @@ export function useCreateSystemMutation() {
         // merchants_insert_own checks owner_id against auth.uid(); sending anyone else's id is
         // rejected by the database, not merely by this line. The insert is the whole of the setup:
         // the merchants_seed_* triggers create the store's first fiscal year in the same
-        // transaction, as ERPNext's setup wizard does.
+        // transaction, as ERPNext's setup wizard does — and merchants_seed_98_level what its level adds.
         .insert({ owner_id: userId, ...values })
         .select()
         .single()
@@ -128,6 +129,28 @@ export function useUpdateCompanyMutation({ merchantId }: { merchantId: string })
     // new values.
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: merchantsKey.lists() });
+    },
+  });
+}
+
+/**
+ * The owner's change of a store's level (./levels.ts), from Features. merchants_guard_level refuses anyone else;
+ * merchants_level_changed adds what the level needs (private.apply_level) and deletes everyone's saved Features
+ * choices in the store, so each menu starts again from the new level's.
+ */
+export function useSetStoreLevelMutation({ merchantId }: { merchantId: string }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (level: number) => {
+      await supabase.from('merchants').update({ level }).eq('id', merchantId).throwOnError();
+    },
+    onSuccess: async () => {
+      // The trigger deleted the choices: the cache says so before the new level arrives, so the Features page never
+      // starts from the old ones. Then everything — a level can add a register and change Stock Settings, and this is
+      // a rare, deliberate action.
+      resetFeaturePreferences(queryClient, merchantId);
+      await queryClient.invalidateQueries();
     },
   });
 }
