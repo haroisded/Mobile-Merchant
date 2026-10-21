@@ -115,7 +115,7 @@ src/
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     scan/                 index.tsx — the product scan: the camera, its barcodes, Read Label (the full-screen route scan.tsx)
     features/             index.tsx (FeaturesProvider, the panes)  screen-list.tsx  screen-detail.tsx  about.tsx  use-features.ts —
-                          the Features page: hide screens and pages, with what each is for (the full-screen route features/)
+                          the Features page: hide screens and pages, with what each is for (the shell destination systems/[id]/features/)
     profile/
     sign-in/
   components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  …

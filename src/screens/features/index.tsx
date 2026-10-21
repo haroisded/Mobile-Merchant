@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
@@ -7,7 +7,6 @@ import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { saveOnce } from '../../components/adaptive-dialog';
 import { Button } from '../../components/button';
-import { closesForm } from '../../components/confirm-dialog';
 import { DESTINATIONS } from '../../components/destinations';
 import { FormFooter } from '../../components/form-footer';
 import { PageHeader } from '../../components/page-header';
@@ -35,8 +34,8 @@ const INTRO = "Hide the screens and pages you don't use in this store. Only your
 
 /**
  * Features: which of a store's screens and pages this person keeps in their own menu, with what each is for — the
- * layout of src/app/(app)/features/, opened from the store's header. It holds the unsaved choices for both of its
- * routes, the unsaved bar under them, and the messages. Hiding is not refusing: nothing is turned off, and nobody
+ * layout of src/app/(app)/systems/[id]/features/, the shell's last destination. It holds the unsaved choices for
+ * both of its routes, the unsaved bar under them, and the messages. Hiding is not refusing: nothing is turned off, and nobody
  * else's menu changes.
  */
 export function FeaturesProvider({ merchantId, children }: { merchantId: string; children: ReactNode }) {
@@ -51,7 +50,7 @@ export function FeaturesProvider({ merchantId, children }: { merchantId: string;
 
   if (current && preferences.data && merchant && (isOwner || permissions.data)) {
     const opensPage = (page: IndexRule) => isOwner || opens(page, permissions.data);
-    const screens = DESTINATIONS.filter((screen) => screen.name !== 'index' && (isOwner || showsDestination(screen, permissions.data)));
+    const screens = DESTINATIONS.filter((screen) => !screen.fixed && (isOwner || showsDestination(screen, permissions.data)));
     return (
       <Draft merchantId={merchantId} storeName={merchant.name} saved={preferences.data} screens={screens} opensPage={opensPage}>
         {children}
@@ -63,7 +62,7 @@ export function FeaturesProvider({ merchantId, children }: { merchantId: string;
   const query = preferences.data && current ? permissions : preferences;
   return (
     <View style={styles.fill}>
-      <PageHeader kicker={merchant?.name ?? ''} title="Features" meta={INTRO} onBack={() => router.back()} />
+      <PageHeader kicker={merchant?.name ?? ''} title="Features" meta={INTRO} />
       <View style={styles.state}>
         <QueryState query={query} offline="You're offline. Your choices will load when you reconnect." failure="Couldn't load your choices. Try again.">
           <ActivityIndicator />
@@ -78,7 +77,6 @@ type DraftProps = Omit<FeaturesValue, 'notify' | 'leave'> & { children: ReactNod
 /** The unsaved choices, the bar that saves or resets them, and the guard on leaving with them. */
 function Draft({ merchantId, storeName, saved: loaded, screens, opensPage, children }: DraftProps) {
   const { colors } = useAppTheme();
-  const wide = useShellWide();
   const navigation = useNavigation();
   // What was last saved: the server's answer when the page opened, then each save's own values.
   const [saved, setSaved] = useState(loaded);
@@ -90,18 +88,19 @@ function Draft({ merchantId, storeName, saved: loaded, screens, opensPage, child
   const changes = screens.reduce((sum, screen) => sum + changedSwitches(saved, hidden, screen, opensPage), 0);
   const notice = mutationNotice(save, failureMessage("Couldn't save your choices. Try again."));
 
-  // While choices are unsaved, the iOS swipe does not take the page away (useHoldRoute's way); Back asks.
-  useEffect(() => {
-    navigation.setOptions({ gestureEnabled: changes === 0 });
-  }, [navigation, changes]);
-
+  // Android's back on the list goes Home, as on every destination (the drawer's first route); with choices unsaved it
+  // asks first, and Discard drops them, since the drawer keeps this screen. Another rail item keeps them instead,
+  // for when the person comes back.
   const leave = () => {
-    if (changes === 0) {
-      router.back();
-      return;
-    }
-    // Wide the ask is a Dialog over the page; narrow a sheet over it, and both go together.
-    discard.ask(true, closesForm(wide, () => router.back()));
+    if (changes === 0) return false;
+    discard.ask(true, () => {
+      form.reset({ hidden: saved });
+      // The drawer's own NAVIGATE (as the shell's TOGGLE_DRAWER): this navigation is the Features route's, in the drawer.
+      // It also brings the store back to the top of the app's stack, which closes the narrow ask's sheet — a
+      // router.back() here as well took the person out of the store (phone width, 2026-10-21).
+      navigation.dispatch({ type: 'NAVIGATE', payload: { name: 'index', params: { id: merchantId } } });
+    });
+    return true;
   };
   const send = saveOnce(save, (values: string[]) => {
     setSaved(values);
@@ -164,7 +163,7 @@ function UnsavedBar({ changes, notice, mutation, onReset, onSave }: BarProps) {
 
 /**
  * The Features page itself: wide, the screens list beside the open screen (two parts in five, as Roles' panes);
- * narrow, the list (`selected` absent) or one screen's page (`selected`, the route features/[screen]).
+ * narrow, the list (`selected` absent) or one screen's page (`selected`, the route features/[name]).
  */
 export function FeaturesScreen({ selected }: { selected?: string }) {
   const { colors } = useAppTheme();
@@ -173,21 +172,18 @@ export function FeaturesScreen({ selected }: { selected?: string }) {
   const [open, setOpen] = useState(selected ?? screens[0]?.name);
   const onList = wide || !selected;
 
-  // Android's back on the list leaves the page, asking first while choices are unsaved. On a screen's page it
-  // returns to the list, which keeps the choices.
+  // Android's back on the list: the provider's leave. On a screen's page it returns to the list, which keeps the choices.
   useFocusEffect(
     useCallback(() => {
       if (!onList) return undefined;
-      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-        leave();
-        return true;
-      });
+      const subscription = BackHandler.addEventListener('hardwareBackPress', leave);
       return () => subscription.remove();
     }, [onList, leave])
   );
 
   const shown = screens.find((screen) => screen.name === (wide ? open : selected));
-  const header = <PageHeader kicker={storeName} title="Features" meta={INTRO} onBack={onList ? leave : () => router.back()} />;
+  // The list is a destination's root, so no back arrow; a screen's page on a phone returns to it.
+  const header = <PageHeader kicker={storeName} title="Features" meta={INTRO} onBack={onList ? undefined : () => router.back()} />;
 
   if (wide) {
     return (
@@ -198,8 +194,9 @@ export function FeaturesScreen({ selected }: { selected?: string }) {
             <ScreenList selected={shown?.name} chevron={false} onOpen={setOpen} />
           </ScrollView>
           <View style={[styles.rule, { backgroundColor: colors.outlineVariant }]} />
-          <ScrollView style={styles.detailPane} contentContainerStyle={styles.measure}>
-            {shown ? <ScreenDetail key={shown.name} screen={shown} /> : null}
+          {/* Keyed by the screen, so another one opens at its top rather than at the last one's scroll. */}
+          <ScrollView key={shown?.name} style={styles.detailPane} contentContainerStyle={styles.measure}>
+            {shown ? <ScreenDetail screen={shown} /> : null}
           </ScrollView>
         </View>
       </View>
@@ -219,7 +216,7 @@ export function FeaturesScreen({ selected }: { selected?: string }) {
             </Text>
           )
         ) : (
-          <ScreenList chevron onOpen={(name) => router.push({ pathname: '/features/[screen]', params: { screen: name, merchantId } })} />
+          <ScreenList chevron onOpen={(name) => router.push({ pathname: '/systems/[id]/features/[name]', params: { id: merchantId, name } })} />
         )}
       </ScrollView>
     </View>

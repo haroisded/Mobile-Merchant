@@ -1619,11 +1619,12 @@ Item Price, a count sheet into a Stock Reconciliation, a Barcode column in the C
 ## Features — hiding screens and pages
 
 Each person can take screens (the side menu's destinations) and pages (the rows of a screen's index) out of their own
-menu in a store, each with plain words on what it is for and when to use it. The **Features** button in the store's
-header opens it (`src/screens/features/`, the full-screen route `features/`: on a tablet the screens list beside the
-open screen, on a phone the list and then a screen's own page, `features/[screen]`). Each row has an About (i) with
+menu in a store, each with plain words on what it is for and when to use it. **Features**, the last item of the store's
+rail, opens it (`src/screens/features/`, the shell destination `systems/[id]/features/`: on a tablet the screens list
+beside the open screen, on a phone the list and then a screen's own page, `features/[name]`). Each row has an About (i) with
 its Purpose and Use-case; the line under it is the index row's own hint, and a screen's its `summary`. Choices are a
-draft until **Save** (an unsaved bar counts them; **Reset** drops them; leaving asks first), and Save stays on the page.
+draft until **Save** (an unsaved bar counts them; **Reset** drops them; Android's back asks first; another rail item keeps them), and Save
+stays on the page.
 Rebuilt on 2026-10-21 to the shape of feature-toggle-garden.lovable.app, with this app's own screens, pages and words —
 Setup's 26 pages included, which the long Dialog before it had left at the bottom of a 460dp scroll.
 Hidden is not disabled: every route stays registered, a deep link or a ledger row still opens a hidden page, and RLS and
@@ -1660,7 +1661,7 @@ lands).
 `screen:stock`, `stock/import-items` — keyed `(user_id, merchant_id)`, cascading from `auth.users` (Delete account) and
 from `merchants`. Own-row policies by hand, like `notifications`; insert and update only for a store the person is in;
 at most 200 keys. Not a doctype: it is the person's, and no permission reaches it. The Features page asks for the row
-again when it opens (`fresh`), because a save writes the whole set: started from a cached copy, it would write away a
+again when it first opens in a store (`fresh`; the drawer keeps it mounted after), because a save writes the whole set: started from a cached copy, it would write away a
 change made on another phone. Offline it opens from the copy and the save waits.
 
 How it was checked (2026-10-21): a rolled-back probe as two owners and `anon` — another person's row unreadable and
@@ -1669,10 +1670,14 @@ keys refused (23514), the row gone with its store; `get_advisors` adds only the 
 On the tablet emulator: Import Items hidden from Stock with Items locked on; Stock hidden while inside it, landing on
 Home; Accounts gone with its only page and back with its switch; choices kept across a restart; a deep link into
 hidden Accounts still opening; an offline save waiting and landing on reconnect; the page full-screen at a phone's
-width.
+width. Moved into the rail, the same day: the acceptance tests 21, 24 and 26–37 on the tablet, upright and at a
+phone's width (`wm size`), and at 200 % text.
 
 Rejected: SecureStore on the phone — lost on a reinstall and different per phone (the human); a column of
 `merchant_members` — the owner has no member row; hiding buttons inside pages (Scan Product, Test Template …) —
 screens and pages only, the human's call; a definer RPC — the row is the caller's own, and RLS says so. For the
 2026-10-21 rebuild: keeping the tablet Dialog (two panes do not fit 560dp); the demo's own descriptions (several were
-wrong for this app, and it had 24 Setup pages); its full-width floating save bar (`FormFooter`, as every full-page form).
+wrong for this app, and it had 24 Setup pages); its full-width floating save bar (`FormFooter`, as every full-page form). Moved into the rail the same day (the human):
+Rejected: the header's `tune` button and a page over the shell — the rest of the app opens from the rail; a `screen`
+route param (React Navigation reads it as a nested route: the phone's push went nowhere); reading the store id from
+the global params live (a sheet over the shell has none, and the page lost its draft).

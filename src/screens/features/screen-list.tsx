@@ -2,6 +2,7 @@ import { useWatch } from 'react-hook-form';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Badge } from '../../components/badge';
+import { DESTINATIONS } from '../../components/destinations';
 import type { Destination } from '../../components/destinations';
 import { Icon } from '../../components/icon';
 import { Text } from '../../components/text';
@@ -30,7 +31,7 @@ export function ScreenList({ selected, chevron, onOpen }: { selected?: string; c
           Always visible
         </Text>
         {/* Home is the way in, and Features the way back to anything hidden: neither has a switch. */}
-        {['Home', 'Features'].map((label) => (
+        {DESTINATIONS.filter((entry) => entry.fixed).map(({ label }) => (
           <View key={label} style={styles.fixed}>
             <Icon source="lock" size={18} color={colors.onSurfaceMuted} />
             <Text variant="titleSmall" style={{ color: colors.onSurfaceMuted }}>

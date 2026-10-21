@@ -23,6 +23,8 @@ export type Destination = Omit<DestinationRule, 'sections'> & {
   label: string;
   icon: IconName;
   stack?: boolean;
+  /** Always in the menu, with no switch on the Features page: Home, the way in, and Features, the way back to anything hidden. */
+  fixed?: true;
   /** One line: what the screen is, under its name on the Features page. */
   summary: string;
   /** What the screen is for, in plain words: the Features page's About for the screen. */
@@ -39,11 +41,13 @@ export type Destination = Omit<DestinationRule, 'sections'> & {
 // Employees is who works here and what each may do (./employees/), the owner's alone; Setup is the company's
 // foundation records (./setup/) — each a stack of its own. Sell is the Register and its sessions (./sell/).
 // Dashboard is the numbers they add up to (./dashboard.tsx) — its own destination, not Home, which stays as it is.
+// Features, last, is what the person keeps in this menu (./features/, src/screens/features/).
 export const DESTINATIONS: Destination[] = [
   {
     name: 'index',
     label: 'Home',
     icon: 'home',
+    fixed: true,
     summary: 'The first screen of the store.',
     purpose: 'The first screen of the store. It stays empty on purpose: the work is on the other screens.',
     useCase: 'Open it to land in the store.',
@@ -118,6 +122,16 @@ export const DESTINATIONS: Destination[] = [
     summary: "The store's settings and the lists everything else picks from.",
     purpose: "The store's settings and the lists everything else picks from: its details, taxes, payment methods, warehouses, units, prices, registers and receipts.",
     useCase: 'Use it when you set the store up, and whenever the way you sell changes.',
+  },
+  {
+    name: 'features',
+    label: 'Features',
+    icon: 'tune',
+    stack: true,
+    fixed: true,
+    summary: 'Which screens and pages show in your menu.',
+    purpose: "Which of the store's screens and pages show in your own menu. Hiding only takes them out of your menu: nothing is deleted or turned off, and nobody else's menu changes.",
+    useCase: 'Use it to keep your menu to the screens you use.',
   },
 ];
 

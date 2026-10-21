@@ -69,7 +69,7 @@ export default function SystemLayout() {
   // waits for its time zone, and money is formatted by it, so the first of those screens no longer asks for it
   // and only then for its own rows — one round trip less (.claude/test-report/backend-performance-test-report.md).
   useSystemSettingsQuery({ merchantId: id });
-  // What this person hid here (the header's Features). Nothing until it loads: a destination appears, never vanishes.
+  // What this person hid here (the Features destination). Nothing until it loads: a destination appears, never vanishes.
   const hidden = useFeaturePreferencesQuery({ merchantId: id }).data;
 
   if (!merchant) return <MissingMerchant merchants={merchants} />;
@@ -95,7 +95,6 @@ export default function SystemLayout() {
         layout={({ children, navigation }) => (
           <View style={styles.fill}>
             <MerchantHeader
-              onFeatures={() => router.push({ pathname: '/features', params: { merchantId: id } })}
               onMenu={() => {
                 if (wide) setExpanded((open) => !open);
                 // DrawerActions is not a public export of expo-router; this is the action it builds,
@@ -167,20 +166,16 @@ function MissingMerchant({ merchants }: { merchants: ReturnType<typeof useMercha
 
 type HeaderProps = {
   onMenu: () => void;
-  onFeatures: () => void;
 };
 
 // Component A. Paper picks the title's variant (.claude/instruction_mds/frontend.md §3.3), so only colour is passed.
-function MerchantHeader({ onMenu, onFeatures }: HeaderProps) {
+function MerchantHeader({ onMenu }: HeaderProps) {
   const { colors } = useAppTheme();
 
   return (
     <Appbar.Header style={{ backgroundColor: colors.primary }}>
       <Appbar.Action icon="menu" color={colors.onPrimary} onPress={onMenu} accessibilityLabel="Menu" />
       <Appbar.Content title="Merchant" color={colors.onPrimary} />
-      {/* What this person shows of the store: its screens and pages (src/screens/features/). Here, not in a
-          screen, so hiding every screen still leaves the way back. */}
-      <Appbar.Action icon="tune" color={colors.onPrimary} onPress={onFeatures} accessibilityLabel="Features" />
       {/* Notifications are the person's, not this system's: the bell leaves the system for the tab, as the grid
           below does for Home. */}
       <BellAction color={colors.onPrimary} onPress={() => router.dismissTo('/notifications')} />

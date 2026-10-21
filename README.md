@@ -94,8 +94,8 @@ together and explained inline.
   fill whichever fields are still empty. At the Register, the barcode button rings a product up by its barcode.
   Native: `expo-camera` and `@infinitered/react-native-mlkit-text-recognition`, so it needs a development build
   made after they were added; the camera permission is asked the first time
-- **Features** — the sliders button in a store's header: each person hides the screens and pages they don't use in
-  that store, on a full page — the screens listed beside the open one on a tablet, a page each on a phone — with an
+- **Features** — the last item of a store's side menu: each person hides the screens and pages they don't use in
+  that store, beside the menu — the screens listed beside the open one on a tablet, a page each on a phone — with an
   About for every row (its purpose and use-case), Hide all / Show all per section, and an unsaved bar with Reset and Save. Hidden is not turned off — nothing is refused, and nobody else's menu
   changes. A page the screen cannot work without (Sell's session and Register, Stock's Items) goes only with its screen;
   a screen whose pages all stand alone (Setup, Accounts) goes when its last page does. Saved per person in Supabase

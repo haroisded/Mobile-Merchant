@@ -59,8 +59,6 @@ const DIALOG_ROUTES = [
 //   a fifth tab. It is the merchant shell: a header plus a rail or drawer of its own.
 // - `create-system` is the create form, pushed full screen over the systems list at every width.
 // - `scan` is the product scan (src/screens/scan), pushed full screen over the Item form or the Register.
-// - `features` is the Features page (src/screens/features), full screen at every width: two panes wide, a list
-//   and a screen's page narrow — its own small Stack, so the unsaved choices outlive the push between them.
 // - `forms/*` are the small Setup forms above; `sheets/*` are the native sheets above.
 export default function AppLayout() {
   const { colors } = useAppTheme();
@@ -76,7 +74,6 @@ export default function AppLayout() {
       <Stack.Screen name="systems/[id]" />
       <Stack.Screen name="create-system" />
       <Stack.Screen name="scan" />
-      <Stack.Screen name="features" />
       {DIALOG_ROUTES.map((name) => (
         <Stack.Screen
           key={name}
