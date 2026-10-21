@@ -32,7 +32,8 @@ them; do not rebuild them.
    `private.apply_doctype_policies()`, and is reached through the permissions whose `permission_rules` name it
    (CLAUDE.md §6.7). No hand-written business policy.
 9. Who creates the merchant row: an explicit onboarding step, never a trigger. The create-system form
-   (`src/screens/home/create-system.tsx`) inserts it: name, abbreviation, country, currency.
+   (`src/screens/home/create-system.tsx`) inserts it: name, country, currency. One store, no branches: no
+   abbreviation and no cost centers (`20261018162135_single_store.sql`).
 10. A merchant is its **Company** (ERPNext's), so a Company field is a `merchants` column, never a
     `companies` table (rule 5). The records a new company starts with are made by one `after insert
     on merchants` trigger per step, `merchants_seed_NN_<area>` — Postgres fires same-event triggers in
@@ -53,7 +54,8 @@ them; do not rebuild them.
     tables (`role_grants`, `member_overrides`) are the owner's alone — no permission may make a code, let
     someone in, or raise anyone's access, their own included — so they are the exception to rule 8: not
     doctypes, hand-written policies on `private.owned_merchant_ids()`. `notifications` is the person's own,
-    keyed on `user_id` like `profiles`.
+    keyed on `user_id` like `profiles` — and so is `feature_preferences` (what one person hid in one store's menu:
+    their own row, written only for a store they are in; it grants and refuses nothing).
 
 ---
 

@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { codeStatus, expiryArgs, expiryText, formatCode, normalizeCode } from '../src/features/access-codes/code.ts';
 import { chartRange, periodRange } from '../src/features/dashboard/period.ts';
 import { resolvePrice } from '../src/features/item-prices/resolve.ts';
+import { hasCore, pageKey, pageShown, screenKey, screenShown, setPage, setScreen } from '../src/features/feature-preferences/visibility.ts';
 import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/features/items/csv.ts';
 import { readLabel } from '../src/features/items/label.ts';
 import { can, effective, has, overridesFor, readsAny, showsDestination, toggle } from '../src/features/permissions/access.ts';
@@ -593,5 +594,38 @@ for (const repeats of [true, false]) {
 }
 // Another code takes over at once once confirmed.
 assert.deepEqual(frames(['A', 'A', 'A', 'B', 'B', 'B'], false), [false, false, true, false, false, true]);
+
+// src/features/feature-preferences/visibility.ts — what a person's Features page hides. A core page goes only with
+// its screen; a screen with no core is shown while one of its pages is. `all` opens everything (the owner); `cashier` cannot open Stock's Items, so Stock has no core for them.
+const STOCKS = {
+  name: 'stock',
+  sections: [{ entries: [{ route: 'items', core: true, doctype: 'Item' }, { route: 'import-items', doctype: 'Item' }, { route: 'stock-ledger', doctype: 'Bin' }] }],
+};
+const SETUPS = { name: 'setup', sections: [{ entries: [{ route: 'company' }, { route: 'uoms' }] }] };
+const SELLS = { name: 'sell', core: { route: 'session', core: true }, sections: [{ entries: [{ route: 'pos-invoices' }] }] };
+const DASH = { name: 'dashboard' };
+const all = () => true;
+const cashier = (page) => page.doctype !== 'Item';
+assert.deepEqual([screenKey('stock'), pageKey('stock', 'items')], ['screen:stock', 'stock/items']);
+assert.deepEqual([hasCore(STOCKS, all), hasCore(STOCKS, cashier), hasCore(SETUPS, all), hasCore(SELLS, all)], [true, false, false, true]);
+// Home always; a screen's own switch; a stored key for a core page is ignored.
+assert.deepEqual([screenShown(['screen:index'], { name: 'index' }, all), screenShown(['screen:dashboard'], DASH, all), screenShown([], DASH, all)], [true, false, true]);
+assert.deepEqual([pageShown(['stock/items'], 'stock', STOCKS.sections[0].entries[0]), pageShown(['stock/import-items'], 'stock', STOCKS.sections[0].entries[1])], [true, false]);
+// A screen with a core stays while its pages go; one with none goes with its last page (only pages it may open count).
+assert.equal(screenShown(['stock/import-items', 'stock/stock-ledger'], STOCKS, all), true);
+assert.equal(screenShown(['stock/stock-ledger'], STOCKS, cashier), false);
+assert.equal(screenShown(['setup/company'], SETUPS, all), true);
+assert.equal(screenShown(['setup/company', 'setup/uoms'], SETUPS, all), false);
+assert.equal(screenShown(['sell/pos-invoices'], SELLS, all), true);
+// The switches: a screen with no core hides and shows its pages with it; a page turned on brings it back. A screen
+// with a core keeps its pages' choices while it is off.
+assert.deepEqual(setScreen([], SETUPS, false, all), ['screen:setup', 'setup/company', 'setup/uoms']);
+assert.deepEqual(setScreen(['screen:setup', 'setup/company', 'setup/uoms', 'stock/stock-ledger'], SETUPS, true, all), ['stock/stock-ledger']);
+assert.deepEqual(setScreen(['stock/import-items'], STOCKS, false, all), ['stock/import-items', 'screen:stock']);
+assert.deepEqual(setScreen(['stock/import-items', 'screen:stock'], STOCKS, true, all), ['stock/import-items']);
+assert.deepEqual(setPage(['screen:setup', 'setup/company', 'setup/uoms'], SETUPS, { route: 'uoms' }, true, all), ['setup/company']);
+assert.deepEqual(setPage([], STOCKS, { route: 'import-items' }, false, all), ['stock/import-items']);
+assert.deepEqual(setPage(['stock/import-items', 'screen:stock'], STOCKS, { route: 'import-items' }, true, all), ['screen:stock']);
+assert.deepEqual(setPage(['stock/import-items'], STOCKS, { route: 'import-items' }, false, all), ['stock/import-items']);
 
 console.log('check:logic — all assertions passed.');

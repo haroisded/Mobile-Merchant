@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { useHiddenFeatures } from '../features/feature-preferences/queries';
+import { pageShown } from '../features/feature-preferences/visibility';
 import { opens } from '../features/permissions/access';
+import type { Permissions } from '../features/permissions/access';
 import { usePermissions } from '../features/role-permissions/queries';
 import type { Ptype } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
@@ -16,6 +19,10 @@ import { Text } from './text';
 export type IndexEntry<R extends string> = {
   label: string;
   hint: string;
+  /** What the page is for and when to use it, in plain words: the Features page shows it under the page's switch. */
+  details: string;
+  /** The page the screen's job cannot be done without: it has no switch of its own, and goes only with its screen. */
+  core?: true;
   /** The doctype whose permission shows this row (private.permitted_merchant_ids). */
   doctype: string;
   /** Which permission on it: Read unless the row is an action — Import Items needs Item create. */
@@ -28,6 +35,8 @@ export type IndexSection<R extends string> = { title: string; hint: string; entr
 
 type Props<R extends string> = {
   merchantId: string;
+  /** The destination this index is, for the pages the person hid there (the Features page). */
+  screen: string;
   /** The system's name, above the title. */
   kicker: string;
   title: string;
@@ -54,16 +63,17 @@ const SECTION_CARD = 320;
  * The index of records a rail destination opens on — Setup, Stock: sections in columns, each a box of rows
  * (.claude/instruction_mds/frontend.md §5, "Index of records").
  */
-export function RecordIndex<R extends string>({ merchantId, kicker, title, meta, isOwner, sections, onOpen, offline, failure, empty, children }: Props<R>) {
+export function RecordIndex<R extends string>({ merchantId, screen, kicker, title, meta, isOwner, sections, onOpen, offline, failure, empty, children }: Props<R>) {
   const { columns, onLayout } = useColumns(SECTION_CARD);
   const permissions = usePermissions({ merchantId });
-  // A row shows only to whom may open it; a section with none left goes. The owner may read everything,
-  // and the systems list already says who that is — so the owner's rows need no my_permissions, which a
-  // fresh start in airplane mode has not fetched.
+  const hidden = useHiddenFeatures({ merchantId });
+  // A row shows only to whom may open it, and only while they have not hidden it; a section with none left
+  // goes. The owner may read everything, and the systems list already says who that is — so the owner's rows
+  // need no my_permissions, which a fresh start in airplane mode has not fetched.
   const shown = sections
     .map((section) => ({
       ...section,
-      entries: section.entries.filter((entry) => isOwner || opens(entry, permissions.data)),
+      entries: section.entries.filter((entry) => listed(entry, { screen, hidden, isOwner, permissions: permissions.data })),
     }))
     .filter((section) => section.entries.length > 0);
 
@@ -90,6 +100,11 @@ export function RecordIndex<R extends string>({ merchantId, kicker, title, meta,
       </ScrollView>
     </View>
   );
+}
+
+/** Whether a row is listed: the person may open it, and has not hidden it on the Features page. */
+function listed(entry: IndexEntry<string>, by: { screen: string; hidden: string[]; isOwner: boolean; permissions: Permissions | null | undefined }) {
+  return (by.isOwner || opens(entry, by.permissions)) && pageShown(by.hidden, by.screen, entry);
 }
 
 function SectionCard<R extends string>({ section, onOpen }: { section: IndexSection<R>; onOpen: (route: R) => void }) {

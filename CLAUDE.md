@@ -421,6 +421,9 @@ the 13 columns that named one — and `merchants.abbr`, rows included; 23 functi
 unchanged; `private.post_gl` merges per account only), and the texts the database writes say store. Identifiers stay
 (`merchants`, `merchant_id`, the doctype `'Company'`, `/systems/[id]`). Do not add a branch concept back — a cost
 center, an abbreviation, a second company per store — without the human (ARCHITECTURE.md, One store).
+Then what each person hides in their own menu: `20261021004636_feature_preferences.sql` (`feature_preferences`, one
+row per person and store, own-row policies like `notifications`, not a doctype — hidden is not disabled; ARCHITECTURE.md,
+Features).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

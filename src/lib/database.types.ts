@@ -465,6 +465,35 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_preferences: {
+        Row: {
+          hidden: string[]
+          merchant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          hidden?: string[]
+          merchant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          hidden?: string[]
+          merchant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_preferences_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiscal_years: {
         Row: {
           created_at: string

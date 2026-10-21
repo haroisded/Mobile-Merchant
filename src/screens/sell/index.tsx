@@ -21,9 +21,29 @@ export const SELL_SECTIONS: IndexSection<SellRoute>[] = [
     title: 'Orders & Sessions',
     hint: 'What was sold, and each session it was sold in',
     entries: [
-      { label: 'Orders', hint: 'Every sale, newest first: reopen its receipt', doctype: 'POS Invoice', route: 'pos-invoices' },
-      { label: 'POS Opening Entries', hint: 'Each session, and what its drawer started with', doctype: 'POS Opening Entry', route: 'pos-opening-entries' },
-      { label: 'POS Closing Entries', hint: 'Each closed session: expected against counted', doctype: 'POS Closing Entry', route: 'pos-closing-entries' },
+      {
+        label: 'Orders',
+        hint: 'Every sale, newest first: reopen its receipt',
+        details:
+          'Every sale and return, newest first. Open one to read its receipt again, take items back with a return, or cancel it. Use it when a customer comes back with a question or a return.',
+        doctype: 'POS Invoice',
+        route: 'pos-invoices',
+      },
+      {
+        label: 'POS Opening Entries',
+        hint: 'Each session, and what its drawer started with',
+        details: 'Each session that was opened: its register, its day and the cash its drawer started with. Use it to check when a shift began and what it began with.',
+        doctype: 'POS Opening Entry',
+        route: 'pos-opening-entries',
+      },
+      {
+        label: 'POS Closing Entries',
+        hint: 'Each closed session: expected against counted',
+        details:
+          'Each closed session: the cash the drawer should have held against what was counted, and what was sold. Use it to review a shift at the end of the day.',
+        doctype: 'POS Closing Entry',
+        route: 'pos-closing-entries',
+      },
     ],
   },
 ];
@@ -37,6 +57,7 @@ export function SellIndex({ merchantId, merchantName, isOwner }: { merchantId: s
   return (
     <RecordIndex
       merchantId={merchantId}
+      screen="sell"
       kicker={merchantName}
       title="Sell"
       meta="Open a session, sell at the Register, close the session"

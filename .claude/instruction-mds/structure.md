@@ -47,7 +47,7 @@ src/
     role-permissions/     queries.ts — usePermissions for every screen (re-exports can / has)
     system-settings/  currencies/                         queries.ts  schema.ts
     global-defaults/      queries.ts
-    accounts/  cost-centers/                              queries.ts  schema.ts
+    accounts/                                             queries.ts  schema.ts
     accounts-settings/  modes-of-payment/                 queries.ts  schema.ts
     tax-categories/  item-tax-templates/                  queries.ts  schema.ts
     sales-tax-templates/  queries.ts  schema.ts  calculate.ts — ERPNext's taxes_and_totals, import-free
@@ -70,6 +70,7 @@ src/
     pos-opening-entries/  queries.ts  schema.ts — a session: the list, the open one, open_pos_session
     pos-invoices/         queries.ts  cart.ts (the sale a cart becomes, import-free)  setup.ts (the records it reads)
     pos-closing-entries/  queries.ts — the list, one by id, close_pos_session
+    feature-preferences/  queries.ts  visibility.ts — what a person hid in a store's menu, and the core rules, import-free
     profiles/
   screens/
     home/                 index.tsx  create-system.tsx  system-card.tsx  slot-card.tsx  pending-requests.tsx  …
@@ -92,11 +93,10 @@ src/
     system-home/          index.tsx — the first screen inside a system; tells someone with no role why
     global-defaults/  system-settings/  currency/         index.tsx
     chart-of-accounts/    index.tsx  account-form.tsx
-    cost-centers/         index.tsx  cost-center-form.tsx
     accounts-settings/    index.tsx
     modes-of-payment/     index.tsx  mode-of-payment-form.tsx
     tax-categories/  item-tax-templates/                  index.tsx  <name>-form.tsx
-    sales-tax-templates/  index.tsx  template-form.tsx (a Setup-stack page)  tax-preview.tsx
+    sales-tax-templates/  index.tsx  template-form.tsx (a Setup-stack page)  test-template.tsx (a forms/ check)
     warehouses/  uoms/  uom-conversion-factors/  price-lists/  brands/    index.tsx  <name>-form.tsx
     item-groups/          index.tsx  item-group-form.tsx (a Setup-stack page)
     tax-rules/            index.tsx  tax-rule-form.tsx  tax-rule-check.tsx  records.ts
@@ -114,9 +114,10 @@ src/
     pos-opening-entries/  index.tsx  open-session.tsx
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
     scan/                 index.tsx — the product scan: the camera, its barcodes, Read Label (the full-screen route scan.tsx)
+    features/             index.tsx — the Features page: hide screens and pages, with what each is for (forms/features)
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  …
+  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of

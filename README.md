@@ -94,6 +94,10 @@ together and explained inline.
   fill whichever fields are still empty. At the Register, the barcode button rings a product up by its barcode.
   Native: `expo-camera` and `@infinitered/react-native-mlkit-text-recognition`, so it needs a development build
   made after they were added; the camera permission is asked the first time
+- **Features** — the sliders button in a store's header: each person hides the screens and pages they don't use in
+  that store, each explained in plain words. Hidden is not turned off — nothing is refused, and nobody else's menu
+  changes. A page the screen cannot work without (Sell's session and Register, Stock's Items) goes only with its screen;
+  a screen whose pages all stand alone (Setup, Accounts) goes when its last page does. Saved per person in Supabase
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
 - **Patched dependencies** via `patch-package`, applied automatically on install
 - **Lint** — oxlint with a local `anti-slop` plugin in `tools/oxlint/`, wired up in `.oxlintrc.json`

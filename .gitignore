@@ -53,9 +53,9 @@ desktop.ini
 # every directory under .claude/ — vendored docs (context/), commit-message handoffs
 # (commit-history/, context-policy.md §2), acceptance tests (tests/), /teach notes, references —
 # local to each machine, never committed. Files (settings.json) stay tracked, and so does
-# instruction_mds/: the project's conventions, the one directory here that is shared.
+# instruction-mds/: the project's conventions, the one directory here that is shared.
 .claude/*/
-!.claude/instruction_mds/
+!.claude/instruction-mds/
 
 # headroom wrap state (live pid, port, env-var ownership) — per-machine, never shared
 .claude/.headroom_wrap_*

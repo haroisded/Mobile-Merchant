@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import Drawer from 'expo-router/drawer';
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -10,22 +10,19 @@ import { Appbar } from '../../../../components/appbar';
 import { Avatar } from '../../../../components/avatar';
 import { BellAction } from '../../../../components/bell-action';
 import { Button } from '../../../../components/button';
+import { DESTINATIONS, menuOf } from '../../../../components/destinations';
+import type { Destination } from '../../../../components/destinations';
 import { Icon } from '../../../../components/icon';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
+import { useFeaturePreferencesQuery } from '../../../../features/feature-preferences/queries';
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
-import { showsDestination } from '../../../../features/permissions/access';
-import type { DestinationRule } from '../../../../features/permissions/access';
 import { usePermissions } from '../../../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../../../features/system-settings/queries';
 import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import type { IconName } from '../../../../lib/icons';
 import { useAppTheme } from '../../../../lib/theme';
-import { ACCOUNTS_SECTIONS } from '../../../../screens/accounts';
-import { SELL_SECTIONS } from '../../../../screens/sell';
-import { SETUP_SECTIONS } from '../../../../screens/setup';
-import { STOCK_SECTIONS } from '../../../../screens/stock';
 import { useSession } from '../../../../Store/StoreUser';
 import { radius, spacing } from '../../../../themes';
 
@@ -36,27 +33,7 @@ import { radius, spacing } from '../../../../themes';
 // One expo-router Drawer serves both widths — drawerType 'permanent' is the rail, 'front' is the
 // drawer — so the two share one route table and one destination list (.claude/instruction_mds/frontend.md §4.4).
 
-// Who sees a destination (src/features/permissions/access.ts, showsDestination): `sections`, its index (the same
-// list its screen draws), for someone who may open one of its rows; `permissions` for someone who holds one — the
-// Dashboard's blocks, and Sell's session for a cashier who opens one without reading the list; `ownerOnly` for
-// Employees. With none of them — Home — the item always shows.
-type Destination = DestinationRule & { name: string; label: string; icon: IconName; stack?: boolean };
-
-// Rail order. `name` is the route file or directory under this one; icons are the app's own names, drawn
-// as each platform's symbol (src/lib/icons.tsx, .claude/instruction_mds/frontend.md §6). Stock is the items,
-// their prices and their stock (./stock/); Accounts is the books every document posts to (./accounts/);
-// Employees is who works here and what each may do (./employees/), the owner's alone; Setup is the company's
-// foundation records (./setup/) — each a stack of its own. Sell is the Register and its sessions (./sell/).
-// Dashboard is the numbers they add up to (./dashboard.tsx) — its own destination, not Home, which stays as it is.
-const DESTINATIONS: Destination[] = [
-  { name: 'index', label: 'Home', icon: 'home' },
-  { name: 'dashboard', label: 'Dashboard', icon: 'dashboard', permissions: ['view_sales', 'view_shift_totals', 'close_any_register', 'view_stock'] },
-  { name: 'sell', label: 'Sell', icon: 'sell', stack: true, sections: SELL_SECTIONS, permissions: ['open_close_register'] },
-  { name: 'stock', label: 'Stock', icon: 'stock', stack: true, sections: STOCK_SECTIONS },
-  { name: 'accounts', label: 'Accounts', icon: 'accounts', stack: true, sections: ACCOUNTS_SECTIONS },
-  { name: 'employees', label: 'Employees', icon: 'group', stack: true, ownerOnly: true },
-  { name: 'setup', label: 'Setup', icon: 'settings', stack: true, sections: SETUP_SECTIONS },
-];
+// The destinations, who sees each and what the Features page hides: src/components/destinations.ts.
 
 /** "Cafe 67" → "C6": the first letter of up to two words, for the store badge. */
 function initials(name: string) {
@@ -92,6 +69,8 @@ export default function SystemLayout() {
   // waits for its time zone, and money is formatted by it, so the first of those screens no longer asks for it
   // and only then for its own rows — one round trip less (.claude/test-report/backend-performance-test-report.md).
   useSystemSettingsQuery({ merchantId: id });
+  // What this person hid here (the header's Features). Nothing until it loads: a destination appears, never vanishes.
+  const hidden = useFeaturePreferencesQuery({ merchantId: id }).data;
 
   if (!merchant) return <MissingMerchant merchants={merchants} />;
 
@@ -99,7 +78,9 @@ export default function SystemLayout() {
   // everything and needs no my_permissions; a member sees Home until theirs arrive. Hidden is not refused —
   // every screen stays registered below, RLS decides, and an index says so when it has nothing to show.
   const isOwner = merchant.owner_id === userId;
-  const shown = DESTINATIONS.filter((entry) => isOwner || showsDestination(entry, permissions.data));
+  // Then what the person chose to hide (src/features/feature-preferences/visibility.ts). Hidden is not refused
+  // either: the screen stays registered, and only the menu leaves it out.
+  const { shown, hiddenByChoice } = menuOf(isOwner, permissions.data, hidden);
 
   // The expanded rail grows with the font scale so its labels stay whole (fontScaled).
   const drawerWidth = wide ? (expanded ? fontScaled(RAIL_EXPANDED) : RAIL_COLLAPSED) : DRAWER_WIDTH;
@@ -114,6 +95,7 @@ export default function SystemLayout() {
         layout={({ children, navigation }) => (
           <View style={styles.fill}>
             <MerchantHeader
+              onFeatures={() => router.push({ pathname: '/forms/features', params: { merchantId: id } })}
               onMenu={() => {
                 if (wide) setExpanded((open) => !open);
                 // DrawerActions is not a public export of expo-router; this is the action it builds,
@@ -125,7 +107,7 @@ export default function SystemLayout() {
           </View>
         )}
         drawerContent={(props) => (
-          <SystemNav {...props} id={id} name={merchant.name} wide={wide} expanded={expanded} destinations={shown} />
+          <SystemNav {...props} id={id} name={merchant.name} wide={wide} expanded={expanded} destinations={shown} hiddenByChoice={hiddenByChoice} />
         )}
         screenOptions={{
           headerShown: false,
@@ -185,16 +167,20 @@ function MissingMerchant({ merchants }: { merchants: ReturnType<typeof useMercha
 
 type HeaderProps = {
   onMenu: () => void;
+  onFeatures: () => void;
 };
 
 // Component A. Paper picks the title's variant (.claude/instruction_mds/frontend.md §3.3), so only colour is passed.
-function MerchantHeader({ onMenu }: HeaderProps) {
+function MerchantHeader({ onMenu, onFeatures }: HeaderProps) {
   const { colors } = useAppTheme();
 
   return (
     <Appbar.Header style={{ backgroundColor: colors.primary }}>
       <Appbar.Action icon="menu" color={colors.onPrimary} onPress={onMenu} accessibilityLabel="Menu" />
       <Appbar.Content title="Merchant" color={colors.onPrimary} />
+      {/* What this person shows of the store: its screens and pages (src/screens/features/). Here, not in a
+          screen, so hiding every screen still leaves the way back. */}
+      <Appbar.Action icon="tune" color={colors.onPrimary} onPress={onFeatures} accessibilityLabel="Features" />
       {/* Notifications are the person's, not this system's: the bell leaves the system for the tab, as the grid
           below does for Home. */}
       <BellAction color={colors.onPrimary} onPress={() => router.dismissTo('/notifications')} />
@@ -230,13 +216,27 @@ type NavProps = DrawerContentComponentProps & {
   wide: boolean;
   expanded: boolean;
   destinations: Destination[];
+  /** The destinations the person may open but hid on the Features page; null until their choices load. */
+  hiddenByChoice: string[] | null;
 };
 
 // Components B and C: the same header, divider and destinations, laid out as a rail when wide and as
 // drawer rows when narrow. No system switcher — the way out of a system is the header's Your systems.
-function SystemNav({ state, navigation, id, name, wide, expanded, destinations }: NavProps) {
+function SystemNav({ state, navigation, id, name, wide, expanded, destinations, hiddenByChoice }: NavProps) {
   const { colors } = useAppTheme();
   const active = state.routes[state.index]?.name;
+  // The screen the person is on, hidden from the Features page just now: back to Home, as its menu row went. Only
+  // on that change — a deep link into a screen hidden earlier still lands, since hidden is not refused.
+  // The choices as they first load are no change, so nothing moves until one is made.
+  const hiddenKey = hiddenByChoice?.join(',') ?? null;
+  const wasHidden = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (hiddenKey === null) return;
+    const now = hiddenKey ? hiddenKey.split(',') : [];
+    const before = wasHidden.current;
+    if (before && active && now.includes(active) && !before.includes(active)) navigation.navigate('index', { id });
+    wasHidden.current = now;
+  }, [hiddenKey, active, navigation, id]);
   // The drawer always shows labels; the rail shows them only while expanded.
   const labelled = !wide || expanded;
 
