@@ -3,16 +3,15 @@ import Drawer from 'expo-router/drawer';
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../../../components/activity-indicator';
 import { Appbar } from '../../../../components/appbar';
-import { Avatar } from '../../../../components/avatar';
 import { BellAction } from '../../../../components/bell-action';
 import { Button } from '../../../../components/button';
 import { DESTINATIONS, menuOf } from '../../../../components/destinations';
 import type { Destination } from '../../../../components/destinations';
-import { Icon } from '../../../../components/icon';
+import { NavItem, StoreBadge } from '../../../../components/shell-nav';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
 import { useHiddenFeatures } from '../../../../features/feature-preferences/queries';
@@ -21,30 +20,19 @@ import { usePermissions } from '../../../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../../../features/system-settings/queries';
 import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
-import type { IconName } from '../../../../lib/icons';
 import { useAppTheme } from '../../../../lib/theme';
 import { useSession } from '../../../../Store/StoreUser';
 import { radius, spacing } from '../../../../themes';
 
 // The merchant shell: a header over an M3 NavigationRail on a wide window, or over an off-canvas
 // drawer on a narrow one. Navigation is a
-// layout, not a component (.claude/instruction_mds/structure.md rule 4), so every piece of the shell lives in this file.
+// layout, not a component (.claude/instruction_mds/structure.md rule 4), so the shell lives in this file — all but its
+// rail rows and store badge, which the Store Guide's practice store draws too (src/components/shell-nav.tsx).
 //
 // One expo-router Drawer serves both widths — drawerType 'permanent' is the rail, 'front' is the
 // drawer — so the two share one route table and one destination list (.claude/instruction_mds/frontend.md §4.4).
 
 // The destinations, who sees each and what the Features page hides: src/components/destinations.ts.
-
-/** "Cafe 67" → "C6": the first letter of up to two words, for the store badge. */
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
-}
 
 // dismissTo pops back to the systems list the anchor in (app)/_layout.tsx keeps under this screen,
 // rather than pushing a second copy of it.
@@ -219,7 +207,6 @@ type NavProps = DrawerContentComponentProps & {
 // Components B and C: the same header, divider and destinations, laid out as a rail when wide and as
 // drawer rows when narrow. No system switcher — the way out of a system is the header's Your systems.
 function SystemNav({ state, navigation, id, name, wide, expanded, destinations, hiddenByChoice }: NavProps) {
-  const { colors } = useAppTheme();
   const active = state.routes[state.index]?.name;
   // The screen the person is on, hidden from the Features page just now: back to Home, as its menu row went. Only
   // on that change — a deep link into a screen hidden earlier still lands, since hidden is not refused.
@@ -238,23 +225,8 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations, 
 
   return (
     <View>
-      <View style={wide ? styles.systemRail : styles.systemDrawer}>
-        <Avatar.Text size={40} label={initials(name)} color={colors.primary} style={{ backgroundColor: colors.onPrimary }} />
-        {labelled ? (
-          <View style={styles.systemText}>
-            <Text variant="titleMedium" numberOfLines={1} style={{ color: colors.onPrimary }}>
-              {name}
-            </Text>
-            {wide ? null : (
-              <Text variant="bodySmall" style={[styles.subtitle, { color: colors.onPrimary }]}>
-                POS store
-              </Text>
-            )}
-          </View>
-        ) : null}
-      </View>
-
-      <View style={[styles.divider, { backgroundColor: colors.onPrimary }]} />
+      {/* Narrow only: on the rail the name stands alone. */}
+      <StoreBadge name={name} line={wide ? undefined : 'POS store'} wide={wide} labelled={labelled} />
 
       <View style={styles.items}>
         {destinations.map((entry) => (
@@ -283,54 +255,6 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations, 
   );
 }
 
-type ItemProps = {
-  label: string;
-  icon: IconName;
-  wide: boolean;
-  labelled: boolean;
-  active?: boolean;
-  onPress: () => void;
-};
-
-// One rail or drawer row. Active: the lightened ground and the 4px accent bar. Inactive: no ground, no
-// bar, 68%. The bar is a left border on every item, transparent when inactive, so selecting an item
-// never shifts its content sideways (.claude/instruction_mds/frontend.md §5).
-function NavItem({ label, icon, wide, labelled, active, onPress }: ItemProps) {
-  const { colors } = useAppTheme();
-
-  return (
-    <Pressable
-      // The drawer router closes the front drawer on any route change (DrawerRouter.js:114-119), so
-      // tapping a destination needs no separate close call.
-      onPress={onPress}
-      // On `primary` the press colour is the same lightened ground the active item wears.
-      android_ripple={{ color: colors.primaryHighlight }}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
-      style={[
-        styles.item,
-        active ? { backgroundColor: colors.primaryHighlight, borderLeftColor: colors.accent } : styles.inactive,
-      ]}
-    >
-      <View style={wide ? styles.railItem : styles.drawerItem}>
-        <Icon source={icon} size={wide ? 24 : 22} color={colors.onPrimary} />
-        {labelled ? (
-          <View style={styles.labelRow}>
-            <Text
-              variant="labelLarge"
-              numberOfLines={1}
-              style={[styles.fill, { color: colors.onPrimary }]}
-            >
-              {label}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   // react-navigation draws its own chrome on the drawer: a hairline right border in its theme's
@@ -340,21 +264,6 @@ const styles = StyleSheet.create({
   // takes the radius a Dialog-sized surface gets (.claude/instruction_mds/frontend.md rule 7).
   rail: { borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 },
   drawer: { borderRightWidth: 0, borderTopRightRadius: radius.xl, borderBottomRightRadius: radius.xl },
-  systemRail: { alignItems: 'flex-start', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.md },
-  systemDrawer: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, padding: spacing.md },
-  systemText: { flexShrink: 1 },
-  subtitle: { opacity: 0.7 },
-  divider: { height: 1, opacity: 0.28 },
   items: { paddingTop: spacing.sm },
-  // 4 of border plus `ms` of padding puts every icon `md` from the edge, level with the badge above.
-  item: { borderLeftWidth: 4, borderLeftColor: 'transparent' },
-  inactive: { opacity: 0.68 },
-  // Stretch, not flex-start: the label row under the icon needs the rail's width, or its flex: 1
-  // label measures to nothing and the rail shows icons only.
-  railItem: { alignItems: 'stretch', gap: spacing.sm, paddingVertical: spacing.ms, paddingLeft: spacing.ms, paddingRight: spacing.ms },
-  // flexGrow, not flex: 1 — under the rail's icon the item is a column, where flex: 1's zero basis
-  // made the row zero tall and hid every label.
-  labelRow: { flexDirection: 'row', alignItems: 'center', flexGrow: 1, flexShrink: 1, minWidth: 0 },
-  drawerItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingLeft: spacing.ms, paddingRight: spacing.md },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.lg },
 });

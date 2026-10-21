@@ -22,10 +22,12 @@ import { PendingRequests } from './pending-requests';
 import { SlotCard } from './slot-card';
 import { SystemCard } from './system-card';
 
-/** The wide grid's first two cells, ahead of the systems. */
+/** The wide grid's first three cells, ahead of the systems. */
 const CREATE = 'create';
 const ENTER = 'enter';
-type Slot = typeof CREATE | typeof ENTER;
+const GUIDE = 'guide';
+type Slot = typeof CREATE | typeof ENTER | typeof GUIDE;
+const isSlot = (item: Merchant | Slot) => item === CREATE || item === ENTER || item === GUIDE;
 
 export function HomeScreen() {
   const { columns, onLayout } = useColumns(SYSTEM_CARD);
@@ -51,13 +53,15 @@ export function HomeScreen() {
   const create = () => router.push('/create-system');
   // A code someone sent: the one way into their system. A small form, page narrow and Dialog wide.
   const enterCode = () => router.push('/forms/enter-access-code');
+  // The Store Guide: each role's work in a practice store, with no store of the person's own needed.
+  const openGuide = () => router.push('/guide');
   const remove = (merchant: Merchant) => {
     if (narrow) router.push({ pathname: '/sheets/remove-system', params: { merchantId: merchant.id } });
     else setRemoving(merchant);
   };
 
   const systems = merchants.data ?? [];
-  const cells: (Merchant | Slot)[] = narrow ? systems : [CREATE, ENTER, ...systems];
+  const cells: (Merchant | Slot)[] = narrow ? systems : [CREATE, ENTER, GUIDE, ...systems];
   const status = <LoadStatus merchants={merchants} />;
 
   return (
@@ -95,10 +99,10 @@ export function HomeScreen() {
       <View style={styles.body} onLayout={onLayout}>
         <FlashList
           data={cells}
-          keyExtractor={(item) => (item === CREATE || item === ENTER ? item : item.id)}
+          keyExtractor={(item) => (item === CREATE || item === ENTER || item === GUIDE ? item : item.id)}
           // Two recycling pools: a slot card never recycles into a system card (vercel-react-native-skills
           // list-performance-item-types).
-          getItemType={(item) => (item === CREATE || item === ENTER ? 'slot' : 'system')}
+          getItemType={(item) => (isSlot(item) ? 'slot' : 'system')}
           numColumns={numColumns}
           // FlashList recomputes its layout when numColumns changes, so the remount FlatList
           // required (.claude/instruction_mds/frontend.md §4.2) is no longer load-bearing. It is kept because the
@@ -106,7 +110,7 @@ export function HomeScreen() {
           // resize, which is already a full relayout — and it costs nothing the rest of the time.
           key={numColumns}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={<HomeHeader narrow={narrow} onCreate={create} onEnterCode={enterCode} />}
+          ListHeaderComponent={<HomeHeader narrow={narrow} onCreate={create} onEnterCode={enterCode} onGuide={openGuide} />}
           // Narrow, the load state stands in for an empty list. Wide, the list is never empty — the
           // create card is always first — so the state goes under it, and the card is the empty state.
           ListEmptyComponent={narrow ? <View style={styles.empty}>{status}</View> : null}
@@ -117,6 +121,8 @@ export function HomeScreen() {
                 <SlotCard icon="add" title="Create New Store" line="Set up your own store's point of sale." onPress={create} />
               ) : item === ENTER ? (
                 <SlotCard icon="key" title="Enter Access Code" line="Join a store with the code its owner sent you." onPress={enterCode} />
+              ) : item === GUIDE ? (
+                <SlotCard icon="help" title="Store Guide" line="Try each role's work in a practice store." onPress={openGuide} />
               ) : (
                 <SystemCard
                   merchant={item}
@@ -140,15 +146,15 @@ export function HomeScreen() {
   );
 }
 
-type HeaderProps = { narrow: boolean; onCreate: () => void; onEnterCode: () => void };
+type HeaderProps = { narrow: boolean; onCreate: () => void; onEnterCode: () => void; onGuide: () => void };
 
 /**
- * Narrow: full-width Create and Enter Access Code buttons, the requests still waiting, then the systems' heading.
- * Wide: the screen's title and its line, then the requests waiting; the grid's first two cards create and enter a
- * code. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10); a wider window gets
+ * Narrow: full-width Create, Enter Access Code and Store Guide buttons, the requests still waiting, then the systems'
+ * heading. Wide: the screen's title and its line, then the requests waiting; the grid's first three cards create,
+ * enter a code and open the guide. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10); a wider window gets
  * more cards per row instead.
  */
-function HomeHeader({ narrow, onCreate, onEnterCode }: HeaderProps) {
+function HomeHeader({ narrow, onCreate, onEnterCode, onGuide }: HeaderProps) {
   return narrow ? (
     <View style={styles.header}>
       <Text variant="titleMedium">Quick Actions</Text>
@@ -157,6 +163,9 @@ function HomeHeader({ narrow, onCreate, onEnterCode }: HeaderProps) {
       </Button>
       <Button mode="outlined" icon="key" onPress={onEnterCode} contentStyle={styles.leading}>
         Enter Access Code
+      </Button>
+      <Button mode="outlined" icon="help" onPress={onGuide} contentStyle={styles.leading}>
+        Store Guide
       </Button>
       <PendingRequests />
       <Text variant="titleMedium">Active Stores</Text>

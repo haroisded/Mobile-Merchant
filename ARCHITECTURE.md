@@ -1731,3 +1731,33 @@ fixed at creation — the owner raises it as the shop grows; a one-tap Start Sel
 opening cash — the Open Session page stays, its only register picked already (the human); deleting what a lower level
 does not show — a sale or a ledger may already use it; a sixth table of level presets — five fixed packages are a
 file the check can assert.
+
+## Store Guide
+
+A page that teaches the roles (`.claude/full-system-context/Store_Roles_and_Permissions.xlsx`) by letting someone do
+their work in a practice store. No database, no query, no write: everything below runs in memory and resets on leave.
+
+| Piece | File |
+| --- | --- |
+| Routes | `src/app/(app)/guide.tsx` (the page), `guide/[role].tsx` (the practice store), `sheets/guide-roles.tsx` (the role list on a phone) |
+| Guide page | `src/screens/guide/index.tsx` — pops the role list once on open: the formSheet narrow, a Dialog wide; **Choose a Role** reopens it; the 20 permissions by area and the sheet's Limits |
+| Role list | `src/screens/guide/role-list.tsx` — `AdaptiveDialog`, a box per work area |
+| Roles | `src/screens/guide/roles.ts` (import-free) — the sheet's 15 roles plus Owner and No role, their DB permission keys, the `requires` closure, `LIMITS` |
+| Tasks and menus | `src/screens/guide/tasks.ts` (types only) — each mock page's destination and the keys that open it (`PAGE_RULES`, the same rule the real shell uses), `menuFor(role)`, ~35 `TASKS` of `{ page, target, title, body }` steps, `tasksFor(role)` |
+| Mock store | `src/screens/guide/sandbox-state.ts` (import-free) — Sample Cafe and a pure reducer: open/close a session, cart, discount, complete, return, void (with the real refusals), stock entries and reconciliations, items, prices, import, setup rows, roles, access codes, level |
+| Shell | `src/screens/guide/sandbox/` — `index.tsx` (header, rail wide / `react-native-drawer-layout` drawer narrow, page history walked by Android Back, the pop-ups), `use-tour.ts`, `guide-bar.tsx` (the step under the page), `guide-target.tsx` (the accent ring, `GuideButton`), `task-list.tsx`, `context.ts` |
+| Mock pages | `src/screens/guide/pages/` — `sell`, `stock`, `dashboard`, `accounts`, `setup`, `owner`, drawn with the app's own components; `frame.tsx` the shared page frame |
+| Rail rows | `src/components/shell-nav.tsx` — `StoreBadge`, `NavItem`, moved out of `systems/[id]/_layout.tsx` so both shells draw the same rows |
+
+`tools/check-logic.mjs` asserts every role's permissions against the sheet's matrix by label, the `requires` closure,
+each role's menu, that every task step's page is in its role's menu, and the reducer's figures (a sale's total, stock
+and expected cash, a return, a refused void, a close's difference, an entry and a count).
+
+A step advances only when the control it names is used (`did(target)` from that control's own handler); any other tap
+just does what it does, and a step on another page says so in the bar. Paper's `Portal` renders a Dialog outside the
+sandbox's context, so a confirm inside a mock page re-provides `SandboxContext` around its actions.
+
+Rejected: a route per mock page — some 35 files mirroring `systems/[id]` and the tour's state in a store across them,
+for pages that exist only to be practised (the one exception to `structure.md` rule 5); rendering the real screens
+over a seeded query cache — every mutation would need a fake, and a guide that wrote by mistake would write to a real
+store; a database sandbox store — a teaching page should work offline and never leave rows behind.

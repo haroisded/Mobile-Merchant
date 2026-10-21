@@ -1,7 +1,7 @@
 import { useNavigation } from 'expo-router';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
+import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DIALOG_MAX, useShellWide } from '../lib/columns';
@@ -168,6 +168,7 @@ function SheetBody({ page, dismissable, kicker, kickerColor, title, children, ac
   // A sheet or page reaches the bottom edge, so its last button would sit under the gesture bar. The
   // native formSheet does not pad for it, and neither does a page on the edge-to-edge Android build.
   const { top, bottom } = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   useHoldRoute(dismissable);
 
   const content = (
@@ -180,7 +181,7 @@ function SheetBody({ page, dismissable, kicker, kickerColor, title, children, ac
         ) : null}
         <Text variant="headlineSmall">{title}</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
       <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant, paddingBottom: spacing.md + bottom }]}>
@@ -196,7 +197,9 @@ function SheetBody({ page, dismissable, kicker, kickerColor, title, children, ac
           <View style={styles.pageColumn}>{content}</View>
         </KeyboardAvoidingView>
       ) : (
-        <View style={[styles.routeSheet, { backgroundColor: colors.surface, borderTopColor: colors.primary }]}>{content}</View>
+        // maxHeight: a fitToContents sheet is laid out at its content's full height, so a body taller than the
+        // screen ran off the bottom with nothing to scroll. Held to the window, the ScrollView takes the rest.
+        <View style={[styles.routeSheet, { maxHeight: height - top, backgroundColor: colors.surface, borderTopColor: colors.primary }]}>{content}</View>
       )}
     </Portal.Host>
   );
@@ -317,6 +320,7 @@ const styles = StyleSheet.create({
   sheetBody: { gap: spacing.ms, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   // The 2px primary rule on the sheet's top edge (.claude/instruction_mds/frontend.md §5).
   routeSheet: { borderTopWidth: 2 },
+  sheetScroll: { flexShrink: 1 },
   page: { flex: 1 },
   // Left-aligned measure, not a centred column (.claude/instruction_mds/frontend.md rule 18, §9).
   pageColumn: { flex: 1, width: '100%', maxWidth: DIALOG_MAX },

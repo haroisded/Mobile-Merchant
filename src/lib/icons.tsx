@@ -80,6 +80,10 @@ export const ICONS = {
   // Access Codes: the tab and Enter Access Code, a code's Share, the Requests and Members tabs. Checked against
   // both sets on 2026-10-14.
   key: { ios: 'key', android: 'key' },
+  // The Store Guide (src/screens/guide/): its Home button and card, and a role's task list. Checked against both sets
+  // on 2026-10-22.
+  help: { ios: 'questionmark.circle', android: 'help' },
+  checklist: { ios: 'checklist', android: 'checklist' },
   share: { ios: 'square.and.arrow.up', android: 'share' },
   inbox: { ios: 'tray', android: 'inbox' },
   group: { ios: 'person.2', android: 'group' },

@@ -21,6 +21,29 @@ import { CONFIRM_FRAMES, SAME_CODE_MS, noSightings, sighted } from '../src/lib/b
 import { fullYearEnd, todayIn, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
+import { PERMISSIONS, requirementsKept, ROLES, roleById } from '../src/screens/guide/roles.ts';
+import {
+  addEntryRow,
+  addToCart,
+  cancelEntry,
+  closeSession,
+  completeOrder,
+  expectedCash,
+  initialStore,
+  newEntry,
+  newRecon,
+  openSession,
+  prepare,
+  returnSale,
+  setCount,
+  setDiscount,
+  submitEntry,
+  submitRecon,
+  totals,
+  voidRefusal,
+  voidSale,
+} from '../src/screens/guide/sandbox-state.ts';
+import { canOpen, menuFor, stepsAt, TASKS, tasksFor } from '../src/screens/guide/tasks.ts';
 
 // src/lib/dates.ts — must agree with fiscal_years_length:
 // end = (start + interval '1 year')::date - 1. Expected values were read back from Postgres.
@@ -692,5 +715,110 @@ for (const part of ['item_code', 'item_group_id', 'stock_uom', 'description', 'i
   assert.ok(itemPartShown(4, part), part);
 }
 assert.deepEqual([plainWords(1), plainWords(2), plainWords(3)], [true, true, false]);
+
+// src/screens/guide/ — in a block of its own: its names are its own.
+{
+  // src/screens/guide/ — the Store Guide. Each role is the sheet's Permission Matrix row
+  // (.claude/full-system-context/Store_Roles_and_Permissions.xlsx, sheet 2), transcribed here a second time by label.
+  const SHEET = {
+    cashier: ['Process Sales', 'Open/Close Register'],
+    'all-around-helper': ['Process Sales', 'Open/Close Register', 'View Stock Levels', 'Receive Shipments'],
+    'head-cashier': ['Process Sales', 'Apply Discounts', 'Process Refunds', 'View Sales', 'Open/Close Register'],
+    'returns-desk': ['Process Refunds', 'View Sales', 'Open/Close Register'],
+    'shift-supervisor': ['Process Sales', 'Apply Discounts', 'Process Refunds', 'Void Transactions', 'View Sales', 'Open/Close Register', 'View Shift Totals', 'Close Any Register'],
+    'cash-custodian': ['View Sales', 'View Shift Totals', 'Close Any Register'],
+    'stock-clerk': ['View Stock Levels', 'Receive Shipments'],
+    'inventory-controller': ['View Stock Levels', 'Receive Shipments', 'Adjust Inventory'],
+    'product-encoder': ['View Stock Levels', 'Manage Items'],
+    'pricing-officer': ['Manage Items', 'Stock Setup', 'Selling & Pricing'],
+    bookkeeper: ['View Sales', 'View Shift Totals', 'View General Ledger', 'Store & Calendar', 'Accounting & Payments', 'Taxes'],
+    'external-auditor': ['View Sales', 'View Shift Totals', 'View Stock Levels', 'View General Ledger'],
+    'setup-admin': ['Stock Setup', 'POS Profiles', 'Naming & Printing'],
+    'assistant-manager': [
+      'Process Sales', 'Apply Discounts', 'Process Refunds', 'Void Transactions', 'View Sales', 'Open/Close Register', 'View Shift Totals',
+      'Close Any Register', 'View Stock Levels', 'Manage Items', 'Receive Shipments', 'Adjust Inventory', 'View General Ledger',
+    ],
+    'store-manager': PERMISSIONS.map((permission) => permission.label),
+    'no-role': [],
+  };
+  const labelOf = (key) => PERMISSIONS.find((permission) => permission.key === key).label;
+  assert.equal(PERMISSIONS.length, 20);
+  for (const [id, labels] of Object.entries(SHEET)) assert.deepEqual(roleById(id).permissions.map(labelOf).sort(), [...labels].sort(), id);
+  assert.deepEqual(roleById('setup-admin').optional.map(labelOf).sort(), ['Accounting & Payments', 'Selling & Pricing', 'Store & Calendar', 'Taxes']);
+  assert.equal(ROLES.length, 17);
+  assert.equal(new Set(ROLES.map((role) => role.id)).size, ROLES.length);
+  // Every role keeps the catalog's requirements: Process Sales and Refunds with Open/Close Register, Discounts with Sales.
+  for (const role of ROLES) assert.ok(requirementsKept(role.permissions), role.id);
+  assert.equal(requirementsKept(['apply_discounts', 'open_close_register']), false);
+  assert.equal(requirementsKept(['process_refunds']), false);
+  // The menu each role practises in.
+  const menuNames = (id) => menuFor(roleById(id)).map((entry) => entry.name);
+  assert.deepEqual(menuNames('cashier'), ['home', 'sell', 'features']);
+  assert.deepEqual(menuNames('stock-clerk'), ['home', 'dashboard', 'stock', 'features']);
+  assert.deepEqual(menuNames('bookkeeper'), ['home', 'dashboard', 'sell', 'accounts', 'setup', 'features']);
+  assert.deepEqual(menuNames('store-manager'), ['home', 'dashboard', 'sell', 'stock', 'accounts', 'setup', 'features']);
+  assert.deepEqual(menuNames('owner'), ['home', 'dashboard', 'sell', 'stock', 'accounts', 'employees', 'setup', 'access-codes', 'features']);
+  assert.deepEqual(menuNames('no-role'), ['home', 'features']);
+  // What each role practises: every role has a task, and every step is on a page it may open at both widths — a guide
+  // never sends someone where RLS would not let them.
+  for (const role of ROLES) {
+    const tasks = tasksFor(role);
+    assert.ok(tasks.length > 0, `${role.id} has no task`);
+    for (const task of tasks) for (const wide of [false, true]) for (const step of stepsAt(task, wide)) assert.ok(canOpen(role, step.page), `${role.id} · ${task.id} · ${step.page}`);
+  }
+  assert.deepEqual(tasksFor(roleById('cashier')).map((task) => task.id), ['open-session', 'ring-sale', 'scan-sell', 'close-own']);
+  assert.deepEqual(tasksFor(roleById('no-role')).map((task) => task.id), ['no-role']);
+  assert.equal(tasksFor(roleById('owner')).length, TASKS.length - 1);
+  assert.equal(tasksFor(roleById('cash-custodian')).some((task) => task.id === 'ring-sale'), false);
+  assert.equal(new Set(TASKS.map((task) => task.id)).size, TASKS.length);
+  for (const permission of PERMISSIONS) assert.ok(TASKS.some((task) => task.needs.includes(permission.key)), `no task practises ${permission.label}`);
+  // A tablet shows the cart beside the Register, so its sale has one step fewer.
+  const ringSale = TASKS.find((task) => task.id === 'ring-sale');
+  assert.equal(stepsAt(ringSale, true).length + 1, stepsAt(ringSale, false).length);
+
+  // The practice store (sandbox-state.ts): a sale, its return, a void, a close, the stock documents.
+  assert.deepEqual(totals([{ code: 'x', name: 'x', qty: 2, rate: 12 }], 10), { gross: 24, off: 2.4, net: 21.6, tax: 2.59, total: 24.19, rounded: 24 });
+  let practice = initialStore();
+  assert.equal(completeOrder(practice), null); // no session
+  practice = openSession(practice, 500);
+  assert.equal(openSession(practice, 100), practice); // one session at a time
+  practice = addToCart(addToCart(addToCart(practice, 'ITEM-0001'), 'ITEM-0001'), 'ITEM-0004');
+  const sold = completeOrder(practice);
+  assert.equal(sold.store.sales.at(-1).total, 81); // 2 × 12 + 48 = 72, VAT 8.64 → 80.64 → 81
+  assert.equal(sold.store.items.find((item) => item.code === 'ITEM-0001').stock, 46);
+  assert.deepEqual(sold.store.cart, []);
+  assert.equal(expectedCash(sold.store, sold.store.mine), 581);
+  const back = returnSale(sold.store, sold.id);
+  assert.equal(back.store.sales.at(-1).total, -81);
+  assert.equal(back.store.items.find((item) => item.code === 'ITEM-0001').stock, 48);
+  assert.equal(expectedCash(back.store, back.store.mine), 500);
+  assert.equal(returnSale(back.store, sold.id), null); // nothing left to return
+  assert.match(voidRefusal(back.store, sold.id), /has a return/);
+  practice = back.store;
+  // A void: today's sale in Ana's open session goes back to stock; yesterday's, in a closed session, is refused.
+  assert.equal(voidRefusal(practice, 'v3'), null);
+  assert.match(voidRefusal(practice, 'v1'), /closed/);
+  const voided = voidSale(practice, 'v3');
+  assert.equal(voided.sales.find((candidate) => candidate.id === 'v3').status, 'Cancelled');
+  assert.equal(voided.items.find((item) => item.code === 'ITEM-0003').stock, 10);
+  assert.equal(voidSale(voided, 'v3'), voided);
+  // Close Any Register: Ana's drawer counted short by 5; a void task opens it again.
+  const ana = expectedCash(practice, 's2');
+  const closed = closeSession(practice, 's2', ana - 5);
+  assert.equal(closed.sessions.find((session) => session.id === 's2').counted - ana, -5);
+  assert.equal(prepare(closed, 'ana-open').sessions.find((session) => session.id === 's2').status, 'Open');
+  // A delivery in, then cancelled; a count down to 40 coffees.
+  const entry = newEntry(practice);
+  assert.equal(submitEntry(entry.store, entry.id), entry.store); // no rows: stays a draft
+  const received = submitEntry(addEntryRow(entry.store, entry.id, 'ITEM-0003', 24), entry.id);
+  assert.equal(received.items.find((item) => item.code === 'ITEM-0003').stock, 30);
+  assert.equal(cancelEntry(received, entry.id).items.find((item) => item.code === 'ITEM-0003').stock, 6);
+  const count = newRecon(practice);
+  assert.equal(submitRecon(setCount(count.store, count.id, 'ITEM-0001', 40), count.id).items.find((item) => item.code === 'ITEM-0001').stock, 40);
+  // Preparing a task: no session for Open Session, a line in the cart for a discount.
+  assert.equal(prepare(practice, 'no-session').mine, null);
+  assert.equal(prepare(initialStore(), 'cart-line').cart.length, 1);
+  assert.equal(setDiscount(practice, 150).discount, 100);
+}
 
 console.log('check:logic — all assertions passed.');
