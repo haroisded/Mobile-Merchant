@@ -694,9 +694,9 @@ assert.equal(SETUP_ROUTES.length, 26);
 // Level 5 is the whole system; each level shows everything the one below shows.
 assert.deepEqual(levelHidden(5), []);
 for (const level of [1, 2, 3, 4]) assert.ok(levelHidden(level + 1).every((key) => levelHidden(level).includes(key)), `level ${level + 1} hides more than ${level}`);
-// Level 1: the Dashboard, Sell's session and Register, Stock's Items — and nothing else.
+// Level 1: the Dashboard, Sell's session, Register and Orders (receipts), Stock's Items — and nothing else.
 assert.deepEqual(menu(1), ['dashboard', 'sell', 'stock']);
-assert.deepEqual(pagesShown(1, APP[1]), []);
+assert.deepEqual(pagesShown(1, APP[1]), ['pos-invoices']);
 assert.deepEqual(pagesShown(1, APP[2]), ['items']);
 assert.deepEqual(pagesShown(2, APP[1]), ['pos-invoices']);
 assert.deepEqual(pagesShown(2, APP[2]), ['items', 'item-prices', 'stock-entries', 'stock-balance']);

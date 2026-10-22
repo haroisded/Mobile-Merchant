@@ -104,8 +104,9 @@ together and explained inline.
   changes. A page the screen cannot work without (Sell's session and Register, Stock's Items) goes only with its screen;
   a screen whose pages all stand alone (Setup, Accounts) goes when its last page does. Saved per person in Supabase
 - **Store levels** — Create Store's second step: how much of the system the store uses, from **Level 1 · Just Sell**
-  (add items, sell at the register, check the Dashboard) to **Level 5 · Everything, by Hand** (the whole system, as
-  every store made before levels is). A level sets things up for the shop — a register to sell from, item codes
+  (add items, sell at the register with discounts and a receipt for every sale, look past orders up, check the
+  Dashboard) to **Level 5 · Everything, by Hand** (the whole system, as every store made before levels is). A level
+  sets things up for the shop — a register to sell from that prints receipts and allows discounts, item codes
   numbered for it, selling past zero stock at Level 1 — starts everyone's menu from its screens (through Features), and
   shows only its share of the New Item form, filling the rest from Stock Settings. Nothing is turned off. The owner
   changes it on Features; a change only ever adds, and starts everyone's menu again from the new level's

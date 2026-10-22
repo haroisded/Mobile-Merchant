@@ -1,8 +1,8 @@
 // What a store's level means (merchants.level, supabase/migrations/20261021153337_store_levels.sql): picked on Create
 // Store's second step, changed by the owner on Features. Import-free: asserted in tools/check-logic.mjs.
 //
-// A level is presets, never a refusal. What the database sets up for one is private.apply_level (a register, item
-// codes from the Item series, selling past zero stock). Here: the menu a person starts from until they save their own
+// A level is presets, never a refusal. What the database sets up for one is private.apply_level (a register that prints
+// a receipt and allows a discount, item codes from the Item series, selling past zero stock). Here: the menu a person starts from until they save their own
 // on Features, and which New Item fields show. A field is hidden only where the system fills it.
 
 export type Level = 1 | 2 | 3 | 4 | 5;
@@ -13,14 +13,19 @@ export const LEVELS: LevelInfo[] = [
   {
     level: 1,
     name: 'Just Sell',
-    summary: 'Add items, sell at the register, and check the dashboard.',
-    gets: ['A register ready to sell from', 'Item codes numbered for you', 'A short New Item form: name, barcode, price, cost and stock'],
+    summary: 'Add items, sell at the register with discounts and receipts, and check the dashboard.',
+    gets: [
+      'A register ready to sell from, with discounts',
+      'A receipt for every sale, and your past orders',
+      'Item codes numbered for you',
+      'A short New Item form: name, barcode, price, cost and stock',
+    ],
   },
   {
     level: 2,
     name: 'Sell & Restock',
-    summary: 'Level 1, plus past orders and returns, deliveries, prices and stock on hand.',
-    gets: ['Orders, receipts and returns', 'Deliveries in, and what is on hand', 'Item groups, units and low-stock alerts on items'],
+    summary: 'Level 1, plus deliveries, prices and stock on hand.',
+    gets: ['Deliveries in, and what is on hand', 'Item prices for each price list', 'Item groups, units and low-stock alerts on items'],
   },
   {
     level: 3,
@@ -46,10 +51,10 @@ export const LEVELS: LevelInfo[] = [
 export const levelInfo = (level: number) => LEVELS.find((info) => info.level === level) ?? LEVELS[LEVELS.length - 1];
 
 // The first level each Features key shows at (screenKey / pageKey, src/features/feature-preferences/visibility.ts). A
-// key not here shows at every level: Home, Dashboard, Features, Sell's session and Register, Stock's Items. A screen
-// hidden at a level hides its pages' keys too, as its own switch does (setScreen), so showing it again shows them all.
+// key not here shows at every level: Home, Dashboard, Features, Sell's session, Register and Orders (a sale's receipt),
+// Stock's Items. A screen hidden at a level hides its pages' keys too, as its own switch does (setScreen), so showing
+// it again shows them all.
 const MENU_FROM = {
-  'sell/pos-invoices': 2,
   'stock/item-prices': 2,
   'stock/stock-entries': 2,
   'stock/stock-balance': 2,

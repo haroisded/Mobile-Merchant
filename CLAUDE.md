@@ -427,7 +427,9 @@ Features).
 Then how much of the system a store uses: `20261021153337_store_levels.sql` (`merchants.level`, 1–5, existing stores 5;
 `private.apply_level()`, add-only — a Main Register for 1–4, the Item series for 1–2, negative stock for 1 — behind
 `merchants_seed_98_level` and `merchants_level_changed`, which also clears the store's Features choices;
-`merchants_guard_level`, the owner's alone; ARCHITECTURE.md, Store levels).
+`merchants_guard_level`, the owner's alone; ARCHITECTURE.md, Store levels). Then `20261022065602_level_one_receipts_discounts.sql`:
+`apply_level` re-created so its Main Register prints a receipt and allows a discount, and both switched on for the Main
+Register of every store at level 1 or 2 — Level 1 sells with receipts, discounts and Orders.
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
