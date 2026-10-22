@@ -12,6 +12,7 @@ import { spacing } from '../themes';
 import { Button } from './button';
 import { Dialog } from './dialog';
 import { HelperText } from './helper-text';
+import { IconButton } from './icon-button';
 import { Portal } from './portal';
 import { Text } from './text';
 
@@ -37,8 +38,10 @@ type Props = {
   children?: ReactNode;
   /** The write's line under the body: an offline wait, or what went wrong (mutationNotice). */
   notice?: Notice | null;
-  /** Buttons. Laid out in a row in the Dialog and stacked full width in a sheet or page. */
-  actions: ReactNode;
+  /** Buttons. Laid out in a row in the Dialog and stacked full width in a sheet or page. None: no footer at all. */
+  actions?: ReactNode;
+  /** A close X at the end of the header, for a list that closes with no footer (the Store Guide's role list). */
+  onClose?: () => void;
   /**
    * False when the body scrolls itself — a picker's virtualized list (search-select.tsx). The body then sits in a
    * shrinking View instead of a ScrollView: a list inside a ScrollView renders every row and cannot scroll on its own.
@@ -68,6 +71,7 @@ export function AdaptiveDialog({
   children: body,
   notice,
   actions,
+  onClose,
   scroll = true,
 }: Props) {
   const { colors } = useAppTheme();
@@ -77,14 +81,14 @@ export function AdaptiveDialog({
 
   if (inSheet || (asPage && !wide)) {
     return (
-      <SheetBody page={!!asPage} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} scroll={scroll}>
+      <SheetBody page={!!asPage} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} onClose={onClose} scroll={scroll}>
         {children}
       </SheetBody>
     );
   }
 
   const dialog = (
-    <WideDialog onDismiss={onDismiss} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} scroll={scroll}>
+    <WideDialog onDismiss={onDismiss} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} onClose={onClose} scroll={scroll}>
       {children}
     </WideDialog>
   );
@@ -132,7 +136,9 @@ type SheetProps = {
   kickerColor: string;
   title: string;
   children?: ReactNode;
-  actions: ReactNode;
+  actions?: ReactNode;
+  /** The header's close X, drawn at its end. */
+  onClose?: () => void;
 };
 
 /**
@@ -150,7 +156,7 @@ type SheetProps = {
 type WideDialogProps = SheetProps & { onDismiss: () => void; dismissable: boolean };
 
 /** The Paper Dialog: kicker, title, body and a row of buttons, held to a maximum width. */
-function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, actions, scroll, children }: WideDialogProps) {
+function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, actions, onClose, scroll, children }: WideDialogProps) {
   return (
     <Portal>
       <Dialog
@@ -168,15 +174,18 @@ function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, action
         ) : null}
         {/* No variant: Dialog.Title picks headlineSmall itself (.claude/instruction_mds/frontend.md §3.3). Its own
             top margin is Paper's, not rhythm between siblings; under a kicker it closes up. */}
-        <Dialog.Title style={kicker ? styles.titleUnderKicker : undefined}>{title}</Dialog.Title>
+        <Dialog.Title style={[kicker ? styles.titleUnderKicker : null, onClose ? styles.titleBesideClose : null]}>{title}</Dialog.Title>
+        <View style={styles.dialogClose}>
+          <CloseX onClose={onClose} />
+        </View>
         <Dialog.ScrollArea style={styles.scrollArea}>
           <Body scroll={scroll} style={styles.body} fill={styles.fixedBody}>
             {children}
           </Body>
         </Dialog.ScrollArea>
         {/* A plain row, not Dialog.Actions: that clones `compact` onto each child, and the child here is
-            the caller's Fragment. */}
-        <View style={styles.dialogActions}>{actions}</View>
+            the caller's Fragment. No actions: only the inset under the body. */}
+        {actions ? <View style={styles.dialogActions}>{actions}</View> : <View style={styles.dialogEnd} />}
       </Dialog>
     </Portal>
   );
@@ -195,7 +204,7 @@ function Body({ scroll, style, fill, scrollStyle, children }: BodyProps) {
   );
 }
 
-function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, children, actions }: SheetProps & { page: boolean; dismissable: boolean }) {
+function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, children, actions, onClose }: SheetProps & { page: boolean; dismissable: boolean }) {
   const { colors } = useAppTheme();
   // A sheet or page reaches the bottom edge, so its last button would sit under the gesture bar. The
   // native formSheet does not pad for it, and neither does a page on the edge-to-edge Android build.
@@ -205,22 +214,23 @@ function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, chil
 
   const content = (
     <>
-      <View style={styles.sheetHeader}>
-        {kicker ? (
-          <Text variant="labelMedium" style={{ color: kickerColor }}>
-            {kicker}
-          </Text>
-        ) : null}
-        <Text variant="headlineSmall">{title}</Text>
+      <View style={styles.sheetHeaderRow}>
+        <View style={styles.sheetHeader}>
+          {kicker ? (
+            <Text variant="labelMedium" style={{ color: kickerColor }}>
+              {kicker}
+            </Text>
+          ) : null}
+          <Text variant="headlineSmall">{title}</Text>
+        </View>
+        <CloseX onClose={onClose} />
       </View>
       {/* Not scrolling, the sheet is held at the window's height (below), so the body fills it and the buttons stay at
           the bottom. */}
       <Body scroll={scroll} style={styles.sheetBody} fill={styles.sheetFill} scrollStyle={styles.sheetScroll}>
         {children}
       </Body>
-      <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant, paddingBottom: spacing.md + bottom }]}>
-        {actions}
-      </View>
+      <SheetFooter actions={actions} bottom={bottom} borderColor={colors.outlineVariant} />
     </>
   );
 
@@ -245,6 +255,17 @@ function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, chil
       )}
     </Portal.Host>
   );
+}
+
+/** The header's close X, when the caller closes from the header (`onClose`). */
+function CloseX({ onClose }: { onClose?: () => void }) {
+  return onClose ? <IconButton icon="close" onPress={onClose} accessibilityLabel="Close" /> : null;
+}
+
+/** A sheet's stacked buttons over the gesture bar — or, with none, only the room the gesture bar needs. */
+function SheetFooter({ actions, bottom, borderColor }: { actions?: ReactNode; bottom: number; borderColor: string }) {
+  if (!actions) return <View style={{ paddingBottom: spacing.sm + bottom }} />;
+  return <View style={[styles.sheetActions, { borderTopColor: borderColor, paddingBottom: spacing.md + bottom }]}>{actions}</View>;
 }
 
 /** The body, then the write's notice line — reserved only when the caller passes a notice slot. */
@@ -369,6 +390,11 @@ const styles = StyleSheet.create({
   page: { flex: 1 },
   // Left-aligned measure, not a centred column (.claude/instruction_mds/frontend.md rule 18, §9).
   pageColumn: { flex: 1, width: '100%', maxWidth: DIALOG_MAX },
-  sheetHeader: { gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  sheetHeaderRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  sheetHeader: { flex: 1, gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  // The close X at the Dialog's top right, beside the kicker and title; the title keeps clear of it.
+  dialogClose: { position: 'absolute', top: spacing.sm, right: spacing.sm },
+  titleBesideClose: { marginRight: spacing.xxl },
+  dialogEnd: { height: spacing.md },
   sheetActions: { gap: spacing.sm, padding: spacing.md, borderTopWidth: 1 },
 });

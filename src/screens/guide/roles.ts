@@ -80,7 +80,7 @@ const CASH: PermissionKey[] = ['open_close_register', 'view_shift_totals', 'clos
 const STOCK: PermissionKey[] = ['view_stock', 'manage_items', 'move_stock', 'adjust_inventory'];
 
 // By work area, the human's pick (2026-10-22). The ids are routes (/guide/<id>), so they never change.
-export const ROLE_GROUPS: RoleGroup[] = [
+const ROLE_GROUPS: RoleGroup[] = [
   {
     title: 'Selling & Cash',
     hint: 'At the register and the drawer',
@@ -238,6 +238,15 @@ export const ROLE_GROUPS: RoleGroup[] = [
 export const ROLES: Role[] = ROLE_GROUPS.flatMap((group) => group.roles);
 
 export const roleById = (id: string) => ROLES.find((role) => role.id === id);
+
+/** The role list's search: groups keep the roles whose name or line holds the words, case aside; an empty group goes. */
+export function rolesMatching(query: string): RoleGroup[] {
+  const needle = query.trim().toLowerCase();
+  return ROLE_GROUPS.map((group) => ({
+    ...group,
+    roles: group.roles.filter((role) => `${role.name} ${role.responsibilities}`.toLowerCase().includes(needle)),
+  })).filter((group) => group.roles.length > 0);
+}
 
 /** Whether `keys` keep every permission's requirement: Process Sales needs Open/Close Register, and so on. */
 export function requirementsKept(keys: PermissionKey[]) {

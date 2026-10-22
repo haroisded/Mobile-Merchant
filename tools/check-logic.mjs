@@ -21,7 +21,7 @@ import { CONFIRM_FRAMES, SAME_CODE_MS, noSightings, sighted } from '../src/lib/b
 import { fullYearEnd, todayIn, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
-import { PERMISSIONS, requirementsKept, ROLES, roleById } from '../src/screens/guide/roles.ts';
+import { PERMISSIONS, requirementsKept, ROLES, roleById, rolesMatching } from '../src/screens/guide/roles.ts';
 import {
   addEntryRow,
   addToCart,
@@ -751,6 +751,13 @@ assert.deepEqual([plainWords(1), plainWords(2), plainWords(3)], [true, true, fal
   for (const role of ROLES) assert.ok(requirementsKept(role.permissions), role.id);
   assert.equal(requirementsKept(['apply_discounts', 'open_close_register']), false);
   assert.equal(requirementsKept(['process_refunds']), false);
+  // The role list's search: name or line, case aside, empty groups gone; nothing typed is every group.
+  assert.deepEqual(
+    rolesMatching(' STOCK ').map((group) => [group.title, group.roles.map((role) => role.id)]),
+    [['Selling & Cash', ['all-around-helper']], ['Stock', ['stock-clerk', 'inventory-controller']]],
+  );
+  assert.deepEqual(rolesMatching('zzzz'), []);
+  assert.equal(rolesMatching('').flatMap((group) => group.roles).length, ROLES.length);
   // The menu each role practises in.
   const menuNames = (id) => menuFor(roleById(id)).map((entry) => entry.name);
   assert.deepEqual(menuNames('cashier'), ['home', 'sell', 'features']);

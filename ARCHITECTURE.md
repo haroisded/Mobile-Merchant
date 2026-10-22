@@ -1745,8 +1745,8 @@ their work in a practice store. No database, no query, no write: everything belo
 | Piece | File |
 | --- | --- |
 | Routes | `src/app/(app)/guide.tsx` (the page), `guide/[role].tsx` (the practice store), `sheets/guide-roles.tsx` (the role list on a phone) |
-| Guide page | `src/screens/guide/index.tsx` — pops the role list once on open: the formSheet narrow, a Dialog wide; **Choose a Role** reopens it; the 20 permissions by area and the sheet's Limits |
-| Role list | `src/screens/guide/role-list.tsx` — `AdaptiveDialog`, a box per work area |
+| Guide page | `src/screens/guide/index.tsx` — pops the role list once on open: the formSheet narrow, a Dialog wide; a hero on `primary` whose **Choose a Role** reopens it (a sheet pushed once until the page is in front again); the 20 permissions as a card per area and the sheet's Limits as numbered cards, each grid `CellRows` (at most 3 and 2 a row). Laid out after pocket-store-compass.lovable.app (2026-10-22): its components, structure and widths, our words, left-aligned |
+| Role list | `src/screens/guide/role-list.tsx` — `AdaptiveDialog` closed by its header **X** (`onClose`, no footer); **Search roles** (`rolesMatching`, `roles.ts`, in `check:logic`) over a card per role: kind tag, line, a bar of how many of the 20 permissions it holds |
 | Roles | `src/screens/guide/roles.ts` (import-free) — the sheet's 15 roles plus Owner and No role, their DB permission keys, the `requires` closure, `LIMITS` |
 | Tasks and menus | `src/screens/guide/tasks.ts` (types only) — each mock page's destination and the keys that open it (`PAGE_RULES`, the same rule the real shell uses), `menuFor(role)`, ~35 `TASKS` of `{ page, target, title, body }` steps, `tasksFor(role)` |
 | Mock store | `src/screens/guide/sandbox-state.ts` (import-free) — Sample Cafe and a pure reducer: open/close a session, cart, discount, complete, return, void (with the real refusals), stock entries and reconciliations, items, prices, import, setup rows, roles, access codes, level |

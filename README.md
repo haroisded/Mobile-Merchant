@@ -110,9 +110,10 @@ together and explained inline.
   numbered for it, selling past zero stock at Level 1 — starts everyone's menu from its screens (through Features), and
   shows only its share of the New Item form, filling the rest from Stock Settings. Nothing is turned off. The owner
   changes it on Features; a change only ever adds, and starts everyone's menu again from the new level's
-- **Store Guide** — a page from Home (a button on a phone, a card on a tablet) that pops up the roles an owner can
-  give, grouped by work area (Selling & Cash, Stock, Books & Setup, Running the store, Not working yet): the 15 from
-  the roles sheet, the Owner and someone with no role. Picking one opens a **practice store** — Sample Cafe, held in
+- **Store Guide** — a page from Home's question-mark icon that pops up the roles an owner can give, searchable and
+  grouped by work area (Selling & Cash, Stock, Books & Setup, Running the store, Not working yet): the 15 from the roles
+  sheet, the Owner and someone with no role, each with how many of the 20 permissions it holds. Under it, the 20
+  permissions by area and the limits of roles today, as cards. Picking one opens a **practice store** — Sample Cafe, held in
   memory, no database — with only that role's screens in its rail or drawer and guided tasks that light up the next
   control and explain each step. Nothing is saved; leaving resets it. Works offline
 - **React Native Paper** for the whole UI, themed from `src/themes.js`
