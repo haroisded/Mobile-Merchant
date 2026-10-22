@@ -51,8 +51,8 @@ export function NotificationsScreen() {
   return (
     <Surface style={styles.screen}>
       <Appbar.Header>
-        {/* Wide, the tab bar is hidden and the systems list's bell opens this: back is the way home. */}
-        {wide ? <Appbar.BackAction onPress={() => router.navigate('/')} /> : null}
+        {/* A page the bell pushes, from Home or from a store's header: Back returns there. */}
+        <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title="Notifications" />
       </Appbar.Header>
       <FlatList

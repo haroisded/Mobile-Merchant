@@ -165,9 +165,9 @@ function MerchantHeader({ onMenu }: HeaderProps) {
     <Appbar.Header style={{ backgroundColor: colors.primary }}>
       <Appbar.Action icon="menu" color={colors.onPrimary} onPress={onMenu} accessibilityLabel="Menu" />
       <Appbar.Content title="Merchant" color={colors.onPrimary} />
-      {/* Notifications are the person's, not this system's: the bell leaves the system for the tab, as the grid
-          below does for Home. */}
-      <BellAction color={colors.onPrimary} onPress={() => router.dismissTo('/notifications')} />
+      {/* Notifications are the person's, not this store's: the bell pushes the inbox over the store, and Back
+          returns here. */}
+      <BellAction color={colors.onPrimary} onPress={() => router.push('/notifications')} />
       {/* The way out of a system. Not left to Back alone: on a phone the front drawer opens from a
           left-edge swipe, the same edge iOS pops a screen from, and iOS has no back button. */}
       <Appbar.Action icon="grid" color={colors.onPrimary} onPress={exitSystem} accessibilityLabel="Your stores" />

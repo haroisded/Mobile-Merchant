@@ -419,7 +419,9 @@ const styles = StyleSheet.create({
   // of its own. The gap spaces label row, control and error, so none of them carries a margin.
   half: { flexBasis: '45%', flexGrow: 1, minWidth: 0, gap: spacing.xs },
   full: { flexBasis: '100%', gap: spacing.xs },
-  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, minHeight: 24 },
+  // Grows and sits its label on its bottom edge: a row's two half fields stretch to the taller, so when one hint
+  // wraps to two lines the other label row grows too and both controls start level.
+  labelRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.sm, minHeight: 24, flexGrow: 1 },
   hint: { flexShrink: 1, textAlign: 'right' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
 });

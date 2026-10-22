@@ -2,6 +2,7 @@ import { useNavigation } from 'expo-router';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DIALOG_MAX, useShellWide } from '../lib/columns';
@@ -38,6 +39,11 @@ type Props = {
   notice?: Notice | null;
   /** Buttons. Laid out in a row in the Dialog and stacked full width in a sheet or page. */
   actions: ReactNode;
+  /**
+   * False when the body scrolls itself — a picker's virtualized list (search-select.tsx). The body then sits in a
+   * shrinking View instead of a ScrollView: a list inside a ScrollView renders every row and cannot scroll on its own.
+   */
+  scroll?: boolean;
 };
 
 /**
@@ -62,6 +68,7 @@ export function AdaptiveDialog({
   children: body,
   notice,
   actions,
+  scroll = true,
 }: Props) {
   const { colors } = useAppTheme();
   const wide = useShellWide();
@@ -70,40 +77,16 @@ export function AdaptiveDialog({
 
   if (inSheet || (asPage && !wide)) {
     return (
-      <SheetBody page={!!asPage} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions}>
+      <SheetBody page={!!asPage} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} scroll={scroll}>
         {children}
       </SheetBody>
     );
   }
 
   const dialog = (
-    <Portal>
-      <Dialog
-        visible
-        onDismiss={onDismiss}
-        dismissable={dismissable}
-        dismissableBackButton={dismissable}
-        // Dialog has no maximum width of its own (.claude/instruction_mds/frontend.md §7).
-        style={styles.dialog}
-      >
-        {kicker ? (
-          <Text variant="labelMedium" style={[styles.dialogKicker, { color: kickerColor }]}>
-            {kicker}
-          </Text>
-        ) : null}
-        {/* No variant: Dialog.Title picks headlineSmall itself (.claude/instruction_mds/frontend.md §3.3). Its own
-            top margin is Paper's, not rhythm between siblings; under a kicker it closes up. */}
-        <Dialog.Title style={kicker ? styles.titleUnderKicker : undefined}>{title}</Dialog.Title>
-        <Dialog.ScrollArea style={styles.scrollArea}>
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-            {children}
-          </ScrollView>
-        </Dialog.ScrollArea>
-        {/* A plain row, not Dialog.Actions: that clones `compact` onto each child, and the child here is
-            the caller's Fragment. */}
-        <View style={styles.dialogActions}>{actions}</View>
-      </Dialog>
-    </Portal>
+    <WideDialog onDismiss={onDismiss} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} scroll={scroll}>
+      {children}
+    </WideDialog>
   );
 
   return asPage ? <PageDialog dismissable={dismissable}>{dialog}</PageDialog> : dialog;
@@ -144,6 +127,7 @@ function useHoldRoute(dismissable: boolean) {
 }
 
 type SheetProps = {
+  scroll: boolean;
   kicker?: string;
   kickerColor: string;
   title: string;
@@ -163,7 +147,55 @@ type SheetProps = {
  *
  * `Portal.Host` scopes any Portal inside to the sheet or page: the root host sits behind a native sheet.
  */
-function SheetBody({ page, dismissable, kicker, kickerColor, title, children, actions }: SheetProps & { page: boolean; dismissable: boolean }) {
+type WideDialogProps = SheetProps & { onDismiss: () => void; dismissable: boolean };
+
+/** The Paper Dialog: kicker, title, body and a row of buttons, held to a maximum width. */
+function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, actions, scroll, children }: WideDialogProps) {
+  return (
+    <Portal>
+      <Dialog
+        visible
+        onDismiss={onDismiss}
+        dismissable={dismissable}
+        dismissableBackButton={dismissable}
+        // Dialog has no maximum width of its own (.claude/instruction_mds/frontend.md §7).
+        style={styles.dialog}
+      >
+        {kicker ? (
+          <Text variant="labelMedium" style={[styles.dialogKicker, { color: kickerColor }]}>
+            {kicker}
+          </Text>
+        ) : null}
+        {/* No variant: Dialog.Title picks headlineSmall itself (.claude/instruction_mds/frontend.md §3.3). Its own
+            top margin is Paper's, not rhythm between siblings; under a kicker it closes up. */}
+        <Dialog.Title style={kicker ? styles.titleUnderKicker : undefined}>{title}</Dialog.Title>
+        <Dialog.ScrollArea style={styles.scrollArea}>
+          <Body scroll={scroll} style={styles.body} fill={styles.fixedBody}>
+            {children}
+          </Body>
+        </Dialog.ScrollArea>
+        {/* A plain row, not Dialog.Actions: that clones `compact` onto each child, and the child here is
+            the caller's Fragment. */}
+        <View style={styles.dialogActions}>{actions}</View>
+      </Dialog>
+    </Portal>
+  );
+}
+
+type BodyProps = { scroll: boolean; style: StyleProp<ViewStyle>; fill: StyleProp<ViewStyle>; scrollStyle?: StyleProp<ViewStyle>; children: ReactNode };
+
+/** The body of a Dialog or sheet: a ScrollView, or a View taking the room left when the body scrolls itself. */
+function Body({ scroll, style, fill, scrollStyle, children }: BodyProps) {
+  return scroll ? (
+    <ScrollView style={scrollStyle} contentContainerStyle={style} keyboardShouldPersistTaps="handled">
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[fill, style]}>{children}</View>
+  );
+}
+
+function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, children, actions }: SheetProps & { page: boolean; dismissable: boolean }) {
   const { colors } = useAppTheme();
   // A sheet or page reaches the bottom edge, so its last button would sit under the gesture bar. The
   // native formSheet does not pad for it, and neither does a page on the edge-to-edge Android build.
@@ -181,9 +213,11 @@ function SheetBody({ page, dismissable, kicker, kickerColor, title, children, ac
         ) : null}
         <Text variant="headlineSmall">{title}</Text>
       </View>
-      <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
+      {/* Not scrolling, the sheet is held at the window's height (below), so the body fills it and the buttons stay at
+          the bottom. */}
+      <Body scroll={scroll} style={styles.sheetBody} fill={styles.sheetFill} scrollStyle={styles.sheetScroll}>
         {children}
-      </ScrollView>
+      </Body>
       <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant, paddingBottom: spacing.md + bottom }]}>
         {actions}
       </View>
@@ -199,7 +233,15 @@ function SheetBody({ page, dismissable, kicker, kickerColor, title, children, ac
       ) : (
         // maxHeight: a fitToContents sheet is laid out at its content's full height, so a body taller than the
         // screen ran off the bottom with nothing to scroll. Held to the window, the ScrollView takes the rest.
-        <View style={[styles.routeSheet, { maxHeight: height - top, backgroundColor: colors.surface, borderTopColor: colors.primary }]}>{content}</View>
+        // A body that scrolls itself (a picker) is held AT the window's height instead: filtered down to a row or two
+        // it would shrink to the bottom of the screen, under the keyboard its own search box raised (phone, 2026-10-22).
+        <View style={[styles.routeSheet, scroll ? { maxHeight: height - top } : { height: height - top }, { backgroundColor: colors.surface, borderTopColor: colors.primary }]}>
+          {/* A picker's sheet reaches the bottom of the screen, and the keyboard its Search box raises would lie over
+              its buttons: the window does not resize for it (edge-to-edge), so the sheet makes the room itself. */}
+          <KeyboardAvoidingView behavior="padding" style={scroll ? undefined : styles.sheetFill}>
+            {content}
+          </KeyboardAvoidingView>
+        </View>
       )}
     </Portal.Host>
   );
@@ -321,6 +363,9 @@ const styles = StyleSheet.create({
   // The 2px primary rule on the sheet's top edge (.claude/instruction_mds/frontend.md §5).
   routeSheet: { borderTopWidth: 2 },
   sheetScroll: { flexShrink: 1 },
+  sheetFill: { flex: 1 },
+  // A body that scrolls itself: it shrinks to the Dialog's or the sheet's height, and its list takes the rest.
+  fixedBody: { flexShrink: 1 },
   page: { flex: 1 },
   // Left-aligned measure, not a centred column (.claude/instruction_mds/frontend.md rule 18, §9).
   pageColumn: { flex: 1, width: '100%', maxWidth: DIALOG_MAX },

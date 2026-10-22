@@ -122,8 +122,7 @@ Paper types `theme.colors` to MD3 only → read added keys through `useAppTheme(
 
 ### 2.3 Accent — only here
 
-- The icon circles on the stores list's slot cards (Create New Store, Enter Access Code); the open screen's icon on
-  the Features page
+- The icon circle on the stores list's Create New Store card; the open screen's icon on the Features page
 - The Features page's Hide all / Show all, and its dot on a screen with unsaved choices
 - Active rail / drawer item: 4px bar. Active form section row: 3px bar
 - Kickers
@@ -281,10 +280,11 @@ rail is narrower than the window.
 | Long forms | stepper: "Step n of N", Next, progress bar | section list beside field grid |
 | Confirms, pickers, Filters panel | native `formSheet` route | Paper `Dialog` |
 | Small create/edit forms (a name and a few fields) | full-page route | Paper `Dialog` over the screen it was opened from: the same route as a `transparentModal` (the `forms/` routes) |
-| Profile | the Account tab | the Account tab, reached from the systems list's account icon (the tab bar is hidden) |
-| Access Codes, Notifications | their tabs | the same screens, reached from the systems list's key and bell, with a back arrow home (the tab bar is hidden) |
+| Profile | the Account tab | the Account tab, reached from the systems list's account icon (the tab bar is hidden); one layout at both widths, held to the form measure |
+| Access Codes | its tab | the same screen, reached from the systems list's key, with a back arrow home (the tab bar is hidden) |
+| Notifications | a pushed page from the bell, back arrow | the same |
 | Multi-step flow ending in a review | stepper, Review as the last step | stepper left, Review sidebar right |
-| Stores list | Create New Store and Enter Access Code buttons + row cards | grid, the two slot cards first |
+| Stores list | row cards, Create New Store first | grid, Create New Store first |
 | Register and Cart | the items page, the cart a page further (the bar at the bottom) | the items left (two parts in five), the cart right (`CartPane`, the same form) |
 | Store Guide's role list | native `formSheet` route (`sheets/guide-roles`) | Paper `Dialog` over the Guide page |
 | Store Guide's practice store | off-canvas drawer (`react-native-drawer-layout`), the shell's rows | rail, collapsible to icons |
@@ -306,7 +306,8 @@ All pairs flip together → one decision (§4.1).
 
 `spacing.xs … xxl` from `src/themes.js`, 4-point scale.
 
-- Screen edge padding: one step, same on every screen. Narrow vs wide may differ one step
+- Screen edge padding: one step, same on every screen — `spacing.md`. Narrow vs wide may differ one step. The sign-in
+  column is the exception (rule 18). Found at `lg` on Account, the legal page and Create Store, 2026-10-22; brought to `md`
 - `ScrollView` padding through `contentContainerStyle`
 - Negative margin only to cancel a Paper built-in inset. Say so in a comment
 - Fixed-size controls are sizes, not spacing
@@ -459,7 +460,7 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Number card | a 1px `outlineVariant` box, `radius.lg`: `labelMedium` label in `secondary`, the figure in `amount`, a `bodySmall` muted line. In a `useColumns(fontScaled(<card min>))` grid — two across a phone, one at a large font scale — rows padded with empty cells |
 | Bar chart (sales per day) | `src/screens/dashboard/sales-chart.tsx`, drawn with `View`s — no chart library: a fixed-height plot (a size: it holds no text), one `flex: 1` bar a day in `primary`, its height the day's share of the best day's; a day without a sale a 2px `outlineVariant` foot. Day numbers in `bodySmall` under every bar up to seven, else under the first, middle and last; a `bodySmall` muted "Best day: …" line; each bar's day and amount as its `accessibilityLabel` |
 | Ranked rows, alert rows | `src/components/row-box.tsx` (`RowBox`, `BoxRow`) — a 1px `outlineVariant` box of rows, `surfaceVariant` hairlines between: `titleMedium` name over a `bodySmall` muted line, then a `titleMedium` figure at the end (a best seller) or a `labelMedium` status in `error` under them (an alert: "Out of stock", "8 left · re-order at 9"). The line an empty list shows replaces the box. `plain` makes the second line body text, not a muted fact: a mistake's sentence |
-| Stores list, wide | `headlineMedium` "Your Stores", `bodyLarge` line. Grid from `useColumns(SYSTEM_CARD)` (3 across 1180dp). First three cells `src/screens/home/slot-card.tsx` (Create New Store, Enter Access Code, Store Guide): `Pressable`, 1px dashed `outlineVariant`, `surfaceMuted`, `radius.lg`, centred `accent` icon circle, `titleMedium` name, `bodySmall` line; always there, so Create is also the empty state. App bar: key (Access Codes), bell (Notifications), account. Narrow keeps the buttons — Create contained, Enter Access Code and Store Guide outlined under it |
+| Stores list | `src/screens/home/`. Narrow: `titleMedium` "Active Stores" over row cards. Wide: `headlineMedium` "Your Stores", `bodyLarge` line, a grid from `useColumns(SYSTEM_CARD)` (3 across 1180dp). Store card (`system-card.tsx`): contained `Card`, a 16:9 `surfaceVariant` tile wide, the 72dp `Card.Title` row (pinned: Paper drops it to 50 with nothing beside the title), the owner's red `delete` `IconButton` at its end. First cell at every width `create-card.tsx`: the same tile and row, `surfaceMuted`, a 1px dashed `outlineVariant` outline laid over it, an `accent` `add` circle — the same size as a store card, and the empty state. App bar: logo, "Merchant", Enter Access Code (`enter-code`), Store Guide (`help`), bell; wide adds Access Codes (`key`) and Account. Multi-select: a long press on an owned card starts it, taps toggle, a 2px `primary` ring laid over a picked card and a `Checkbox.Android` in place of the delete icon; the app bar becomes close · "n selected" · Select all · red delete; Android back leaves it. The confirm types the store's name for one, `DELETE` for several (`remove-system-dialog.tsx`) |
 | Store Guide | `src/screens/guide/`: the page (`guide.tsx`) — app-bar back, `PageHeader` kicker "Store Guide" title "Learn a role", contained **Choose a Role** (full width narrow), a `bodyMedium` intro, "The 20 permissions" by area (`labelMedium` `secondary` heading, `bodyMedium` names), the Limits as `NoteCallout`s; the role list pops once on open (§4.4) — a box per work area, rows of `titleMedium` name, a boxed `labelMedium` kind tag (BUILT-IN, CUSTOM, OWNER, NO ROLE), `bodySmall` muted "n permissions · what they do", `chevron-right`. The practice store (`guide/[role]`): an `Appbar` on `primary` — Menu, "Guide · role", Tasks (`checklist`), Leave (`close`) — over the shell's own rail or drawer rows (`src/components/shell-nav.tsx`) listing only the role's screens, mock pages drawn with these components, and while a task runs the step bar in the `FormFooter` slot: `labelMedium` `accent` "Task · Step n of N", `titleMedium` title, `bodyMedium` what to do, an `error` `bodySmall` line when the step is on another page, text **Start Again** / **Stop Task**. The task list, a task's intro and its Done are Paper `Dialog`s at both widths — teaching pop-ups over mock state, not confirms |
 | Waiting for approval | `src/screens/home/pending-requests.tsx`: `titleMedium` heading over a `RowBox` — the system, then "Code ABC-123 · asked …". Above Your Stores narrow, under the title wide; nothing at all while none wait |
 | Pane switch (Access Codes) | `SegmentedButtons` Codes · Requests · Members in a horizontal `ScrollView`, `minWidth` 96 + `fontScaled(192)`, held to 560dp wide; the pane is the route's param, so a notification opens Requests. No count in a label — "Requests (3)" is cut off on a phone; the count sits on the Pending chip |
@@ -467,7 +468,11 @@ Press targets: `Pressable` + `android_ripple={{ color: colors.ripple }}` every t
 | Code entry | `src/screens/access-codes/enter-access-code-form.tsx`: six `radius.md` boxes in a row (`headlineSmall`, the next box's border `primary` while focused) drawn over one Paper `TextInput` at opacity 0.01 that takes the typing and a paste; the boxes hidden from screen readers, the field labelled "Access code, six characters" |
 | Created codes | a 1px `outlineVariant` box, `radius.lg`: each code in `amount` with a share `IconButton`, `surfaceVariant` hairlines; Share All when there are several. React Native's `Share` — the platform sheet |
 | Notification row | `Pressable` row, `surfaceVariant` hairline under it: `Avatar.Icon` 40 by kind, `titleMedium` title, `bodyMedium` body, `bodySmall` muted time; unread: `surfaceMuted` ground and a 10dp `accent` `Badge` dot. "Mark all as read" an `accent` text `Button` above the list. Wide, the list is held to `FORM_MEASURE`, left-aligned |
-| Bell with a count | `src/components/bell-action.tsx`: `Appbar.Action` + an 18dp `accent` `Badge` (`onAccent` text, "99+" past 99) on its upper corner — the wide systems list, and a system's header (where it leaves the system for the Notifications tab). The tab's own count is `NativeTabs.Trigger.Badge`, rendered only when there is one (§7) |
+| Bell with a count | `src/components/bell-action.tsx`: `Appbar.Action` + an 18dp `accent` `Badge` (`onAccent` text, "99+" past 99) on its upper corner — the systems list at both widths, and a system's header; both push the Notifications page |
+| Sign-in | `src/screens/sign-in/index.tsx`, the one centred column (rule 18): `displaySmall` "Merchant", `headlineSmall` "Welcome" over a muted `bodyMedium` line, the two provider buttons, then a `bodySmall` line whose Terms of Service and Privacy Policy are `accent` links |
+| Legal page | `src/screens/legal/`: app-bar back and the title, `bodySmall` muted "Last updated …", a `bodyLarge` intro, `headlineSmall` section headings over `bodyLarge` paragraphs, at `READING_MEASURE`. The route `legal/[doc]` sits outside both sign-in guards, so the sign-in page and Account open the same page |
+| Account (Profile) | `src/screens/profile/`: identity, then `labelMedium` headings over `Card` lists — Account, Security & Privacy (Privacy Policy, Terms of Service open the legal page), Preferences (Dark Mode `Switch` in `accent`, the whole row pressable; Themes, a placeholder that does nothing) — then Sign Out and Delete account. The same at both widths |
+| Picker | `src/components/search-select.tsx`: a read-only outlined field; it opens a Search box over a `FlatList` of the options — the only scroller, rendered a window at a time — in a Dialog wide or the `sheets/pick` formSheet narrow (`AdaptiveDialog scroll={false}`; the sheet held at the window's height so a short filtered list keeps its buttons above the keyboard) |
 
 ## 6. Icons
 

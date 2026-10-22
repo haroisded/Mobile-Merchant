@@ -155,11 +155,12 @@ export function useSetStoreLevelMutation({ merchantId }: { merchantId: string })
   });
 }
 
-export function useDeleteMerchantMutation() {
+/** Removes one store or several — the systems list's multi-select — in one statement. */
+export function useDeleteMerchantsMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (ids: string[]) => {
       // No owner_id filter, for the same reason the list query has none: merchants_delete_own is
       // what restricts this to the caller's rows. A client-side `.eq('owner_id', …)` would read as
       // the thing enforcing it, and a reader who believes that will eventually drop the policy.
@@ -170,7 +171,7 @@ export function useDeleteMerchantMutation() {
       // only ever renders rows merchants_select_own returned — and a row deleted elsewhere in the
       // meantime lands on the same screen either way, because the invalidation below refetches a
       // list that no longer contains it.
-      await supabase.from('merchants').delete().eq('id', id).throwOnError();
+      await supabase.from('merchants').delete().in('id', ids).throwOnError();
     },
 
     onSuccess: async () => {

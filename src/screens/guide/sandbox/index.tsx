@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
+import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Appbar } from '../../../components/appbar';
 import { Button } from '../../../components/button';
@@ -123,12 +124,18 @@ function PracticeStore({ role }: { role: Role }) {
       }}
     />
   );
+  const insets = useSafeAreaInsets();
+  const guiding = !!tour.tour && !!tour.step;
   const content = (
     <View style={[styles.fill, { backgroundColor: colors.background }]}>
-      <View style={styles.fill}>
-        {/* Keyed by depth: each page opened is a fresh one, as a pushed route is. */}
-        <PageView key={`${history.length}-${current.page}`} page={current.page} />
-      </View>
+      {/* While a task's bar is under the page, the page does not reach the bottom edge: its own footer gets no
+          gesture-bar inset (form-footer.tsx). */}
+      <SafeAreaInsetsContext value={guiding ? { ...insets, bottom: 0 } : insets}>
+        <View style={styles.fill}>
+          {/* Keyed by depth: each page opened is a fresh one, as a pushed route is. */}
+          <PageView key={`${history.length}-${current.page}`} page={current.page} />
+        </View>
+      </SafeAreaInsetsContext>
       <TourBar tour={tour} page={current.page} wide={wide} />
     </View>
   );
@@ -288,7 +295,7 @@ function PageView({ page }: { page: Page }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   row: { flex: 1, flexDirection: 'row' },
-  missing: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.lg },
+  missing: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   drawer: { borderTopRightRadius: radius.xl, borderBottomRightRadius: radius.xl, overflow: 'hidden' },
   items: { paddingTop: spacing.sm },
 });

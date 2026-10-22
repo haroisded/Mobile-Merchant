@@ -1,14 +1,13 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { Appbar } from '../../components/appbar';
 import { Avatar } from '../../components/avatar';
 import { BellAction } from '../../components/bell-action';
 import { Button } from '../../components/button';
-import { IconButton } from '../../components/icon-button';
 import { RemoveSystemDialog } from '../../components/remove-system-dialog';
 import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
@@ -16,93 +15,74 @@ import { useMerchantsQuery } from '../../features/merchants/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { SYSTEM_CARD, useColumns, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
+import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
 import { spacing } from '../../themes';
+import { CreateCard } from './create-card';
 import { PendingRequests } from './pending-requests';
-import { SlotCard } from './slot-card';
 import { SystemCard } from './system-card';
 
-/** The wide grid's first three cells, ahead of the systems. */
+/** The list's first cell at every width, ahead of the stores. */
 const CREATE = 'create';
-const ENTER = 'enter';
-const GUIDE = 'guide';
-type Slot = typeof CREATE | typeof ENTER | typeof GUIDE;
-const isSlot = (item: Merchant | Slot) => item === CREATE || item === ENTER || item === GUIDE;
+type Cell = Merchant | typeof CREATE;
 
 export function HomeScreen() {
   const { columns, onLayout } = useColumns(SYSTEM_CARD);
   const merchants = useMerchantsQuery();
   // The list holds the systems this person owns and the ones they were invited to; only an owner removes.
   const userId = useSession()?.user.id;
-  // The row awaiting confirmation, held here rather than in the card that opens it — a FlashList
+  // The rows awaiting confirmation, held here rather than in the card that opens it — a FlashList
   // cell is recycled, and this state must outlive neither the row nor the scroll position.
-  const [removing, setRemoving] = useState<Merchant | null>(null);
+  const [removing, setRemoving] = useState<Merchant[] | null>(null);
 
   // The one threshold (.claude/instruction_mds/frontend.md §4.1) picks the anatomy: row cards narrow, grid
   // wide. The measured column count only sizes the grid.
   const narrow = !useShellWide();
   const numColumns = narrow ? 1 : columns;
 
-  // Wide, the tab bar is hidden, so this is the only way to the Account tab. navigate, not push: the
-  // tab is a sibling in the same tab navigator, so it switches tabs rather than stacking a second one.
-  const openAccount = () => router.navigate('/account');
+  const systems = merchants.data ?? [];
+  const owned = systems.filter((merchant) => merchant.owner_id === userId);
+  const { picked, setPicked, selected, selecting, toggle } = useSelection(owned);
 
-  // Creating is a full-screen route at every width, opened by a button narrow and by the grid's first
-  // card wide. Removing is a formSheet route narrow and a dialog over this screen wide
-  // (.claude/instruction_mds/frontend.md §5).
+  // Creating is a full-screen route at every width. Removing is a formSheet route narrow and a dialog over this
+  // screen wide (.claude/instruction_mds/frontend.md §5); one store or several, the same confirm.
   const create = () => router.push('/create-system');
-  // A code someone sent: the one way into their system. A small form, page narrow and Dialog wide.
-  const enterCode = () => router.push('/forms/enter-access-code');
-  // The Store Guide: each role's work in a practice store, with no store of the person's own needed.
-  const openGuide = () => router.push('/guide');
-  const remove = (merchant: Merchant) => {
-    if (narrow) router.push({ pathname: '/sheets/remove-system', params: { merchantId: merchant.id } });
-    else setRemoving(merchant);
+  const remove = (rows: Merchant[]) => {
+    if (narrow) router.push({ pathname: '/sheets/remove-system', params: { merchantIds: rows.map((row) => row.id).join(',') } });
+    else setRemoving(rows);
+  };
+  // While selecting, a tap on an owned store toggles it; a member's store, which cannot be selected, does nothing.
+  const press = (merchant: Merchant) => {
+    if (!selecting) router.push({ pathname: '/systems/[id]', params: { id: merchant.id } });
+    else if (merchant.owner_id === userId) toggle(merchant.id);
   };
 
-  const systems = merchants.data ?? [];
-  const cells: (Merchant | Slot)[] = narrow ? systems : [CREATE, ENTER, GUIDE, ...systems];
-  const status = <LoadStatus merchants={merchants} />;
+  const cells: Cell[] = [CREATE, ...systems];
 
   return (
     <Surface style={styles.screen}>
-      <Appbar.Header>
-        {/* The Merchant's logo, and nothing else: a brand mark is not a control, so it no longer
-            opens the Account screen. That affordance is not lost — Account is the last tab on a
-            narrow container and the bar's own action on a wide one.
-
-            Blank because nothing in the schema carries a logo yet, and a blank logo has no features:
-            no glyph, no initials. `Avatar.Text` with an empty label is Paper's own circle — avatars
-            stay circular whatever the theme's roundness (.claude/instruction_mds/frontend.md rule 7).
-
-            ponytail: swap to <Avatar.Image source={{ uri }} /> the day branding carries a logo. */}
-        <View style={styles.logo}>
-          {/* 40, MD3's avatar beside an app-bar title, and the rail's system badge. */}
-          <Avatar.Text label="" size={40} />
-        </View>
-        <Appbar.Content title="Merchant" />
-        {narrow ? (
-          // Unticked in the Priority filter: renders, does nothing yet.
-          <IconButton icon="search" />
-        ) : (
-          <>
-            {/* Wide, the tab bar is hidden: these are the ways to its Access Codes, Notifications and Account. */}
-            <Appbar.Action icon="key" onPress={() => router.navigate('/access-codes')} accessibilityLabel="Access Codes" />
-            <BellAction onPress={() => router.navigate('/notifications')} />
-            <Appbar.Action icon="account-circle" onPress={openAccount} accessibilityLabel="Account" />
-          </>
-        )}
-      </Appbar.Header>
+      {selecting ? (
+        <SelectionBar
+          count={selected.length}
+          onClose={() => setPicked([])}
+          onSelectAll={() => setPicked(owned.map((merchant) => merchant.id))}
+          onDelete={() => remove(selected)}
+        />
+      ) : (
+        <HomeBar narrow={narrow} />
+      )}
 
       {/* onLayout goes on the element that actually constrains the cards — never on the screen and
           never on the window. This is what survives Stage Manager and split-screen. */}
       <View style={styles.body} onLayout={onLayout}>
         <FlashList
           data={cells}
-          keyExtractor={(item) => (item === CREATE || item === ENTER || item === GUIDE ? item : item.id)}
-          // Two recycling pools: a slot card never recycles into a system card (vercel-react-native-skills
+          keyExtractor={(item) => (item === CREATE ? item : item.id)}
+          // Two recycling pools: the create card never recycles into a store card (vercel-react-native-skills
           // list-performance-item-types).
-          getItemType={(item) => (isSlot(item) ? 'slot' : 'system')}
+          getItemType={(item) => (item === CREATE ? 'create' : 'system')}
+          // The cards read the selection: a change of it redraws them.
+          extraData={picked}
           numColumns={numColumns}
           // FlashList recomputes its layout when numColumns changes, so the remount FlatList
           // required (.claude/instruction_mds/frontend.md §4.2) is no longer load-bearing. It is kept because the
@@ -110,26 +90,27 @@ export function HomeScreen() {
           // resize, which is already a full relayout — and it costs nothing the rest of the time.
           key={numColumns}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={<HomeHeader narrow={narrow} onCreate={create} onEnterCode={enterCode} onGuide={openGuide} />}
-          // Narrow, the load state stands in for an empty list. Wide, the list is never empty — the
-          // create card is always first — so the state goes under it, and the card is the empty state.
-          ListEmptyComponent={narrow ? <View style={styles.empty}>{status}</View> : null}
-          ListFooterComponent={narrow ? null : <View style={styles.empty}>{status}</View>}
+          ListHeaderComponent={<HomeHeader narrow={narrow} />}
+          // The create card is always first, so the list is never empty: the load state goes under it.
+          ListFooterComponent={
+            <View style={styles.empty}>
+              <LoadStatus merchants={merchants} />
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={styles.cell}>
               {item === CREATE ? (
-                <SlotCard icon="add" title="Create New Store" line="Set up your own store's point of sale." onPress={create} />
-              ) : item === ENTER ? (
-                <SlotCard icon="key" title="Enter Access Code" line="Join a store with the code its owner sent you." onPress={enterCode} />
-              ) : item === GUIDE ? (
-                <SlotCard icon="help" title="Store Guide" line="Try each role's work in a practice store." onPress={openGuide} />
+                <CreateCard row={narrow} onPress={create} />
               ) : (
                 <SystemCard
                   merchant={item}
                   row={narrow}
-                  onPress={() => router.push({ pathname: '/systems/[id]', params: { id: item.id } })}
-                  onRemove={() => remove(item)}
+                  onPress={() => press(item)}
+                  onRemove={() => remove([item])}
                   canRemove={item.owner_id === userId}
+                  selecting={selecting}
+                  selected={picked.includes(item.id)}
+                  onLongPress={() => toggle(item.id)}
                 />
               )}
             </View>
@@ -137,43 +118,94 @@ export function HomeScreen() {
         />
       </View>
 
-      {/* Mounted only while a row is awaiting confirmation, which is what makes the typed-
+      {/* Mounted only while rows are awaiting confirmation, which is what makes the typed-
           confirmation field empty again on every open with no reset logic. */}
-      {removing ? (
-        <RemoveSystemDialog merchant={removing} onDismiss={() => setRemoving(null)} />
-      ) : null}
+      {removing ? <RemoveSystemDialog merchants={removing} onDismiss={() => setRemoving(null)} /> : null}
     </Surface>
   );
 }
 
-type HeaderProps = { narrow: boolean; onCreate: () => void; onEnterCode: () => void; onGuide: () => void };
+/**
+ * The multi-select over the stores this person owns: ids picked by a long press and then by taps. Read through
+ * `owned`, so a store deleted or revoked meanwhile drops out by itself, and the selection ends when none is left.
+ */
+function useSelection(owned: Merchant[]) {
+  const [picked, setPicked] = useState<string[]>([]);
+  const selected = owned.filter((merchant) => picked.includes(merchant.id));
+  const selecting = selected.length > 0;
+  const toggle = (id: string) => setPicked((ids) => (ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id]));
+
+  // Android's back leaves selection before it leaves the screen, as every list with a selection bar does.
+  useEffect(() => {
+    if (!selecting) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPicked([]);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [selecting]);
+
+  return { picked, setPicked, selected, selecting, toggle };
+}
+
+type SelectionBarProps = { count: number; onClose: () => void; onSelectAll: () => void; onDelete: () => void };
+
+/** The selection bar, in place of the header while stores are picked. */
+function SelectionBar({ count, onClose, onSelectAll, onDelete }: SelectionBarProps) {
+  const { colors } = useAppTheme();
+  return (
+    <Appbar.Header>
+      <Appbar.Action icon="close" onPress={onClose} accessibilityLabel="Cancel selection" />
+      <Appbar.Content title={`${count} selected`} />
+      <Appbar.Action icon="select-all" onPress={onSelectAll} accessibilityLabel="Select all" />
+      <Appbar.Action icon="delete" color={colors.error} onPress={onDelete} accessibilityLabel="Remove selected stores" />
+    </Appbar.Header>
+  );
+}
+
+/** The header: the logo and name, then Enter Access Code, Store Guide and the bell; wide adds Access Codes and Account. */
+function HomeBar({ narrow }: { narrow: boolean }) {
+  return (
+    <Appbar.Header>
+      {/* The Merchant's logo, and nothing else: a brand mark is not a control.
+
+          Blank because nothing in the schema carries a logo yet, and a blank logo has no features:
+          no glyph, no initials. `Avatar.Text` with an empty label is Paper's own circle — avatars
+          stay circular whatever the theme's roundness (.claude/instruction_mds/frontend.md rule 7).
+
+          ponytail: swap to <Avatar.Image source={{ uri }} /> the day branding carries a logo. */}
+      <View style={styles.logo}>
+        {/* 40, MD3's avatar beside an app-bar title, and the rail's system badge. */}
+        <Avatar.Text label="" size={40} />
+      </View>
+      <Appbar.Content title="Merchant" />
+      {/* A code someone sent — the one way into their store — and the Store Guide, at every width. */}
+      <Appbar.Action icon="enter-code" onPress={() => router.push('/forms/enter-access-code')} accessibilityLabel="Enter Access Code" />
+      <Appbar.Action icon="help" onPress={() => router.push('/guide')} accessibilityLabel="Store Guide" />
+      {/* Wide, the tab bar is hidden: the key and the account icon are the ways to Access Codes and Account. */}
+      {narrow ? null : <Appbar.Action icon="key" onPress={() => router.navigate('/access-codes')} accessibilityLabel="Access Codes" />}
+      <BellAction onPress={() => router.push('/notifications')} />
+      {/* navigate, not push: the tab is a sibling in the same tab navigator. */}
+      {narrow ? null : <Appbar.Action icon="account-circle" onPress={() => router.navigate('/account')} accessibilityLabel="Account" />}
+    </Appbar.Header>
+  );
+}
 
 /**
- * Narrow: full-width Create, Enter Access Code and Store Guide buttons, the requests still waiting, then the systems'
- * heading. Wide: the screen's title and its line, then the requests waiting; the grid's first three cards create,
- * enter a code and open the guide. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10); a wider window gets
- * more cards per row instead.
+ * Narrow: the requests still waiting, then the stores' heading. Wide: the screen's title and its line, then the
+ * requests waiting. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10); a wider window
+ * gets more cards per row instead.
  */
-function HomeHeader({ narrow, onCreate, onEnterCode, onGuide }: HeaderProps) {
+function HomeHeader({ narrow }: { narrow: boolean }) {
   return narrow ? (
     <View style={styles.header}>
-      <Text variant="titleMedium">Quick Actions</Text>
-      <Button mode="contained" icon="add" onPress={onCreate} contentStyle={styles.leading}>
-        Create New Store
-      </Button>
-      <Button mode="outlined" icon="key" onPress={onEnterCode} contentStyle={styles.leading}>
-        Enter Access Code
-      </Button>
-      <Button mode="outlined" icon="help" onPress={onGuide} contentStyle={styles.leading}>
-        Store Guide
-      </Button>
       <PendingRequests />
       <Text variant="titleMedium">Active Stores</Text>
     </View>
   ) : (
     <View style={styles.headerWide}>
       <Text variant="headlineMedium">Your Stores</Text>
-      <Text variant="bodyLarge">Manage, edit and monitor each store's point of sale.</Text>
+      <Text variant="bodyLarge">Manage and monitor each store&apos;s point of sale. Long-press a store to select several.</Text>
       <PendingRequests />
     </View>
   );
@@ -191,8 +223,6 @@ function HomeHeader({ narrow, onCreate, onEnterCode, onGuide }: HeaderProps) {
  * onlineManager reports a connection, so a button would offer to do what is already going to happen.
  */
 function LoadStatus({ merchants }: { merchants: ReturnType<typeof useMerchantsQuery> }) {
-  const narrow = !useShellWide();
-
   if (merchants.isPaused) {
     return (
       <View style={styles.state}>
@@ -215,8 +245,8 @@ function LoadStatus({ merchants }: { merchants: ReturnType<typeof useMerchantsQu
       </View>
     );
   }
-  // Wide, the create card already says there is nothing yet.
-  return narrow ? <Text variant="bodyMedium">No stores yet.</Text> : null;
+  // The create card already says there is nothing yet.
+  return null;
 }
 
 // FlashList positions every cell absolutely, so neither `columnWrapperStyle` (it has no such prop)
@@ -226,8 +256,6 @@ function LoadStatus({ merchants }: { merchants: ReturnType<typeof useMerchantsQu
 const GUTTER = spacing.sm;
 
 const styles = StyleSheet.create({
-  // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
-  leading: { justifyContent: 'flex-start' },
   screen: { flex: 1 },
   body: { flex: 1 },
   list: { padding: GUTTER },

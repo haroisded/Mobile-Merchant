@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { StyleSheet } from 'react-native';
 
 import { AdaptiveDialog } from '../../../components/adaptive-dialog';
 import { Button } from '../../../components/button';
@@ -17,10 +18,11 @@ export default function PickSheet() {
   return (
     <AdaptiveDialog
       inSheet
+      scroll={false}
       onDismiss={() => router.back()}
       title={request.title}
       actions={
-        <Button mode="outlined" onPress={() => router.back()}>
+        <Button mode="outlined" onPress={() => router.back()} contentStyle={styles.leading}>
           Cancel
         </Button>
       }
@@ -36,3 +38,8 @@ export default function PickSheet() {
     </AdaptiveDialog>
   );
 }
+
+const styles = StyleSheet.create({
+  // Full width in the sheet, so the label sits at the left edge (.claude/instruction_mds/frontend.md §5).
+  leading: { justifyContent: 'flex-start' },
+});

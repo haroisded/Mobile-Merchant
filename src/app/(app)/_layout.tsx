@@ -59,6 +59,7 @@ const DIALOG_ROUTES = [
 // - `systems/[id]` sits outside it, so opening a system PUSHES over the tab bar rather than becoming
 //   a fifth tab. It is the merchant shell: a header plus a rail or drawer of its own.
 // - `create-system` is the create form, pushed full screen over the systems list at every width.
+// - `notifications` is the person's inbox, pushed by the bell on Home and in a store's header.
 // - `scan` is the product scan (src/screens/scan), pushed full screen over the Item form or the Register.
 // - `guide` is the Store Guide, and `guide/[role]` a role's practice store (src/screens/guide), both full
 //   screen at every width, opened from the Home tab.
@@ -76,6 +77,7 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="systems/[id]" />
       <Stack.Screen name="create-system" />
+      <Stack.Screen name="notifications" />
       <Stack.Screen name="scan" />
       <Stack.Screen name="guide" />
       <Stack.Screen name="guide/[role]" />

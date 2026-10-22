@@ -25,7 +25,9 @@ export const DIALOG_MAX = 560; // a Dialog over the screen, and a small form's p
 // Chrome widths, not card widths: panes are named so no screen writes its own (.claude/instruction_mds/frontend.md §1).
 export const RAIL_EXPANDED = 128; // icons + labels; fits a nine-letter label in labelLarge
 export const RAIL_COLLAPSED = 72; // icons only, after the menu action
-export const DRAWER_WIDTH = 300; // the narrow shell's off-canvas drawer
+// The narrow shell's off-canvas drawer. A multiple of 8 so it is whole pixels at the 1.75-3.5 densities: at 300 a
+// 2.625 phone lays it 787.5px wide, and the closed drawer, translated by that, leaves a 1px sliver at the left edge.
+export const DRAWER_WIDTH = 304;
 
 // The Home systems grid's card: three across a 1180dp tablet, four at 1440, five at 1920. A system card
 // carries two buttons under its name, so it is wider than MIN_CARD.

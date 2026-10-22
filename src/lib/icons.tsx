@@ -25,6 +25,8 @@ export const ICONS = {
   logout: { ios: 'rectangle.portrait.and.arrow.right', android: 'logout' },
   minus: { ios: 'minus', android: 'remove' },
   search: { ios: 'magnifyingglass', android: 'search' },
+  // The systems list's selection bar: every store at once. Checked against both sets on 2026-10-22.
+  'select-all': { ios: 'checklist.checked', android: 'select_all' },
   // The date field's trailing icon (src/components/form-fields.tsx).
   calendar: { ios: 'calendar', android: 'calendar_today' },
 
@@ -61,7 +63,8 @@ export const ICONS = {
 
   // Profile
   camera: { ios: 'camera', android: 'photo_camera' },
-  device: { ios: 'iphone', android: 'smartphone' },
+  // The Dark Mode row. Checked against both sets on 2026-10-22.
+  'dark-mode': { ios: 'moon', android: 'dark_mode' },
   // The Themes row and its toggle. A palette rather than a moon: the row is the way into every
   // appearance choice, and light/dark is only the first one it carries.
   themes: { ios: 'paintpalette', android: 'palette' },
@@ -80,6 +83,8 @@ export const ICONS = {
   // Access Codes: the tab and Enter Access Code, a code's Share, the Requests and Members tabs. Checked against
   // both sets on 2026-10-14.
   key: { ios: 'key', android: 'key' },
+  // Enter Access Code in the Home header, apart from the Access Codes key. Checked against both sets on 2026-10-22.
+  'enter-code': { ios: 'person.badge.key', android: 'password' },
   // The Store Guide (src/screens/guide/): its Home button and card, and a role's task list. Checked against both sets
   // on 2026-10-22.
   help: { ios: 'questionmark.circle', android: 'help' },

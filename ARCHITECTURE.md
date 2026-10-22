@@ -108,11 +108,12 @@ src/screens/<screen>/      UI by screen — home (the systems list, its slot car
                            switch, the number cards, sales per day, best sellers, stock alerts),
                            import-items (the template, a file's mistakes, the import and its log), scan
                            (the product scan: the camera, its barcodes, Read Label), features (hide screens and
-                           pages, with what each is for), profile, sign-in
+                           pages, with what each is for), profile, sign-in, legal (the Privacy Policy and Terms of
+                           Service: their texts in documents.ts, one page that reads them)
 src/components/            one re-export per Paper primitive in use (text.tsx is the Text wrapper:
                            per-variant font-scale cap and iOS ramp), plus what more than one screen or a
                            sheet route draws: adaptive-dialog (+ FormActions, saveOnce),
-                           remove-system-dialog, delete-account-dialog, placeholder-screen,
+                           remove-system-dialog (one store or several), delete-account-dialog,
                            page-header, query-state, form-fields (+ ControlledChecklist),
                            search-select (+ ControlledSelect), country-currency-fields, record-list
                            (a Setup master's list), form-footer (PageForm, a full-page form),
@@ -134,13 +135,15 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            pick-one row of chips, + PickChip), bell-action (the app bar's bell and its
                            unread count), badge —
                            and the files frontend.md restores on first use: note-callout, header-title
-src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard
+src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard, and legal/[doc]
+                           outside both guards
 src/app/sign-in.tsx        renders the sign-in screen
-src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, scan, the sheets/ routes (native
+src/app/legal/[doc].tsx    the Privacy Policy or the Terms of Service, signed in or not
+src/app/(app)/_layout.tsx  signed-in group: tabs, systems/, create-system, notifications, scan, the sheets/ routes (native
                            formSheet: confirms, the picker) and the forms/ routes (a small form: a
                            page narrow, a transparentModal Dialog wide) beside them, anchored on tabs
-src/app/(app)/(tabs)/      home, access-codes, notifications, settings, account + the NativeTabs bar (five:
-                           Android's most) and the Notifications badge
+src/app/(app)/(tabs)/      home, access-codes, account + the NativeTabs bar; it keeps the unread poll
+                           running, and the count shows on the bell (Home and a system's header)
 src/app/(app)/systems/[id]/ the merchant shell — _layout (header + rail/drawer), Home, dashboard.tsx, and five Stacks
                            of their own: sell/ (the index, open-session, register, cart, pos-invoices,
                            pos-invoice, pos-return, the two entries' lists, close-session, pos-closing-entry), stock/ (the index, items, item, item-prices, import-items, the stock
@@ -308,7 +311,7 @@ app bar navigates to the account tab — but nothing navigates its way past the 
 renders `null` while the session is unknown, so the splash screen covers the restore and the sign-in
 screen never flashes.
 
-Under the `(app)` guard the tree splits once more: `(tabs)` owns the four bottom-bar destinations,
+Under the `(app)` guard the tree splits once more: `(tabs)` owns the three bottom-bar destinations,
 and `systems/[id]` sits beside it rather than inside it, so opening a system pushes *over* the bar
 instead of becoming a fifth tab.
 

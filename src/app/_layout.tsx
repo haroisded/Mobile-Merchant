@@ -101,6 +101,9 @@ export default function RootLayout() {
           <Stack.Protected guard={!!session}>
             <Stack.Screen name="(app)" />
           </Stack.Protected>
+          {/* Outside both guards: the Privacy Policy and Terms of Service open from the sign-in page and from
+              Account alike (src/screens/legal/). */}
+          <Stack.Screen name="legal/[doc]" />
         </Stack>
       </QueryProvider>
     </PaperProvider>

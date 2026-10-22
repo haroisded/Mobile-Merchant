@@ -33,16 +33,20 @@ together and explained inline.
 - **Session stored in the Keychain / Keystore** via `expo-secure-store`, not plaintext AsyncStorage
 - **SQL migrations** for `profiles` and `merchants` with RLS, the tenancy seam, and in-app account deletion
 - **A stores list and a merchant shell** — create a store in two steps (one business, no branches: name, country,
-  currency; then its level), remove it, open it onto a header and a rail (tablet) or drawer (phone) with seven
+  currency; then its level), remove one from its card or several at once (long-press to select, type DELETE),
+  open it onto a header and a rail (tablet) or drawer (phone) with seven
   destinations — Home, Dashboard, Sell, Stock, Accounts, Employees and Setup — each listed only for someone whose
   permissions reach something in it (Employees for the owner alone)
 - **Access Codes, the only way into someone else's store** — a tab beside Home: the owner makes codes (one to
   twenty at a time; 5 min, 30 min, 1 hour, to the end of a day, or never; one person or many) and sends them from
   the phone's share sheet. Whoever enters one on Home waits under Waiting for approval; the owner approves or
   declines them on Requests, and Members lists who got in, each with Revoke. Wrong codes are rate-limited, and a
-  code never names its store until it is valid. **Notifications** (a tab with an unread count, and a bell
-  inside every store) tells each side what happened — no push yet: the count is asked for every minute and
+  code never names its store until it is valid. **Notifications** (the bell on Home and inside every store,
+  with an unread count) tells each side what happened — no push yet: the count is asked for every minute and
   whenever the app comes back
+- **Sign-in, Account and the legal pages** — a sign-in page with a greeting and links to a standard Privacy Policy
+  and Terms of Service (`[Developer name]` and `[contact email]` to fill in before release), readable signed in or
+  out; Account holds the profile, those two documents and Dark Mode, the same on a phone and a tablet
 - **Employees, Discord-style** — the owner's own destination inside a system: everyone let in with an
   access code, each holding one **role** (Cashier, Stock Clerk and Store Manager come with every store, and
   the owner makes more — a name, a colour and the permissions it carries, such as Process Sales, Apply Discounts,

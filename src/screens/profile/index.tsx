@@ -1,6 +1,5 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { User } from '@supabase/supabase-js';
 
@@ -25,12 +24,12 @@ import { spacing } from '../../themes';
 import { PreferencesCard } from './preferences-card';
 
 type Props = {
-  /** The back arrow (narrow) and Go Back (wide). */
+  /** The back arrow. */
   onBack: () => void;
 };
 
 // The Account tab's body (`(tabs)/account.tsx`). On a tablet the tab bar is hidden, and the systems
-// list's account icon opens it instead.
+// list's account icon opens it instead. One layout at both widths: the phone's lists, held to the form measure.
 export function ProfileScreen({ onBack }: Props) {
   const session = useSession();
   const { data: profile } = useProfileQuery();
@@ -61,10 +60,8 @@ export function ProfileScreen({ onBack }: Props) {
 
   return (
     <Surface style={styles.screen}>
-      {/* Narrow gets a back arrow; wide gets the "Go Back" button at the bottom
-          instead, so the same action is not offered twice. */}
       <Appbar.Header>
-        {narrow ? <Appbar.BackAction onPress={onBack} /> : null}
+        <Appbar.BackAction onPress={onBack} />
         <Appbar.Content title="Profile" />
       </Appbar.Header>
 
@@ -79,17 +76,12 @@ export function ProfileScreen({ onBack }: Props) {
           <Text variant="bodySmall">{email}</Text>
         </View>
 
-        <ProfileDetails narrow={narrow} name={name} email={email} user={user} />
+        <ProfileDetails />
 
         {/* Outside the width branch on purpose: a phone and a tablet both get it. */}
         <PreferencesCard />
 
         <View style={narrow ? styles.actions : styles.actionsRow}>
-          {narrow ? null : (
-            <Button icon="arrow-back" mode="outlined" onPress={onBack} contentStyle={styles.leading}>
-              Go Back
-            </Button>
-          )}
           <Button
             icon="logout"
             mode="contained"
@@ -150,25 +142,8 @@ function useSignOut() {
   return { busy, error, signOutNow };
 }
 
-type DetailsProps = { narrow: boolean; name: string; email: string; user: User };
-
-/** Narrow, the account and security lists; wide, the same identity condensed into one details card. */
-function ProfileDetails({ narrow, name, email, user }: DetailsProps) {
-  if (!narrow) {
-    return (
-      // Wide condenses the same identity into one details card, per the M3 tablet analysis.
-      <Card mode="contained">
-        <Card.Title title="Account Details" titleVariant="titleMedium" left={(p) => <Avatar.Icon {...p} icon="account" />} />
-        <Card.Content style={styles.details}>
-          <Detail label="Full name">{name}</Detail>
-          <Detail label="Email address">{email}</Detail>
-          <Detail label="Signed in with">{user.app_metadata.provider ?? 'unknown'}</Detail>
-          <Detail label="Account ID">{user.id}</Detail>
-        </Card.Content>
-      </Card>
-    );
-  }
-
+/** The account and security lists. Privacy Policy and Terms of Service open the documents (src/screens/legal/). */
+function ProfileDetails() {
   return (
     <>
       <Text variant="labelMedium">Account</Text>
@@ -176,26 +151,15 @@ function ProfileDetails({ narrow, name, email, user }: DetailsProps) {
         <List.Item title="Account Information" left={(p) => <List.Icon {...p} icon="account" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
         <Divider />
         <List.Item title="Your Businesses" left={(p) => <List.Icon {...p} icon="grid" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
-        <Divider />
-        <List.Item title="Manage Devices" left={(p) => <List.Icon {...p} icon="device" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
       </Card>
 
       <Text variant="labelMedium">Security &amp; Privacy</Text>
       <Card>
-        <List.Item title="Privacy Policy" left={(p) => <List.Icon {...p} icon="shield" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
+        <List.Item title="Privacy Policy" left={(p) => <List.Icon {...p} icon="shield" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'privacy' } })} />
         <Divider />
-        <List.Item title="Terms of Service" left={(p) => <List.Icon {...p} icon="terms" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
+        <List.Item title="Terms of Service" left={(p) => <List.Icon {...p} icon="terms" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'terms' } })} />
       </Card>
     </>
-  );
-}
-
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <View>
-      <Text variant="labelMedium">{label}</Text>
-      <Text variant="bodyMedium">{children}</Text>
-    </View>
   );
 }
 
@@ -203,12 +167,11 @@ const styles = StyleSheet.create({
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   leading: { justifyContent: 'flex-start' },
   screen: { flex: 1 },
-  body: { gap: spacing.ms, padding: spacing.lg, maxWidth: FORM_MEASURE, width: '100%' },
+  body: { gap: spacing.ms, padding: spacing.md, maxWidth: FORM_MEASURE, width: '100%' },
   // Left-aligned like every heading and label (.claude/instruction_mds/frontend.md rule 18).
   identity: { alignItems: 'flex-start', gap: spacing.xs },
   // Overlaps the avatar's corner: a position, not spacing between siblings.
   avatarFab: { position: 'absolute', right: -spacing.sm, bottom: -spacing.sm },
-  details: { gap: spacing.ms },
   actions: { gap: spacing.ms },
   // Wide: content-width buttons in a row. Stacked full-width buttons read as banners on a tablet.
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

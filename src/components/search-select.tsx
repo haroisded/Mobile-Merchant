@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useController } from 'react-hook-form';
 import type { Control, FieldPathByValue, FieldValues } from 'react-hook-form';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { useShellWide } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
@@ -74,6 +74,7 @@ export function SearchSelect({ title, value, options, onChange, disabled, ...fie
         <AdaptiveDialog
           onDismiss={() => setOpen(false)}
           title={title}
+          scroll={false}
           actions={
             <Button mode="outlined" onPress={() => setOpen(false)}>
               Cancel
@@ -131,8 +132,9 @@ type ListProps = {
 
 /**
  * The search box and the options that match it — the body of both the wide Dialog above and the narrow
- * sheet route. Mapped rather than virtualized: it lives inside the Dialog's or sheet's ScrollView, and the
- * longest list is a few hundred rows.
+ * sheet route (AdaptiveDialog `scroll={false}`). The search box stays put and the options scroll under it in a
+ * virtualized list, drawn a screenful at a time: the countries are 250 rows. Mapped into the dialog's ScrollView
+ * (the shape until 2026-10-22), every row rendered at once and the phone's sheet could not be scrolled.
  */
 export function PickList({ options, value, onPick }: ListProps) {
   const { colors } = useAppTheme();
@@ -152,10 +154,18 @@ export function PickList({ options, value, onPick }: ListProps) {
         accessibilityLabel="Search"
         left={<TextInput.Icon icon="search" />}
       />
-      {shown.length === 0 ? <Text variant="bodyMedium">Nothing matches that search.</Text> : null}
-      {shown.map((option) => (
+      <FlatList
+        data={shown}
+        keyExtractor={(option) => option.value}
+        keyboardShouldPersistTaps="handled"
+        // A screenful first, then more as it scrolls (the lazy loading the picker asked for).
+        initialNumToRender={15}
+        maxToRenderPerBatch={20}
+        windowSize={5}
+        style={styles.list}
+        ListEmptyComponent={<Text variant="bodyMedium">Nothing matches that search.</Text>}
+        renderItem={({ item: option }) => (
         <Pressable
-          key={option.value}
           onPress={() => onPick(option.value)}
           android_ripple={{ color: colors.ripple }}
           accessibilityRole="button"
@@ -170,12 +180,15 @@ export function PickList({ options, value, onPick }: ListProps) {
             </Text>
           ) : null}
         </Pressable>
-      ))}
+        )}
+      />
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  // Shrinks to what the Dialog or sheet leaves under the search box, and scrolls inside it.
+  list: { flexShrink: 1 },
   // 48: the Android touch target floor (.claude/instruction_mds/frontend.md rule 19).
   option: { minHeight: 48, justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
 });

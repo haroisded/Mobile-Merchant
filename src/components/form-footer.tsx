@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FORM_MEASURE, useShellWide } from '../lib/columns';
 import type { Notice } from '../lib/errors';
@@ -14,14 +14,16 @@ import { NoteCallout } from './note-callout';
  * A full-page form's bottom bar, under PageForm: the save or offline notice above the buttons. The Register's
  * bar to its cart is one too (src/screens/register/index.tsx).
  *
- * SafeAreaView, not View: the Android build is edge-to-edge (android/gradle.properties), so a bar pinned
- * to the bottom draws behind the system navigation bar. `additive` adds the inset to the bar's own
- * padding.
+ * Padded by the bottom inset: the Android build is edge-to-edge (android/gradle.properties), so a bar pinned
+ * to the bottom draws behind the system navigation bar. The inset is read from context, not measured by a native
+ * SafeAreaView, so a bar with another under it — a practice page above the Store Guide's bar — is given 0 there
+ * (src/screens/guide/sandbox/index.tsx) instead of a gesture bar's gap above the bar below.
  */
 export function FormFooter({ notice, children }: { notice: Notice | null; children: ReactNode }) {
   const { colors } = useAppTheme();
+  const { bottom } = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
+    <View style={[styles.footer, { paddingBottom: spacing.ms + bottom, borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
       {/* Held to the form's measure, as the fields above it are: a notice across a tablet is a line no one reads. */}
       <View style={styles.measure}>
         {notice ? (
@@ -31,7 +33,7 @@ export function FormFooter({ notice, children }: { notice: Notice | null; childr
         ) : null}
         {children}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
