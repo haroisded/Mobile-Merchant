@@ -9,7 +9,7 @@ import { Text } from '../../components/text';
 import { TextInput } from '../../components/text-input';
 import { memberName } from '../../features/members/queries';
 import type { Merchant } from '../../features/merchants/queries';
-import { useShellWide } from '../../lib/columns';
+import { useBottomInset, useShellWide } from '../../lib/columns';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
 import { AccessEditor, accessValues } from './editor/access-editor';
@@ -57,6 +57,7 @@ function AccessPanes({ data, initial }: { data: EmployeesData; initial?: string 
   const { isDirty } = useFormState({ control: form.control });
   const discard = useDiscard();
   const roleOf = (roleId: string | null) => data.roles.find((role) => role.id === roleId);
+  const bottom = useBottomInset();
 
   const choose = (memberId: string) =>
     discard.ask(isDirty, () => {
@@ -85,6 +86,7 @@ function AccessPanes({ data, initial }: { data: EmployeesData; initial?: string 
         <FlatList
           data={found}
           keyExtractor={(candidate) => candidate.id}
+          contentContainerStyle={{ paddingBottom: bottom }}
           ListEmptyComponent={
             <Text variant="bodyMedium" style={styles.state}>
               {needle ? 'Nobody matches.' : 'Nobody has joined yet.'}

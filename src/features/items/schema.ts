@@ -46,10 +46,11 @@ export const itemSchema = (codeTyped: boolean, nameRequired = false) =>
       // items_max_discount: a percentage; blank or 0 is no limit.
       max_discount: atLeastZero.refine((value) => Number(value || 0) <= 100, 'Enter 100 or less.'),
       discount_account: z.string(),
-      // Read on creation only: it becomes the item's first Item Price.
+      // A new item's first Item Price; on a saved one, its undated price in the default list, changed when changed.
       standard_rate: atLeastZero,
-      // Read on creation only: together they become an Opening Stock reconciliation, saved and submitted with
-      // the item (public.save_item_with_opening_stock). An empty rate takes the Standard Selling Rate.
+      // A new item's Opening Stock reconciliation; on a saved one, its stock on hand in its warehouse, counted again
+      // when changed — both saved and submitted with the item (public.save_item_with_opening_stock). An empty rate
+      // takes the bin's, then the Standard Selling Rate.
       opening_stock: atLeastZero,
       valuation_rate: atLeastZero,
       uoms: z.array(

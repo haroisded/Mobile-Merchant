@@ -1,7 +1,7 @@
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import type { ReactElement, ReactNode } from 'react';
 
-import { useTableFits } from '../lib/columns';
+import { useBottomInset, useTableFits } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
 import { DataTable } from './data-table';
@@ -30,6 +30,8 @@ type Props<T> = {
   empty: string;
   offline: string;
   failure: string;
+  /** A (tabs) screen's list (Access Codes): the tab bar keeps it clear of the navigation bar on a phone (useBottomInset). */
+  underTabs?: boolean;
 };
 
 /**
@@ -37,9 +39,11 @@ type Props<T> = {
  * (.claude/instruction_mds/frontend.md §4.4, §3.5). A short bounded list, so FlatList (§4.2). The loading,
  * offline and failed states stand in for an empty list.
  */
-export function RecordList<T>({ query, keyOf, columns, title, subtitle, status, accessibilityLabel, onPress, header, empty, offline, failure }: Props<T>) {
+export function RecordList<T>({ query, keyOf, columns, title, subtitle, status, accessibilityLabel, onPress, header, empty, offline, failure, underTabs = false }: Props<T>) {
   const { colors } = useAppTheme();
   const table = useTableFits();
+  // The last row scrolls clear of the system navigation bar.
+  const bottom = useBottomInset(underTabs);
 
   const emptyState = (
     <View style={styles.state}>
@@ -55,6 +59,7 @@ export function RecordList<T>({ query, keyOf, columns, title, subtitle, status, 
       keyExtractor={keyOf}
       ListHeaderComponent={header}
       ListEmptyComponent={emptyState}
+      contentContainerStyle={{ paddingBottom: bottom }}
       renderItem={({ item }) => (
         <Pressable
           onPress={onPress ? () => onPress(item) : undefined}

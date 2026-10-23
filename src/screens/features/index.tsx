@@ -8,6 +8,7 @@ import { ActivityIndicator } from '../../components/activity-indicator';
 import { saveOnce } from '../../components/adaptive-dialog';
 import { Button } from '../../components/button';
 import { DESTINATIONS } from '../../components/destinations';
+import type { Destination } from '../../components/destinations';
 import { FormFooter } from '../../components/form-footer';
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
@@ -20,7 +21,7 @@ import { useMerchantsQuery } from '../../features/merchants/queries';
 import { opens, showsDestination } from '../../features/permissions/access';
 import type { IndexRule } from '../../features/permissions/access';
 import { usePermissions } from '../../features/role-permissions/queries';
-import { FORM_MEASURE, useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
@@ -181,6 +182,8 @@ export function FeaturesScreen({ selected }: { selected?: string }) {
   const wide = useShellWide();
   const { merchantId, storeName, screens, leave } = useFeatures();
   const [open, setOpen] = useState(selected ?? screens[0]?.name);
+  // The end of each list keeps clear of the navigation bar (with the unsaved bar up, a little more room than needed).
+  const bottom = { paddingBottom: useBottomInset() };
   const onList = wide || !selected;
 
   // Android's back on the list: the provider's leave. On a screen's page it returns to the list, which keeps the choices.
@@ -201,12 +204,12 @@ export function FeaturesScreen({ selected }: { selected?: string }) {
       <View style={styles.fill}>
         {header}
         <View style={styles.panes}>
-          <ScrollView style={styles.listPane}>
+          <ScrollView style={styles.listPane} contentContainerStyle={bottom}>
             <ScreenList selected={shown?.name} chevron={false} onOpen={setOpen} />
           </ScrollView>
           <View style={[styles.rule, { backgroundColor: colors.outlineVariant }]} />
           {/* Keyed by the screen, so another one opens at its top rather than at the last one's scroll. */}
-          <ScrollView key={shown?.name} style={styles.detailPane} contentContainerStyle={styles.measure}>
+          <ScrollView key={shown?.name} style={styles.detailPane} contentContainerStyle={[styles.measure, bottom]}>
             {shown ? <ScreenDetail screen={shown} /> : null}
           </ScrollView>
         </View>
@@ -217,20 +220,25 @@ export function FeaturesScreen({ selected }: { selected?: string }) {
   return (
     <View style={styles.fill}>
       {header}
-      <ScrollView>
+      <ScrollView contentContainerStyle={bottom}>
         {selected ? (
-          shown ? (
-            <ScreenDetail screen={shown} />
-          ) : (
-            <Text variant="bodyMedium" style={styles.state}>
-              This screen isn&apos;t yours to show or hide in this store.
-            </Text>
-          )
+          <ScreenPage screen={shown} />
         ) : (
           <ScreenList chevron onOpen={(name) => router.push({ pathname: '/systems/[id]/features/[name]', params: { id: merchantId, name } })} />
         )}
       </ScrollView>
     </View>
+  );
+}
+
+/** One screen's page on a phone: its choices, or why there are none to make. */
+function ScreenPage({ screen }: { screen: Destination | undefined }) {
+  if (screen) return <ScreenDetail screen={screen} />;
+
+  return (
+    <Text variant="bodyMedium" style={styles.state}>
+      This screen isn&apos;t yours to show or hide in this store.
+    </Text>
   );
 }
 

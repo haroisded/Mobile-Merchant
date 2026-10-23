@@ -87,6 +87,7 @@ function FormatHeader({ merchant, existing }: { merchant: Merchant; existing: Pr
         kicker="Print Format"
         title={existing?.print_format_name ?? 'New print format'}
         onBack={() => router.back()}
+        form
         actions={
           existing && can(permissions, 'Print Format', 'delete') ? (
             <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>

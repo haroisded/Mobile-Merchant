@@ -51,6 +51,9 @@ const lightColors = {
   surfaceMuted: "#F1F5F9",
   surfaceSubtle: "#F8FAFC",
   primaryHighlight: "rgba(255, 255, 255, 0.14)",
+  // A session that is open, and a sale that went through: the Sell page's Open pill and the receipt's check.
+  success: "#1E7A3C",
+  successContainer: "#E6F4EA",
   // The press colour for Pressable's android_ripple on a light surface. Paper's TouchableRipple
   // derived it from the text colour at 12%; Pressable reads nothing, so it is a key
   // (.claude/instruction_mds/frontend.md §5). On `primary` the ripple is `primaryHighlight`.
@@ -124,6 +127,8 @@ const darkColors = {
   surfaceMuted: "#1E2632",
   surfaceSubtle: "#1A212C",
   primaryHighlight: "rgba(0, 0, 0, 0.12)",
+  success: "#6DD58C",
+  successContainer: "#0F3D20",
   ripple: "rgba(225, 231, 239, 0.12)",
   // The role palette a step lighter, to sit on the dark ground.
   roleGrey: "#9CA3AF",

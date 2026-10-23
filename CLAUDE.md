@@ -430,6 +430,10 @@ Then how much of the system a store uses: `20261021153337_store_levels.sql` (`me
 `merchants_guard_level`, the owner's alone; ARCHITECTURE.md, Store levels). Then `20261022065602_level_one_receipts_discounts.sql`:
 `apply_level` re-created so its Main Register prints a receipt and allows a discount, and both switched on for the Main
 Register of every store at level 1 or 2 — Level 1 sells with receipts, discounts and Orders.
+Then a saved item's price and stock: `20261022221436_item_edit_price_stock.sql` (`public.save_item_with_opening_stock`
+re-created, same signature — a saved item's changed Standard Selling Rate updates or writes its undated stock-unit price
+in Selling Settings' list, and a changed Stock on Hand or Valuation Rate posts one submitted Stock Reconciliation;
+ARCHITECTURE.md, Register, sale and refund).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration

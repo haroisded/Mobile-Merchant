@@ -14,6 +14,7 @@ const posInvoicesKey = {
   lists: () => [...posInvoicesKey.all, 'list'],
   list: (args: { merchantId: string }) => [...posInvoicesKey.lists(), args],
   returns: (args: { returnAgainst: string }) => [...posInvoicesKey.lists(), 'returns', args],
+  session: (args: { sessionId: string }) => [...posInvoicesKey.lists(), 'session', args],
   detail: (args: { id: string }) => [...posInvoicesKey.all, 'detail', args],
 };
 
@@ -84,6 +85,27 @@ export function usePosInvoiceReturnsQuery({ returnAgainst }: { returnAgainst: st
         .throwOnError();
       return data;
     },
+    staleTime: STALE.MINUTES.FIVE,
+  });
+}
+
+/**
+ * The submitted sales and returns of one session, with their payments: the Sell page's Orders and Cash in drawer
+ * (drawerCash, ./cart.ts). Under `lists`, so a checkout or a void refreshes them.
+ */
+export function useSessionInvoicesQuery({ sessionId }: { sessionId: string }, enabled: boolean) {
+  return useQuery({
+    queryKey: posInvoicesKey.session({ sessionId }),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pos_invoices')
+        .select('id, is_return, change_amount, pos_invoice_payments(mode_of_payment_id, amount)')
+        .eq('pos_opening_entry_id', sessionId)
+        .eq('docstatus', 1)
+        .throwOnError();
+      return data;
+    },
+    enabled,
     staleTime: STALE.MINUTES.FIVE,
   });
 }

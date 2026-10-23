@@ -19,7 +19,7 @@ export const unstable_settings = { anchor: '(tabs)' };
 // with no file is ignored, and a file with no name here still routes — as an ordinary full-screen
 // push with no sheet presentation and no contentStyle, which is how delete-product shipped as a
 // top-aligned white screen (a tester's report, 2026-09-19 — commit 5076055).
-const SHEETS = ['sheets/about', 'sheets/confirm','sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/guide-roles', 'sheets/pick', 'sheets/remove-system'];
+const SHEETS = ['sheets/about', 'sheets/checkout', 'sheets/confirm', 'sheets/delete-account', 'sheets/delete-fiscal-year', 'sheets/guide-roles', 'sheets/pick', 'sheets/remove-system'];
 
 // The small forms, Setup's and Access Codes': full pages on a phone, a Dialog over the list they were opened
 // from on a tablet (.claude/instruction_mds/frontend.md §4.4). Wide they are transparentModals, so that list
@@ -49,6 +49,7 @@ const DIALOG_ROUTES = [
   'forms/access-request',
   'forms/enter-access-code',
   'forms/store-level',
+  'forms/profile',
 ];
 
 // The root layout declares <Stack.Screen name="(app)" />, and that group needs its own layout to
@@ -58,7 +59,7 @@ const DIALOG_ROUTES = [
 // - `(tabs)` owns the merchant-level bottom navigation — the systems list and the Account tab.
 // - `systems/[id]` sits outside it, so opening a system PUSHES over the tab bar rather than becoming
 //   a fifth tab. It is the merchant shell: a header plus a rail or drawer of its own.
-// - `create-system` is the create form, pushed full screen over the systems list at every width.
+// - `create-system` is the create form: pushed full screen over the systems list on a phone, a Dialog over it wide.
 // - `notifications` is the person's inbox, pushed by the bell on Home and in a store's header.
 // - `scan` is the product scan (src/screens/scan), pushed full screen over the Item form or the Register.
 // - `guide` is the Store Guide, and `guide/[role]` a role's practice store (src/screens/guide), both full
@@ -70,13 +71,15 @@ export default function AppLayout() {
   // synchronous, so no zero-width first frame, and it follows rotation and split-screen. Read here
   // rather than in the shell because (tabs) and sheets/ sit beside the shell, not under it.
   const wide = useWindowDimensions().width >= WIDE_MIN;
+  // Wide, a small form is a transparentModal whose whole content is its Dialog, the screen it came from left under it.
+  const asDialog = wide ? ({ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } } as const) : undefined;
 
   return (
     <ShellWideContext value={wide}>
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="systems/[id]" />
-      <Stack.Screen name="create-system" />
+      <Stack.Screen name="create-system" options={asDialog} />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="scan" />
       <Stack.Screen name="guide" />
@@ -85,9 +88,7 @@ export default function AppLayout() {
         <Stack.Screen
           key={name}
           name={name}
-          options={
-            wide ? { presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } } : undefined
-          }
+          options={asDialog}
         />
       ))}
       {SHEETS.map((name) => (

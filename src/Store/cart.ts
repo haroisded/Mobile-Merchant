@@ -32,6 +32,17 @@ export const addToCart = (sessionId: string, itemId: string, uomId: string) =>
       : [...lines, { itemId, uomId, qty: 1, rate: null }],
   }));
 
+/** One fewer of an item in that unit: its line loses one, or goes at the last — a scan taken back (✕ on Scanned). */
+export const takeFromCart = (sessionId: string, itemId: string, uomId: string) =>
+  change(sessionId, (lines) => ({
+    lines: lines
+      .map((line) => (line.itemId === itemId && line.uomId === uomId ? { ...line, qty: line.qty - 1 } : line))
+      .filter((line) => line.qty > 0),
+  }));
+
+/** Takes an item's line out of the cart whatever its quantity: a second tap on its row at the Register. */
+export const dropFromCart = (sessionId: string, itemId: string) => change(sessionId, (lines) => ({ lines: lines.filter((line) => line.itemId !== itemId) }));
+
 /** How many of an item, in that unit, the cart holds now — read outside a render, for the scan's answer. */
 export const cartQty = (sessionId: string, itemId: string, uomId: string) => {
   const state = useCartStore.getState();

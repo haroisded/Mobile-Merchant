@@ -11,7 +11,7 @@ import { Text } from '../../components/text';
 import { useFiscalYearsQuery } from '../../features/fiscal-years/queries';
 import type { FiscalYear } from '../../features/fiscal-years/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
-import { useTableFits } from '../../lib/columns';
+import { useBottomInset, useTableFits } from '../../lib/columns';
 import { displayDate, todayDate } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
@@ -29,6 +29,7 @@ const openForm = (merchantId: string, fiscalYearId?: string) =>
 export function FiscalYears({ merchantId }: Props) {
   const { colors } = useAppTheme();
   const table = useTableFits();
+  const bottom = useBottomInset();
   const years = useFiscalYearsQuery({ merchantId });
   const permissions = usePermissions({ merchantId }).data;
   const rows = years.data ?? [];
@@ -54,6 +55,7 @@ export function FiscalYears({ merchantId }: Props) {
       data={rows}
       keyExtractor={(item) => item.id}
       ListEmptyComponent={empty}
+      contentContainerStyle={{ paddingBottom: bottom }}
       renderItem={({ item }) => <YearRow item={item} wide={table} onPress={() => openForm(merchantId, item.id)} />}
     />
   );

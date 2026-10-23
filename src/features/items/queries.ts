@@ -66,15 +66,23 @@ const invalidateSavedItems = (queryClient: QueryClient) =>
   ]);
 
 /**
+ * What an item's save sends. On a saved item the price, stock and cost are sent only when changed: a key left out is
+ * a figure left as it is (public.save_item_with_opening_stock reads the key's presence).
+ */
+type Figures = 'standard_rate' | 'opening_stock' | 'valuation_rate';
+export type SavedItemValues = Omit<ItemValues, Figures> & Partial<Pick<ItemValues, Figures>>;
+
+/**
  * Save an item and its rows in one transaction (public.save_item_with_opening_stock, security invoker: it
  * calls public.save_item). A new stock item's Opening Stock is posted with it, as a submitted Opening Stock
- * reconciliation — so the save also changes the ledgers, the stock balance and the reconciliations.
+ * reconciliation; a saved one's changed price updates its Item Price, its changed stock or cost a submitted Stock
+ * Reconciliation — so the save also changes the prices, the ledgers, the stock balance and the reconciliations.
  */
 export function useSaveItemMutation({ merchantId, itemId }: { merchantId: string; itemId?: string }) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (values: ItemValues) => {
+    mutationFn: async (values: SavedItemValues) => {
       await supabase.rpc('save_item_with_opening_stock', { payload: { id: itemId ?? '', merchant_id: merchantId, ...values } }).throwOnError();
     },
     onSuccess: () => invalidateSavedItems(queryClient),

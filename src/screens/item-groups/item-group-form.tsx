@@ -94,6 +94,7 @@ function GroupHeader({ merchant, existing }: { merchant: Merchant; existing: Ite
         kicker="Item Group"
         title={existing?.item_group_name ?? 'New item group'}
         onBack={() => router.back()}
+        form
         actions={
           existing && deletable ? (
             <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>

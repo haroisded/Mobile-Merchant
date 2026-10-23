@@ -42,7 +42,7 @@ export function CompanyScreen({ merchant }: Props) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Store" meta={merchant.name} onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Store" meta={merchant.name} onBack={() => router.back()} form />
       {countries.data && currencies.data && accounts.data ? (
         <CompanyForm merchant={merchant} countries={countries.data} currencies={currencies.data} accounts={accounts.data} />
       ) : (

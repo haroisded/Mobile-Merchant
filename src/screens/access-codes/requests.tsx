@@ -40,6 +40,7 @@ export function Requests() {
         <FilterChips options={filters} value={filter} onChange={setFilter} />
       </View>
       <RecordList
+        underTabs
         query={{ ...requests, data: found }}
         keyOf={(request) => request.id}
         columns={[

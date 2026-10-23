@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar } from '../../components/appbar';
 import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
-import { READING_MEASURE } from '../../lib/columns';
+import { READING_MEASURE, useBottomInset } from '../../lib/columns';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
 import { LEGAL_DOCS } from './documents';
@@ -18,6 +18,7 @@ import type { LegalDoc } from './documents';
 export function LegalScreen({ doc }: { doc: LegalDoc }) {
   const { colors } = useAppTheme();
   const { title, updated, intro, sections } = LEGAL_DOCS[doc];
+  const bottom = useBottomInset();
 
   return (
     <Surface style={styles.screen}>
@@ -25,7 +26,7 @@ export function LegalScreen({ doc }: { doc: LegalDoc }) {
         <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title={title} />
       </Appbar.Header>
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]}>
         <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>
           {`Last updated ${updated}`}
         </Text>

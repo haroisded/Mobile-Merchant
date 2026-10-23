@@ -13,10 +13,11 @@ export const LEVELS: LevelInfo[] = [
   {
     level: 1,
     name: 'Just Sell',
-    summary: 'Add items, sell at the register with discounts and receipts, and check the dashboard.',
+    summary: 'Add items, sell at the register with discounts and receipts, and check the dashboard and the ledger.',
     gets: [
       'A register ready to sell from, with discounts',
       'A receipt for every sale, and your past orders',
+      'The General Ledger, where every sale posts',
       'Item codes numbered for you',
       'A short New Item form: name, barcode, price, cost and stock',
     ],
@@ -36,8 +37,8 @@ export const LEVELS: LevelInfo[] = [
   {
     level: 4,
     name: 'Full Store',
-    summary: 'Level 3, plus the books, taxes, pricing rules and the stock and selling settings.',
-    gets: ['The General Ledger', 'Taxes, pricing rules and warehouses', 'Every New Item field'],
+    summary: 'Level 3, plus taxes, pricing rules, warehouses and the stock and selling settings.',
+    gets: ['Taxes and the currency', 'Pricing rules and warehouses', 'Every New Item field'],
   },
   {
     level: 5,
@@ -52,8 +53,8 @@ export const levelInfo = (level: number) => LEVELS.find((info) => info.level ===
 
 // The first level each Features key shows at (screenKey / pageKey, src/features/feature-preferences/visibility.ts). A
 // key not here shows at every level: Home, Dashboard, Features, Sell's session, Register and Orders (a sale's receipt),
-// Stock's Items. A screen hidden at a level hides its pages' keys too, as its own switch does (setScreen), so showing
-// it again shows them all.
+// Stock's Items, Accounts' General Ledger (the human, 2026-10-23: where a sale posts is seen from level 1). A screen
+// hidden at a level hides its pages' keys too, as its own switch does (setScreen), so showing it again shows them all.
 const MENU_FROM = {
   'stock/item-prices': 2,
   'stock/stock-entries': 2,
@@ -77,8 +78,6 @@ const MENU_FROM = {
   'setup/letter-heads': 3,
   'setup/print-settings': 3,
 
-  'screen:accounts': 4,
-  'accounts/general-ledger': 4,
   'setup/currency': 4,
   'setup/sales-tax-templates': 4,
   'setup/item-tax-templates': 4,

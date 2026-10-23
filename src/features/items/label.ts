@@ -6,9 +6,9 @@
  *
  * - Price: the first amount marked ₱, PHP or P ("₱ 185.00", "PHP185", "P 1,250").
  * - Brand: an existing Brand named on the label as a whole word, the longest name first. Never a new one.
- * - Name: the tallest line left — a pack prints its product's name largest. A line that is only the brand
- *   is left out: the brand is often printed larger still.
- * - Description: up to four of the rest, in reading order.
+ * - Description: up to four of the lines left, in reading order — less the tallest, the product's name, which a
+ *   pack prints largest. The name itself is never filled: the person types it (the human, 2026-10-23). A line
+ *   that is only the brand is left out: the brand is often printed larger still.
  * A line of digits and separators alone (the numbers under a barcode, a batch code, a date or a time stamped
  * on the pack — or by a camera) is none of them.
  */
@@ -28,7 +28,6 @@ export function readLabel(lines: Line[], brands: { id: string; brand: string }[]
   const name = rest.reduce<Line | undefined>((tallest, line) => (!tallest || line.height > tallest.height ? line : tallest), undefined);
 
   return {
-    item_name: name?.text.slice(0, 140) ?? '',
     description: rest
       .filter((line) => line !== name)
       .slice(0, 4)

@@ -25,9 +25,11 @@ const binsKey = {
  * ponytail: one request, so PostgREST's 1,000-row cap is the ceiling — items times warehouses. Past it the
  * report needs paging, and its total a sum the database works out.
  */
-export function useBinsQuery(args: BinsArgs) {
+export function useBinsQuery(args: BinsArgs, enabled = true) {
   return useQuery({
     queryKey: binsKey.list(args),
+    // Off while there is nothing to ask about yet (a new item's page): '' would ask for every bin.
+    enabled,
     queryFn: async () => {
       let query = supabase.from('bins').select('*').eq('merchant_id', args.merchantId);
       if (args.item) query = query.eq('item_id', args.item);

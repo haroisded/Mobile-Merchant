@@ -9,6 +9,7 @@ import { useAppTheme } from '../lib/theme';
 import { childrenOf, pathTo, subtree } from '../lib/tree';
 import type { PickOption } from '../Store/picker';
 import { spacing } from '../themes';
+import { BottomSpacer } from './bottom-spacer';
 import { Button } from './button';
 import { DataTable } from './data-table';
 import { HeaderTitle } from './header-title';
@@ -63,11 +64,6 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
   const table = useTableFits();
   const nodes = query.data ?? [];
   const rows = childrenOf(nodes, parent ?? null);
-  const count = (node: T) => {
-    const held = childrenOf(nodes, node.id).length;
-    return `${held} ${held === 1 ? noun[0] : noun[1]}`;
-  };
-  const words = (node: T) => [node.is_group ? count(node) : null, ...status(node), node.disabled ? 'Disabled' : null].filter((word) => word !== null);
   // The open folder was deleted (its own Edit Group, or by someone else): this page has nothing left to
   // show, so it steps back to the folder that held it. On focus, not on the refetch: the delete's form
   // and confirm may still sit above this page, and a back from here would close them instead.
@@ -92,6 +88,7 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
       data={rows}
       keyExtractor={(node) => node.id}
       ListHeaderComponent={table ? null : breadcrumb}
+      ListFooterComponent={BottomSpacer}
       ListEmptyComponent={
         <Text variant="bodyMedium" style={styles.state}>
           Nothing in this group yet.
@@ -100,11 +97,11 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
       renderItem={({ item }) => (
         <TreeRow
           name={label(item)}
-          words={words(item)}
+          words={wordsOf(item, nodes, noun, status)}
           group={item.is_group}
           disabled={item.disabled === true}
           table={table}
-          onPress={item.is_group ? () => open(item.id) : onEdit ? () => onEdit(item) : undefined}
+          onPress={item.is_group ? () => open(item.id) : onEdit && (() => onEdit(item))}
         />
       )}
     />
@@ -117,6 +114,12 @@ export function TreeBrowser<T extends TreeNode>({ query, parent, root, label, st
   ) : (
     list
   );
+}
+
+/** What a row says under its name: a group's count of what it holds, the caller's words, and Disabled. */
+function wordsOf<T extends TreeNode>(node: T, nodes: T[], noun: [string, string], status: (node: T) => (string | null)[]) {
+  const held = childrenOf(nodes, node.id).length;
+  return [node.is_group ? `${held} ${held === 1 ? noun[0] : noun[1]}` : null, ...status(node), node.disabled ? 'Disabled' : null].filter((word) => word !== null);
 }
 
 type RowProps = { name: string; words: string[]; group: boolean; disabled: boolean; table: boolean; onPress: (() => void) | undefined };

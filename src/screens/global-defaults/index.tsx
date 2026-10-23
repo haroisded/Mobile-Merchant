@@ -27,7 +27,7 @@ export function GlobalDefaultsScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Global Defaults" meta="What new records and receipts start with" onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Global Defaults" meta="What new records and receipts start with" onBack={() => router.back()} form />
       {defaults.data ? (
         <DefaultsForm merchant={merchant} saved={defaults.data} />
       ) : (

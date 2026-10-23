@@ -77,14 +77,18 @@ together and explained inline.
   Reconciliations (Opening Stock, a count against the books): a draft is saved, **Submit** posts it, **Cancel**
   reverses it. Posting writes the Stock Ledger and the Stock Balance, valued by FIFO or Moving Average, and
   with Perpetual Inventory the General Ledger — three read-only reports with filters, each row opening its
-  document. A new item can carry its Opening Stock
+  document. A new item can carry its Opening Stock; a saved item's price, stock on hand and cost change from its own
+  page — the stock as one submitted count
 - **POS Profiles** — a register's settings under Setup → Point of Sale: its warehouse, price list, taxes and
   print layout, the users who may use it, the payment methods it offers (a default, Allow in Returns), the
   item groups it lists, the accounts that win over an item's, and its switches
 - **Sell** — a rail destination: a cashier opens a session on a register with what its drawer holds, sells at
-  the Register (search, cart, quantity, unit, taxes, rounded total, one amount per payment method, change),
-  and closes the session against a count. A sale posts its stock and its ledger entries at once, shows its
-  receipt on screen, and is reopened from Orders
+  the Register (products and cart as tabs on a phone, side by side on a tablet; a tap adds or removes a product, a
+  − / + stepper sets its quantity; per-line discounts; a Complete order sheet with quick cash amounts and change),
+  and closes the session against a count — the Sell page shows the session's orders and the cash its drawer holds.
+  A sale posts its stock and its ledger entries at once, shows its receipt on screen, and is reopened from Orders.
+  A refund takes back what was sold, shows its receipt first, and is saved on Return to Register, all of it back
+  by one payment method
 - **Dashboard** — a rail destination: Today, Last 7 Days or This Month; four number cards (Sales with its
   invoice count, Gross Profit, Open Registers with the cash they should hold, Low Stock); sales per day as a
   bar chart; the best sellers by quantity or amount, by item or item group; and the items out of stock or at
@@ -94,8 +98,9 @@ together and explained inline.
   every item — up to 500 a file — with its price and its opening stock, and lists what was made. The phone's
   own file pickers, through `expo-file-system`: no extra native package
 - **Product scan** — the phone's camera, read on the phone by Google ML Kit (no network, no cost). On a new
-  item, **Scan Product** reads the barcode and the label: Barcode, Item Code, name, brand, description and price
-  fill whichever fields are still empty. At the Register, the barcode button rings a product up by its barcode.
+  item, **Scan Product** reads the barcode and the label: Barcode, Item Code, brand, description and price fill
+  whichever fields are still empty — never the name, which the person types. At the Register, the barcode button
+  rings a product up by its barcode. A Scanned list shows what each scan did, and takes any of it back.
   Native: `expo-camera` and `@infinitered/react-native-mlkit-text-recognition`, so it needs a development build
   made after they were added; the camera permission is asked the first time
 - **Features** — the last item of a store's side menu: each person hides the screens and pages they don't use in

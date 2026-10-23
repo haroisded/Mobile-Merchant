@@ -39,7 +39,7 @@ export function CurrencyScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Currency" meta={merchant.default_currency} onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Currency" meta={merchant.default_currency} onBack={() => router.back()} form />
       {currency.data ? (
         <CurrencyForm merchantId={merchant.id} saved={currency.data} />
       ) : (

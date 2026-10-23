@@ -5,7 +5,7 @@ import { FormFooter } from '../../../components/form-footer';
 import { Icon } from '../../../components/icon';
 import { PageHeader } from '../../../components/page-header';
 import { Text } from '../../../components/text';
-import { FORM_MEASURE } from '../../../lib/columns';
+import { FORM_MEASURE, useBottomInset } from '../../../lib/columns';
 import { formatMoney } from '../../../lib/money';
 import { useAppTheme } from '../../../lib/theme';
 import { radius, spacing } from '../../../themes';
@@ -38,10 +38,12 @@ type FrameProps = {
 
 /** A practice page: the page header, the page scrolling at the form measure, and its footer. */
 export function Frame({ title, meta, onBack, actions, footer, children }: FrameProps) {
+  // With no footer, the page's end keeps clear of the navigation bar (0 while a task's bar is under it).
+  const bottom = useBottomInset();
   return (
     <View style={styles.fill}>
       <PageHeader kicker={STORE_NAME} title={title} meta={meta} onBack={onBack} actions={actions} />
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.body, footer ? null : { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
       {footer ? <FormFooter notice={null}>{footer}</FormFooter> : null}

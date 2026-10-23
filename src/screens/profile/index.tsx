@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { User } from '@supabase/supabase-js';
 
+import { AdaptiveDialog } from '../../components/adaptive-dialog';
 import { Appbar } from '../../components/appbar';
 import { Avatar } from '../../components/avatar';
 import { Button } from '../../components/button';
@@ -16,7 +17,7 @@ import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { useProfileQuery } from '../../features/profiles/queries';
 import { signOut } from '../../lib/auth';
-import { FORM_MEASURE, useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
@@ -28,9 +29,37 @@ type Props = {
   onBack: () => void;
 };
 
-// The Account tab's body (`(tabs)/account.tsx`). On a tablet the tab bar is hidden, and the systems
-// list's account icon opens it instead. One layout at both widths: the phone's lists, held to the form measure.
+// The Account tab's body (`(tabs)/account.tsx`), a phone's. On a tablet the tab bar is hidden, and the systems list's
+// account icon opens the same body as a Dialog over the stores instead (ProfileDialog, the forms/profile route).
 export function ProfileScreen({ onBack }: Props) {
+  // Under the tab bar on a phone, which keeps it clear of the navigation bar; reached wide, it meets the bar itself.
+  const bottom = useBottomInset(true);
+
+  return (
+    <Surface style={styles.screen}>
+      <Appbar.Header>
+        <Appbar.BackAction onPress={onBack} />
+        <Appbar.Content title="Profile" />
+      </Appbar.Header>
+
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]}>
+        <ProfileBody />
+      </ScrollView>
+    </Surface>
+  );
+}
+
+/** A tablet's Account: the same body, as a floating Dialog over the stores (the human, 2026-10-23), closed by its X. */
+export function ProfileDialog({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <AdaptiveDialog asPage title="Profile" onDismiss={onDismiss} onClose={onDismiss}>
+      <ProfileBody />
+    </AdaptiveDialog>
+  );
+}
+
+/** Who is signed in, the account and security lists, the preferences, Sign Out and Delete account. */
+function ProfileBody() {
   const session = useSession();
   const { data: profile } = useProfileQuery();
   // MD3's `error` role, read from whichever of themes.js's two palettes the root layout put in
@@ -52,61 +81,55 @@ export function ProfileScreen({ onBack }: Props) {
   const user = session.user;
   const { name, email } = identity(user, profile?.display_name);
 
-  // Narrow, the confirm is a formSheet route (.claude/instruction_mds/frontend.md §5); wide, it mounts here.
+  // Narrow, the confirm is a formSheet route (.claude/instruction_mds/frontend.md §5); wide, it mounts here — over
+  // the Profile Dialog, in its route's Portal host.
   const askDelete = () => {
     if (narrow) router.push('/sheets/delete-account');
     else setConfirmingDelete(true);
   };
 
   return (
-    <Surface style={styles.screen}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={onBack} />
-        <Appbar.Content title="Profile" />
-      </Appbar.Header>
-
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.identity}>
-          <View>
-            <Avatar.Icon size={narrow ? 80 : 96} icon="account" />
-            {/* Unticked: renders over the avatar, does nothing yet. */}
-            <FAB size="small" icon="camera" style={styles.avatarFab} />
-          </View>
-          <Text variant="titleMedium">{name}</Text>
-          <Text variant="bodySmall">{email}</Text>
+    <>
+      <View style={styles.identity}>
+        <View>
+          <Avatar.Icon size={narrow ? 80 : 96} icon="account" />
+          {/* Unticked: renders over the avatar, does nothing yet. */}
+          <FAB size="small" icon="camera" style={styles.avatarFab} />
         </View>
+        <Text variant="titleMedium">{name}</Text>
+        <Text variant="bodySmall">{email}</Text>
+      </View>
 
-        <ProfileDetails />
+      <ProfileDetails />
 
-        {/* Outside the width branch on purpose: a phone and a tablet both get it. */}
-        <PreferencesCard />
+      {/* Outside the width branch on purpose: a phone and a tablet both get it. */}
+      <PreferencesCard />
 
-        <View style={narrow ? styles.actions : styles.actionsRow}>
-          <Button
-            icon="logout"
-            mode="contained"
-            buttonColor={colors.error}
-            textColor={colors.onError}
-            onPress={() => void signOutNow()}
-            loading={busy}
-            disabled={busy}
-            contentStyle={styles.leading}
-          >
-            Sign Out
-          </Button>
-        </View>
-
-        {/* Deleting an account has to be reachable in-app — App Store Guideline 5.1.1(v) — and it
-            cannot be undone, so it asks first and is styled apart from the primary action. */}
-        <Button icon="person-remove" mode="text" textColor={colors.error} onPress={askDelete} disabled={busy} contentStyle={styles.leading}>
-          Delete account
+      <View style={narrow ? styles.actions : styles.actionsRow}>
+        <Button
+          icon="logout"
+          mode="contained"
+          buttonColor={colors.error}
+          textColor={colors.onError}
+          onPress={() => void signOutNow()}
+          loading={busy}
+          disabled={busy}
+          contentStyle={styles.leading}
+        >
+          Sign Out
         </Button>
-        <HelperText type="error" visible={error !== null}>
-          {error}
-        </HelperText>
-        {confirmingDelete ? <DeleteAccountDialog onDismiss={() => setConfirmingDelete(false)} /> : null}
-      </ScrollView>
-    </Surface>
+      </View>
+
+      {/* Deleting an account has to be reachable in-app — App Store Guideline 5.1.1(v) — and it
+          cannot be undone, so it asks first and is styled apart from the primary action. */}
+      <Button icon="person-remove" mode="text" textColor={colors.error} onPress={askDelete} disabled={busy} contentStyle={styles.leading}>
+        Delete account
+      </Button>
+      <HelperText type="error" visible={error !== null}>
+        {error}
+      </HelperText>
+      {confirmingDelete ? <DeleteAccountDialog onDismiss={() => setConfirmingDelete(false)} /> : null}
+    </>
   );
 }
 
@@ -149,8 +172,6 @@ function ProfileDetails() {
       <Text variant="labelMedium">Account</Text>
       <Card>
         <List.Item title="Account Information" left={(p) => <List.Icon {...p} icon="account" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
-        <Divider />
-        <List.Item title="Your Businesses" left={(p) => <List.Icon {...p} icon="grid" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} />
       </Card>
 
       <Text variant="labelMedium">Security &amp; Privacy</Text>

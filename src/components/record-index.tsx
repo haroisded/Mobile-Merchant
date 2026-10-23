@@ -11,6 +11,7 @@ import type { Ptype } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
+import { BottomSpacer } from './bottom-spacer';
 import { CellRows } from './cell-rows';
 import { Icon } from './icon';
 import { PageHeader } from './page-header';
@@ -75,18 +76,20 @@ export function RecordIndex<R extends string>({ merchantId, screen, kicker, titl
   // need no my_permissions, which a fresh start in airplane mode has not fetched.
   const by = { screen, hidden, isOwner, permissions: permissions.data };
   const shown = sections.map((section) => ({ ...section, entries: section.entries.filter((entry) => listed(entry, by)) })).filter((section) => section.entries.length > 0);
+  const loading = !isOwner && !permissions.data;
+  const said = nothingListed(by, shown.length) ? empty : null;
 
   return (
     <View style={styles.fill}>
       <PageHeader kicker={kicker} title={title} meta={meta} />
       <ScrollView contentContainerStyle={styles.body}>
         {children}
-        {isOwner || permissions.data ? null : (
+        {loading ? (
           <View style={styles.state}>
             <QueryState query={permissions} offline={offline} failure={failure} />
           </View>
-        )}
-        {nothingListed(by, shown.length) && empty !== null ? <Text variant="bodyMedium">{empty}</Text> : null}
+        ) : null}
+        {said ? <Text variant="bodyMedium">{said}</Text> : null}
         <CellRows
           items={shown}
           columns={columns}
@@ -96,6 +99,7 @@ export function RecordIndex<R extends string>({ merchantId, screen, kicker, titl
           rowGap={spacing.lg}
           columnGap={spacing.md}
         />
+        <BottomSpacer />
       </ScrollView>
     </View>
   );

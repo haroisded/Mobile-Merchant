@@ -12,7 +12,7 @@ import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries'
 import { usePosClosingEntryQuery } from '../../features/pos-closing-entries/queries';
 import { usePosOpeningEntriesQuery } from '../../features/pos-opening-entries/queries';
 import { displayDate } from '../../lib/dates';
-import { FORM_MEASURE } from '../../lib/columns';
+import { FORM_MEASURE, useBottomInset } from '../../lib/columns';
 import { spacing } from '../../themes';
 
 /**
@@ -25,6 +25,7 @@ export function PosClosingEntryPage({ merchant, docId }: { merchant: Merchant; d
   const modes = useModesOfPaymentQuery({ merchantId: merchant.id }).data;
   const sessions = usePosOpeningEntriesQuery({ merchantId: merchant.id }).data;
   const money = useMoney(merchant);
+  const bottom = useBottomInset();
   if (!entry.data) return <DocumentState doctype="POS Closing Entry" query={entry} />;
 
   const closing = entry.data;
@@ -38,7 +39,7 @@ export function PosClosingEntryPage({ merchant, docId }: { merchant: Merchant; d
         meta={[displayDate(closing.posting_date), session ? `Session ${session.name}` : null].filter(Boolean).join(' · ')}
         onBack={() => router.back()}
       />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]}>
         <SectionHeading title="Payment Reconciliation" hint="What each payment method should hold against what was counted" />
         {closing.pos_closing_entry_payments.map((row) => (
           <SampleBox key={row.id}>

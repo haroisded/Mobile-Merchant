@@ -7,7 +7,7 @@ import { Button } from '../../components/button';
 import { CellRows } from '../../components/cell-rows';
 import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
-import { fontScaled, READING_MEASURE, useColumns, useShellWide } from '../../lib/columns';
+import { fontScaled, READING_MEASURE, useBottomInset, useColumns, useShellWide } from '../../lib/columns';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
 import { RoleListDialog } from './role-list';
@@ -43,6 +43,7 @@ export function GuideScreen() {
   const noteGrid = useColumns(fontScaled(NOTE_CARD));
   const areaColumns = Math.min(3, areaGrid.columns);
   const noteColumns = Math.min(2, noteGrid.columns);
+  const bottom = useBottomInset();
 
   // Narrow, the list is a sheet route over this page; wide, a Dialog on it. Either way it pops up once, on opening.
   // A quick second tap must not push a second sheet (emulator, 2026-10-22: two stacked, one Back left the other), so a
@@ -71,7 +72,7 @@ export function GuideScreen() {
         <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title="Store Guide" />
       </Appbar.Header>
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.xl + bottom }]}>
         <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <Text variant="labelMedium" style={{ color: colors.accent }}>
             Store Guide

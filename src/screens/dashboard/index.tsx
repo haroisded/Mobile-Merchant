@@ -26,7 +26,7 @@ import { itemLabel } from '../../features/items/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { has, usePermissions } from '../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../features/system-settings/queries';
-import { fontScaled, useColumns, useShellWide } from '../../lib/columns';
+import { fontScaled, useBottomInset, useColumns, useShellWide } from '../../lib/columns';
 import { displayDate, todayIn } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
@@ -167,6 +167,7 @@ type BlocksProps = {
 function Blocks({ merchant, today, shows: { sells, stocks, registers }, period, switcher }: BlocksProps) {
   const range = periodRange(period, today);
   const { columns, onLayout } = useColumns(BLOCK);
+  const bottom = useBottomInset();
 
   if (!sells && !stocks && !registers) {
     return (
@@ -183,7 +184,7 @@ function Blocks({ merchant, today, shows: { sells, stocks, registers }, period, 
   ].filter((block) => block !== null);
 
   return (
-    <ScrollView contentContainerStyle={styles.body}>
+    <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]}>
       {switcher}
       <NumberCards
         merchant={merchant}

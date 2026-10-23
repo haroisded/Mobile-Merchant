@@ -12,7 +12,7 @@ import { ITEM_CSV_COLUMNS, itemsTemplate, parseCsv, readItemsCsv } from '../src/
 import { itemPartShown, levelHidden, levelInfo, plainWords } from '../src/features/merchants/levels.ts';
 import { readLabel } from '../src/features/items/label.ts';
 import { can, effective, has, overridesFor, readsAny, showsDestination, toggle } from '../src/features/permissions/access.ts';
-import { additionalDiscount, buildReturn, buildSale, checkoutPayload, offeredItems, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
+import { additionalDiscount, buildReturn, buildSale, checkoutPayload, drawerCash, offeredItems, refundMethod, returnableLines, returnPayload, settle, tenderedAmounts } from '../src/features/pos-invoices/cart.ts';
 import { pickPricingRule, ruleRate } from '../src/features/pricing-rules/apply.ts';
 import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt.ts';
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
@@ -365,6 +365,21 @@ assert.deepEqual(returnableLines(sold, [{ pos_invoice_items: oneBack.items }, { 
 // What is sent: the sale it returns, each line's own, and the refund below zero with nothing as change.
 const back = returnPayload(sold, oneBack, { id: 'session', pos_profile_id: 'front' }, [{ mode_of_payment_id: 'cash', amount: 90 }, { mode_of_payment_id: 'card', amount: 0 }]);
 assert.deepEqual([back.return_against, back.paid_amount, back.change_amount, back.write_off_amount, back.payments], ['sale', -90, 0, 0, [{ mode_of_payment_id: 'cash', amount: -90 }]]);
+// Where the whole refund goes: the sale's largest payment returns may use, else the default that may, else the first.
+const REFUND_METHODS = [{ mode_of_payment_id: 'cash', is_default: true, allow_in_returns: true }, { mode_of_payment_id: 'card', is_default: false, allow_in_returns: true }, { mode_of_payment_id: 'gcash', is_default: false, allow_in_returns: false }];
+assert.equal(refundMethod([{ mode_of_payment_id: 'cash', amount: 20 }, { mode_of_payment_id: 'card', amount: 70 }], REFUND_METHODS), 'card');
+assert.equal(refundMethod([{ mode_of_payment_id: 'gcash', amount: 90 }], REFUND_METHODS), 'cash');
+assert.equal(refundMethod([{ mode_of_payment_id: 'gcash', amount: 90 }], [REFUND_METHODS[1], REFUND_METHODS[2]]), 'card');
+assert.equal(refundMethod([], [REFUND_METHODS[2]]), undefined);
+
+// The Sell page's Cash in drawer: opening cash, plus each sale's and return's cash, less change where cash was paid.
+const isCash = (id) => id === 'cash';
+const opening = [{ mode_of_payment_id: 'cash', opening_amount: 500 }, { mode_of_payment_id: 'card', opening_amount: 0 }];
+const pay = (rows, change = 0) => ({ change_amount: change, pos_invoice_payments: rows.map(([mode_of_payment_id, amount]) => ({ mode_of_payment_id, amount })) });
+assert.equal(drawerCash(opening, [], isCash), 500);
+assert.equal(drawerCash(opening, [pay([['cash', 200]], 10), pay([['card', 90]]), pay([['cash', -45]])], isCash), 645);
+// Paid by card alone, the change is not out of the drawer (the database's first Cash-type payment, else the first).
+assert.equal(drawerCash(opening, [pay([['card', 100]], 5)], isCash), 500);
 
 // src/features/pricing-rules/apply.ts — the rule a line takes (20.4), and the rate it gives.
 const ruleOf = (over) => ({ id: 'r', title: 'Rule', apply_on: 'Item Code', min_qty: 0, max_qty: 0, min_amt: 0, max_amt: 0, valid_from: null, valid_upto: null, for_price_list: null, priority: 1, disable: false, rate_or_discount: 'Discount Percentage', rate: 0, discount_percentage: 10, discount_amount: 0, created_at: '2026-01-01', pricing_rule_targets: [{ item_id: 'coffee', item_group_id: null, brand_id: null }], ...over });
@@ -576,8 +591,9 @@ assert.deepEqual([shows({}, null), shows({ ownerOnly: true }, CASHIER), shows({ 
 assert.deepEqual([shows({ sections: SELL, permissions: ['open_close_register'] }, CASHIER), shows({ sections: SELL }, CASHIER), shows({ sections: SELL }, null)], [true, false, false]);
 assert.deepEqual([shows({ permissions: ['view_sales', 'view_stock'] }, CASHIER), shows({ permissions: ['view_sales'] }, { ...CASHIER, permissions: ['view_sales'] })], [false, true]);
 
-// src/features/items/label.ts — a label's lines into an Item's fields. The brand printed largest is skipped for the
-// name; the digits under the barcode and the price line are no one's; a brand matches whole words only.
+// src/features/items/label.ts — a label's lines into an Item's fields. The name is never filled (the person types it):
+// the tallest line left — the product's name — stays out of the description too, the brand printed largest is not that
+// line; the digits under the barcode and the price line are no one's; a brand matches whole words only.
 const BRANDS = [{ id: 'b1', brand: 'Nescafe' }, { id: 'b2', brand: 'Nescafe Gold' }, { id: 'b3', brand: 'Kopiko' }];
 const label = [
   { text: 'NESCAFE', height: 90 },
@@ -588,7 +604,6 @@ const label = [
   { text: 'Made in the Philippines', height: 16 },
 ];
 assert.deepEqual(readLabel(label, BRANDS), {
-  item_name: 'Classic Instant Coffee',
   description: 'Net Wt. 200 g\nMade in the Philippines',
   brand_id: 'b1',
   standard_rate: '185.00',
@@ -599,9 +614,9 @@ assert.equal(readLabel([{ text: 'Kopikoffee', height: 10 }], BRANDS).brand_id, '
 assert.equal(readLabel([{ text: 'PHP1,250.5', height: 10 }], BRANDS).standard_rate, '1250.5');
 assert.equal(readLabel([{ text: 'SRP P 49', height: 10 }], BRANDS).standard_rate, '49');
 assert.equal(readLabel([{ text: 'Soap 5 pcs', height: 10 }], BRANDS).standard_rate, '');
-assert.deepEqual(readLabel([], BRANDS), { item_name: '', description: '', brand_id: '', standard_rate: '' });
-// A date and time stamped on the picture (the emulator's camera does) is no one's: nothing read is nothing filled.
-assert.deepEqual(readLabel([{ text: '15.10.26 00:36:14', height: 30 }, { text: 'EXP 10/27', height: 10 }], BRANDS), { item_name: 'EXP 10/27', description: '', brand_id: '', standard_rate: '' });
+assert.deepEqual(readLabel([], BRANDS), { description: '', brand_id: '', standard_rate: '' });
+// A date and time stamped on the picture (the emulator's camera does) is no one's; the one line left is the name's.
+assert.deepEqual(readLabel([{ text: '15.10.26 00:36:14', height: 30 }, { text: 'EXP 10/27', height: 10 }], BRANDS), { description: '', brand_id: '', standard_rate: '' });
 
 // src/lib/barcode.ts — which camera reports count. Frames are 100 ms apart.
 const frames = (codes, repeats, seen = noSightings(), start = 0) => codes.map((code, i) => sighted(seen, code, start + i * 100, repeats));
@@ -694,14 +709,16 @@ assert.equal(SETUP_ROUTES.length, 26);
 // Level 5 is the whole system; each level shows everything the one below shows.
 assert.deepEqual(levelHidden(5), []);
 for (const level of [1, 2, 3, 4]) assert.ok(levelHidden(level + 1).every((key) => levelHidden(level).includes(key)), `level ${level + 1} hides more than ${level}`);
-// Level 1: the Dashboard, Sell's session, Register and Orders (receipts), Stock's Items — and nothing else.
-assert.deepEqual(menu(1), ['dashboard', 'sell', 'stock']);
+// Level 1: the Dashboard, Sell's session, Register and Orders (receipts), Stock's Items, Accounts' General Ledger
+// (the human, 2026-10-23) — and nothing else.
+assert.deepEqual(menu(1), ['dashboard', 'sell', 'stock', 'accounts']);
 assert.deepEqual(pagesShown(1, APP[1]), ['pos-invoices']);
 assert.deepEqual(pagesShown(1, APP[2]), ['items']);
+assert.deepEqual(pagesShown(1, APP[3]), ['general-ledger']);
 assert.deepEqual(pagesShown(2, APP[1]), ['pos-invoices']);
 assert.deepEqual(pagesShown(2, APP[2]), ['items', 'item-prices', 'stock-entries', 'stock-balance']);
-assert.deepEqual(menu(2), ['dashboard', 'sell', 'stock']);
-assert.deepEqual(menu(3), ['dashboard', 'sell', 'stock', 'employees', 'setup']);
+assert.deepEqual(menu(2), ['dashboard', 'sell', 'stock', 'accounts']);
+assert.deepEqual(menu(3), ['dashboard', 'sell', 'stock', 'accounts', 'employees', 'setup']);
 assert.equal(pagesShown(3, APP[5]).length, 10);
 assert.deepEqual(menu(4), ['dashboard', 'sell', 'stock', 'accounts', 'employees', 'setup']);
 assert.equal(pagesShown(4, APP[5]).length, 17);

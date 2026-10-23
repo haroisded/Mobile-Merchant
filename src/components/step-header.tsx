@@ -17,14 +17,16 @@ type Props = {
   failed?: boolean;
   backLabel: string;
   onBack: () => void;
+  /** Inside a Dialog's body, which pads its own sides (Create Store on a tablet): no inset of its own. */
+  flush?: boolean;
 };
 
 /** A narrow stepper's header: back, "Step n of m", the step's title and progress. The product form and the receipt wizard share it. */
-export function StepHeader({ index, count, title, optional, failed, backLabel, onBack }: Props) {
+export function StepHeader({ index, count, title, optional, failed, backLabel, onBack, flush = false }: Props) {
   const { colors } = useAppTheme();
 
   return (
-    <View style={styles.stepper}>
+    <View style={[styles.stepper, flush ? styles.flush : null]}>
       <View style={styles.row}>
         <IconButton icon="chevron-left" disabled={index === 0} onPress={onBack} accessibilityLabel={backLabel} style={styles.back} />
         <View style={styles.fill}>
@@ -44,6 +46,7 @@ export function StepHeader({ index, count, title, optional, failed, backLabel, o
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   stepper: { gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  flush: { paddingHorizontal: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // IconButton ships a 6dp margin of its own; zeroed so the row's gap is the only spacing.
   back: { margin: 0 },

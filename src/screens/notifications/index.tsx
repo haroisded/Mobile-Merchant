@@ -10,7 +10,7 @@ import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { useMarkNotificationsReadMutation, useNotificationsQuery } from '../../features/notifications/queries';
 import type { Notification } from '../../features/notifications/queries';
-import { FORM_MEASURE, useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
 import { displayDateTime } from '../../lib/dates';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
@@ -39,6 +39,7 @@ function open(notification: Notification) {
 export function NotificationsScreen() {
   const { colors } = useAppTheme();
   const wide = useShellWide();
+  const bottom = useBottomInset();
   const notifications = useNotificationsQuery();
   const markRead = useMarkNotificationsReadMutation();
   const unread = notifications.data?.filter((notification) => notification.read_at === null).length ?? 0;
@@ -58,6 +59,7 @@ export function NotificationsScreen() {
       <FlatList
         // Wide, the rows are held to the reading measure, left-aligned: never one row across a tablet (rule 16).
         style={wide ? styles.measure : undefined}
+        contentContainerStyle={{ paddingBottom: bottom }}
         data={notifications.data ?? []}
         keyExtractor={(notification) => notification.id}
         ListHeaderComponent={

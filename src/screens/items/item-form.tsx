@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
-import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { useFieldArray, useForm, useFormState, useWatch } from 'react-hook-form';
 import type { Control, UseFormReturn } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -25,8 +25,9 @@ import type { Brand } from '../../features/brands/queries';
 import { useMoney } from '../../features/currencies/queries';
 import { useItemGroupsQuery } from '../../features/item-groups/queries';
 import type { ItemGroup } from '../../features/item-groups/queries';
+import { useItemPricesQuery } from '../../features/item-prices/queries';
 import { itemLabel, useDeleteItemMutation, useItemsQuery, useSaveItemMutation } from '../../features/items/queries';
-import type { Item } from '../../features/items/queries';
+import type { Item, SavedItemValues } from '../../features/items/queries';
 import { readLabel } from '../../features/items/label';
 import { itemSchema } from '../../features/items/schema';
 import type { ItemValues } from '../../features/items/schema';
@@ -51,6 +52,8 @@ type Records = {
   stockSettings: StockSettings;
   /** Selling Settings' Default Price List's name: where a new item's Standard Selling Rate is written. */
   sellingPriceList: string | undefined;
+  /** A saved item's figures as they stand: its price in that list, and its stock and cost in its warehouse. */
+  figures: Figures;
   sales: SalesDefaultsRecords;
   tax: ItemTaxRecords;
 };
@@ -72,7 +75,9 @@ export function ItemPage({ merchant, itemId }: { merchant: Merchant; itemId?: st
   const sellingSettings = useSellingSettingsQuery({ merchantId: merchant.id }).data;
   const sales = useSalesDefaultsRecords(merchant.id);
   const tax = useItemTaxRecords(merchant.id);
-  if (!items || !groups || !uoms || !brands || !stockSettings || !sellingSettings || !sales || !tax) return null;
+  const existing = itemId ? items?.find((item) => item.id === itemId) : undefined;
+  const figures = useFigures(merchant.id, existing, sales?.warehouses);
+  if (!items || !groups || !uoms || !brands || !stockSettings || !sellingSettings || !sales || !tax || !figures) return null;
 
   return (
     <Form
@@ -83,12 +88,42 @@ export function ItemPage({ merchant, itemId }: { merchant: Merchant; itemId?: st
         brands,
         stockSettings,
         sellingPriceList: sales.priceLists.find((priceList) => priceList.id === sellingSettings.default_price_list)?.price_list_name,
+        figures,
         sales,
         tax,
       }}
-      existing={itemId ? items.find((item) => item.id === itemId) : undefined}
+      existing={existing}
     />
   );
+}
+
+/** A saved item's figures as its page opens on them; '' where there is none yet. */
+type Figures = { rate: string; stock: string; cost: string; warehouse: { warehouse_name: string } | undefined };
+
+const NO_FIGURES: Figures = { rate: '', stock: '', cost: '', warehouse: undefined };
+
+/**
+ * A saved item's price and stock, read before the form mounts: its fields start from them — the undated stock-unit
+ * price in Selling Settings' list, the bin in its warehouse. Where the person may not read prices or stock, the
+ * policies answer no rows and the fields start empty. Undefined while a saved item's are loading; a new item has none.
+ */
+function useFigures(merchantId: string, existing: Item | undefined, warehouses: { id: string; warehouse_name: string }[] | undefined): Figures | undefined {
+  const priceList = useSellingSettingsQuery({ merchantId }).data?.default_price_list;
+  const fallback = useStockSettingsQuery({ merchantId }).data?.default_warehouse;
+  const warehouse = existing?.default_warehouse ?? fallback ?? '';
+  const prices = useItemPricesQuery({ merchantId }).data;
+  const bins = useBinsQuery({ merchantId, item: existing?.id ?? '', warehouse }, existing !== undefined).data;
+  if (!existing) return NO_FIGURES;
+  if (!prices || !bins) return undefined;
+
+  const price = prices.find((row) => row.item_id === existing.id && row.price_list_id === priceList && row.uom_id === existing.stock_uom && !row.valid_from && !row.valid_upto);
+  const bin = bins.find((row) => row.item_id === existing.id && row.warehouse_id === warehouse);
+  return {
+    rate: price ? String(price.price_list_rate) : '',
+    stock: bin ? String(bin.actual_qty) : '',
+    cost: bin?.valuation_rate ? String(bin.valuation_rate) : '',
+    warehouse: warehouses?.find((candidate) => candidate.id === warehouse),
+  };
 }
 
 // A new item starts from Stock Settings: its group (when that is one items go in), unit and warehouse.
@@ -121,7 +156,7 @@ const blank = ({ groups, stockSettings }: Records): ItemValues => ({
 
 const text = (value: string | number | null) => String(value ?? '');
 
-const saved = (item: Item): ItemValues => ({
+const saved = (item: Item, figures: Figures): ItemValues => ({
   item_code: item.item_code,
   item_name: item.item_name,
   barcode: text(item.barcode),
@@ -142,9 +177,9 @@ const saved = (item: Item): ItemValues => ({
   // 0 is "no limit", shown as the empty field it is saved from.
   max_discount: item.max_discount ? String(item.max_discount) : '',
   discount_account: text(item.discount_account),
-  standard_rate: '',
-  opening_stock: '',
-  valuation_rate: '',
+  standard_rate: figures.rate,
+  opening_stock: figures.stock,
+  valuation_rate: figures.cost,
   uoms: item.item_uoms.map((row) => ({ uom_id: row.uom_id, conversion_factor: String(row.conversion_factor) })),
   taxes: item.item_taxes.map((row) => ({ item_tax_template_id: row.item_tax_template_id, tax_category_id: text(row.tax_category_id), valid_from: text(row.valid_from) })),
 });
@@ -155,17 +190,22 @@ type ScanProductProps = {
   existing: Item | undefined;
   fromSeries: boolean;
   priced: boolean;
+  shows: (part: ItemPart) => boolean;
 };
 
 /**
  * Scan Product: opens the product scan for this form (src/screens/scan). A barcode fills Barcode, and a typed Item
- * Code still empty; the label fills whichever of the name, brand, description and — on a new item its creator may
- * price — the Standard Selling Rate is still empty. Nothing typed is overwritten but the barcode, the scan's own.
+ * Code still empty; the label fills whichever of the brand, description and — where its reader may price it — the
+ * Standard Selling Rate is still empty and on the form at this level. The name is never filled: the person types it.
+ * Nothing typed is overwritten but the barcode, the scan's own.
  */
-function ScanProduct({ form: { getValues, setValue }, brands, existing, fromSeries, priced }: ScanProductProps) {
+function ScanProduct({ form: { getValues, setValue }, brands, existing, fromSeries, priced, shows }: ScanProductProps) {
   const wide = useShellWide();
-  const fill = (name: 'barcode' | 'item_code' | 'item_name' | 'description' | 'brand_id' | 'standard_rate', value: string) => {
-    if (value && (name === 'barcode' || !getValues(name))) setValue(name, value, { shouldDirty: true, shouldValidate: true });
+  // Whether it wrote anything: a label that filled nothing keeps the scan open on "No print found".
+  const fill = (name: 'barcode' | 'item_code' | 'description' | 'brand_id' | 'standard_rate', value: string) => {
+    if (!value || (name !== 'barcode' && getValues(name))) return false;
+    setValue(name, value, { shouldDirty: true, shouldValidate: true });
+    return true;
   };
   const scan = () => {
     openScan({
@@ -173,16 +213,29 @@ function ScanProduct({ form: { getValues, setValue }, brands, existing, fromSeri
       mode: 'item',
       onBarcode: (code) => {
         fill('barcode', code);
-        if (!existing && !fromSeries) fill('item_code', code);
-        return { type: 'info', text: `Barcode ${code}. Now read the label, or tap Done.` };
+        const coded = !existing && !fromSeries && fill('item_code', code);
+        return {
+          notice: { type: 'info', text: `Barcode ${code}. Now read the label, or tap Done.` },
+          entry: {
+            title: `Barcode ${code}`,
+            sub: coded ? 'In Barcode and Item Code' : 'In Barcode',
+            // Taken back: the fields it filled are emptied, unless something else has gone in since.
+            undo: () => {
+              if (getValues('barcode') === code) setValue('barcode', '', { shouldDirty: true, shouldValidate: true });
+              if (coded && getValues('item_code') === code) setValue('item_code', '', { shouldDirty: true });
+            },
+          },
+        };
       },
       onLabel: (lines) => {
         const label = readLabel(lines, brands);
-        fill('item_name', label.item_name);
-        fill('brand_id', label.brand_id);
-        fill('description', label.description);
-        if (priced) fill('standard_rate', label.standard_rate);
-        return Object.values(label).some(Boolean);
+        // A part this level hides is never filled behind the person's back.
+        const filled = [
+          shows('brand_id') && fill('brand_id', label.brand_id),
+          shows('description') && fill('description', label.description),
+          priced && fill('standard_rate', label.standard_rate),
+        ];
+        return filled.some(Boolean);
       },
     });
     router.push('/scan');
@@ -248,7 +301,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
   // Stock Settings' Item Naming By: a typed code, or the next name of the Item series.
   const fromSeries = !existing && records.stockSettings.item_naming_by === 'Naming Series';
 
-  const initial = existing ? saved(existing) : blank(records);
+  const initial = existing ? saved(existing, records.figures) : blank(records);
   const shows = partsShown(merchant.level, { code: !existing && !fromSeries, group: !initial.item_group_id, uom: !initial.stock_uom });
 
   const { control, handleSubmit, formState, getValues, setValue } = useForm<ItemValues>({
@@ -257,8 +310,28 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
     mode: 'onTouched',
   });
   const isStockItem = useWatch({ control, name: 'is_stock_item' });
+  const { dirtyFields } = useFormState({ control });
   const section = { control, records, disabled: !editable, shows };
-  const priced = !existing && can(permissions, 'Item Price', 'create');
+  // A new item's first price needs Item Price create; a saved one's price may be changed or written: write and create.
+  const priced = can(permissions, 'Item Price', 'create') && (!existing || can(permissions, 'Item Price', 'write'));
+  // Its stock: a submitted Stock Reconciliation, the Opening Stock of a new item or a count of a saved one.
+  const stocked = isStockItem && can(permissions, 'Stock Reconciliation', 'create') && can(permissions, 'Stock Reconciliation', 'submit');
+
+  // A saved item sends its price, stock and cost only when changed: a key left out is a figure left as it is. A cost
+  // changed alone still sends the stock, which the count it posts is of.
+  const send = (values: ItemValues): SavedItemValues => {
+    if (!existing) return values;
+    const { standard_rate, opening_stock, valuation_rate, ...rest } = values;
+    const counted = dirtyFields.opening_stock || dirtyFields.valuation_rate;
+    // undefined: left out of the request's JSON.
+    return {
+      ...rest,
+      standard_rate: dirtyFields.standard_rate ? standard_rate : undefined,
+      opening_stock: counted ? opening_stock : undefined,
+      valuation_rate: counted ? valuation_rate : undefined,
+    };
+  };
+  const submit = saveOnce(save, () => router.back());
 
   return (
     <View style={styles.fill}>
@@ -270,17 +343,16 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         mutation={save}
         // An item not yet saved always has something to check: Save names what is missing ("Enter a code.").
         dirty={!existing || formState.isDirty}
-        onSave={handleSubmit(saveOnce(save, () => router.back()))}
+        onSave={handleSubmit((values) => submit(send(values)))}
       >
-        {editable ? <ScanProduct form={{ getValues, setValue }} brands={records.brands} existing={existing} fromSeries={fromSeries} priced={priced} /> : null}
+        {editable ? <ScanProduct form={{ getValues, setValue }} brands={records.brands} existing={existing} fromSeries={fromSeries} priced={priced} shows={shows} /> : null}
         <Details
           {...section}
           plain={plainWords(merchant.level)}
           existing={existing}
           fromSeries={fromSeries}
           priced={priced}
-          // The Opening Stock is a Stock Reconciliation saved and submitted as the creator.
-          stocked={!existing && isStockItem && can(permissions, 'Stock Reconciliation', 'create') && can(permissions, 'Stock Reconciliation', 'submit')}
+          stocked={stocked}
         />
         <Sections {...section} merchant={merchant} existing={existing} isStockItem={isStockItem} readsStock={can(permissions, 'Bin', 'read')} />
       </PageForm>
@@ -356,9 +428,9 @@ type DetailsProps = SectionProps & {
   existing: Item | undefined;
   /** A new item under a naming series: its code comes from the series on Save. */
   fromSeries: boolean;
-  /** A new item whose creator may write its first price. */
+  /** Its reader may write its price: a new item's first, a saved one's own. */
   priced: boolean;
-  /** A new stock item whose creator may post its Opening Stock. */
+  /** A stock item whose reader may post its stock: a new item's Opening Stock, a saved one's count. */
   stocked: boolean;
 };
 
@@ -469,7 +541,8 @@ function Kind({ control, records, disabled, shows, existing }: DetailsProps) {
   );
 }
 
-// The price, stock and cost fields in a shop's words (levels 1-2) or the books' (src/features/merchants/levels.ts).
+// The price, stock and cost fields in a shop's words (levels 1-2) or the books' (src/features/merchants/levels.ts). A
+// saved item's stock is what it holds now, in either words: its Opening Stock is long past.
 const PLAIN_WORDS = {
   rate: 'Selling Price',
   stock: 'Stock on Hand',
@@ -485,56 +558,50 @@ const BOOK_WORDS = {
   costHint: 'What each unit cost; empty: the Standard Selling Rate',
 };
 
-/** Where a new item's Standard Selling Rate is written, or why it is written nowhere. */
-const rateHint = (plain: boolean, priceList: string | undefined) =>
-  plain ? 'What it sells for at the register' : priceList ? `Becomes its price in ${priceList}` : 'Selling Settings names no price list';
+/** Where the Standard Selling Rate is written, or why it is written nowhere. */
+const rateHint = (plain: boolean, priceList: string | undefined, saved: boolean) =>
+  plain ? 'What it sells for at the register' : !priceList ? 'Selling Settings names no price list' : saved ? `Its price in ${priceList}` : `Becomes its price in ${priceList}`;
 
-/** A new item's first price, and the stock it starts with (docs.frappe.io/erpnext/item 2.2, /opening-stock). */
-function FirstFigures({ control, records, disabled, plain, priced, stocked }: DetailsProps) {
-  const words = plain ? PLAIN_WORDS : BOOK_WORDS;
+/**
+ * The item's price, its stock and its cost (docs.frappe.io/erpnext/item 2.2, /opening-stock): on a new item, its first
+ * price and the stock it starts with; on a saved one, the same figures as they stand — changing them on Save changes its
+ * price and posts a stock count (the human, 2026-10-23). Read-only where its reader may not post them.
+ */
+function FirstFigures({ control, records, disabled, plain, priced, stocked, existing }: DetailsProps) {
+  const words = figureWords(plain, existing, records);
 
   return (
     <>
-      {/* docs.frappe.io/erpnext/item 2.2: read on creation only. */}
-      {priced ? (
-        <ControlledText
-          control={control}
-          name="standard_rate"
-          label={words.rate}
-          hint={rateHint(plain, records.sellingPriceList)}
-          placeholder="0"
-          keyboardType="decimal-pad"
-          maxLength={14}
-          disabled={disabled}
-        />
-      ) : null}
-      {/* docs.frappe.io/erpnext/item 2.2, /opening-stock: read on creation only, and posted with the item. */}
-      {stocked ? (
+      {priced || existing ? <FigureField control={control} name="standard_rate" label={words.rate} hint={words.rateHint} disabled={disabled || !priced} /> : null}
+      {/* Posted with the item, as a submitted Stock Reconciliation. A service keeps no stock. */}
+      {stocked || existing?.is_stock_item ? (
         <>
-          <ControlledText
-            control={control}
-            name="opening_stock"
-            label={words.stock}
-            hint={words.stockHint}
-            placeholder="0"
-            keyboardType="decimal-pad"
-            maxLength={14}
-            disabled={disabled}
-          />
-          <ControlledText
-            control={control}
-            name="valuation_rate"
-            label={words.cost}
-            hint={words.costHint}
-            placeholder="0"
-            keyboardType="decimal-pad"
-            maxLength={14}
-            disabled={disabled}
-          />
+          <FigureField control={control} name="opening_stock" label={words.stock} hint={words.stockHint} disabled={disabled || !stocked} />
+          <FigureField control={control} name="valuation_rate" label={words.cost} hint={words.costHint} disabled={disabled || !stocked} />
         </>
       ) : null}
     </>
   );
+}
+
+/** The figures' labels and hints in the level's words — and on a saved item, what changing one does. */
+function figureWords(plain: boolean, existing: Item | undefined, records: Records) {
+  const words = { ...(plain ? PLAIN_WORDS : BOOK_WORDS), rateHint: rateHint(plain, records.sellingPriceList, existing !== undefined) };
+  if (!existing) return words;
+
+  return {
+    ...words,
+    stock: 'Stock on Hand',
+    stockHint: `In ${records.figures.warehouse?.warehouse_name ?? 'its warehouse'} · changing it records a stock count`,
+    costHint: 'What each one cost; changing it records a stock count',
+  };
+}
+
+type FigureProps = { control: Control<ItemValues>; name: 'standard_rate' | 'opening_stock' | 'valuation_rate'; label: string; hint: string; disabled: boolean };
+
+/** One of the figures: a number field of the form. */
+function FigureField({ control, name, label, hint, disabled }: FigureProps) {
+  return <ControlledText control={control} name={name} label={label} hint={hint} placeholder="0" keyboardType="decimal-pad" maxLength={14} disabled={disabled} />;
 }
 
 /**

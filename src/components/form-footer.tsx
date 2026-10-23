@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FORM_MEASURE, useShellWide } from '../lib/columns';
+import { FORM_MEASURE, useBottomInset, useShellWide } from '../lib/columns';
 import type { Notice } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
@@ -18,14 +18,16 @@ import { NoteCallout } from './note-callout';
  * to the bottom draws behind the system navigation bar. The inset is read from context, not measured by a native
  * SafeAreaView, so a bar with another under it — a practice page above the Store Guide's bar — is given 0 there
  * (src/screens/guide/sandbox/index.tsx) instead of a gesture bar's gap above the bar below.
+ *
+ * `centered`: under a PageForm, whose column is centred on a tablet — the bar's content lines up with the fields.
  */
-export function FormFooter({ notice, children }: { notice: Notice | null; children: ReactNode }) {
+export function FormFooter({ notice, centered = false, children }: { notice: Notice | null; centered?: boolean; children: ReactNode }) {
   const { colors } = useAppTheme();
   const { bottom } = useSafeAreaInsets();
   return (
     <View style={[styles.footer, { paddingBottom: spacing.ms + bottom, borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
       {/* Held to the form's measure, as the fields above it are: a notice across a tablet is a line no one reads. */}
-      <View style={styles.measure}>
+      <View style={centered ? styles.centred : styles.measure}>
         {notice ? (
           <HelperText type={notice.type} padding="none">
             {notice.text}
@@ -55,7 +57,9 @@ type PageFormProps = {
 
 /**
  * A full-page form — the Company and the Settings singles: its fields scroll above FormFooter's Save. Held
- * to the single-column measure, left-aligned (.claude/instruction_mds/frontend.md rule 18, §9).
+ * to the single-column measure, the column centred in a pane wider than it — a tablet's — with its page header
+ * (PageHeader `form`) and its Save (the human, 2026-10-23; .claude/instruction_mds/frontend.md rule 18). With no
+ * Save (read-only), the end of the fields keeps clear of the system navigation bar.
  *
  * KeyboardAvoidingView: the Android build is edge-to-edge, so the window does not resize for the keyboard
  * (adaptive-dialog.tsx), and React Native only reports the keyboard (ReactRootView.java) — nothing makes
@@ -63,15 +67,16 @@ type PageFormProps = {
  */
 export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, saveLabel = 'Save', children }: PageFormProps) {
   const wide = useShellWide();
+  const bottom = useBottomInset();
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.fill}>
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.body, editable ? null : { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
         {editable ? null : <NoteCallout>{`You can see this page. ${readOnly}`}</NoteCallout>}
         {children}
       </ScrollView>
       {editable ? (
-        <FormFooter notice={notice}>
+        <FormFooter notice={notice} centered>
           <Button
             mode="contained"
             onPress={onSave}
@@ -91,9 +96,12 @@ export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, 
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  footer: { padding: spacing.ms, borderTopWidth: 1 },
+  // Its sides pad as a form's body does, so the bar's content starts where the fields do.
+  footer: { paddingTop: spacing.ms, paddingHorizontal: spacing.md, borderTopWidth: 1 },
   measure: { gap: spacing.sm, width: '100%', maxWidth: FORM_MEASURE },
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
+  // The body's content width (FORM_MEASURE less its padding), centred as the body is.
+  centred: { gap: spacing.sm, width: '100%', maxWidth: FORM_MEASURE - 2 * spacing.md, alignSelf: 'center' },
+  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE, alignSelf: 'center' },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   leading: { justifyContent: 'flex-start' },
   hug: { alignSelf: 'flex-start' },

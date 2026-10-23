@@ -16,6 +16,7 @@ import { fontScaled, RECEIPT_58MM, RECEIPT_80MM } from '../lib/columns';
 import { asRoundingMethod, formatMoney, formatNumber, moneyInWords } from '../lib/money';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
+import { Icon } from './icon';
 import { SampleLine } from './sample-box';
 import { Text } from './text';
 
@@ -62,6 +63,8 @@ type Props = {
   roundedTotal: number;
   /** After the totals: what was paid by each method, and the change. */
   payments?: { label: string; amount: number }[];
+  /** Over everything, under a success check: the store, and what just happened ("Refund successful"). A sale's page only. */
+  banner?: { title: string; subtitle?: string };
 };
 
 /** A line of the receipt, printed only when it has something to say. */
@@ -76,11 +79,22 @@ export function Printed({ text, variant, muted }: { text: string | undefined; va
   );
 }
 
+/** The success check: a 56dp circle in `successContainer`, centred over what it confirms. */
+export function SuccessMark() {
+  const { colors } = useAppTheme();
+
+  return (
+    <View style={[styles.mark, { backgroundColor: colors.successContainer }]}>
+      <Icon source="check" size={28} color={colors.success} />
+    </View>
+  );
+}
+
 /** The receipt's width on a roll; a page takes its container's own measure. */
-const paperWidth = (paper: string | undefined) =>
+export const paperWidth = (paper: string | undefined) =>
   paper === '58mm' ? { maxWidth: fontScaled(RECEIPT_58MM) } : paper === '80mm' ? { maxWidth: fontScaled(RECEIPT_80MM) } : null;
 
-export function Receipt({ records, format, letterHeadId, meta, items, taxes, discounts, netTotal, grandTotal, roundedTotal, payments }: Props) {
+export function Receipt({ records, format, letterHeadId, meta, items, taxes, discounts, netTotal, grandTotal, roundedTotal, payments, banner }: Props) {
   const { colors } = useAppTheme();
   const { settings, globals, system, currency } = records;
 
@@ -92,6 +106,7 @@ export function Receipt({ records, format, letterHeadId, meta, items, taxes, dis
 
   return (
     <View style={[styles.paper, { borderColor: colors.outlineVariant }, paperWidth(format.paper)]}>
+      <Banner banner={banner} />
       <Printed variant="bodyMedium" text={header?.content} />
       <Printed variant="titleMedium" text={format.print_heading?.trim()} />
       {meta?.map((line) => (
@@ -121,6 +136,19 @@ export function Receipt({ records, format, letterHeadId, meta, items, taxes, dis
       {footerNote || header?.footer ? rule : null}
       <Printed variant="bodyMedium" text={footerNote} />
       <Printed variant="bodySmall" text={header?.footer} />
+    </View>
+  );
+}
+
+/** The success check over the receipt, with the store and what just happened under it. Nothing for none. */
+function Banner({ banner }: { banner: Props['banner'] }) {
+  if (!banner) return null;
+
+  return (
+    <View style={styles.banner}>
+      <SuccessMark />
+      <Printed variant="titleMedium" text={banner.title} />
+      <Printed muted variant="bodySmall" text={banner.subtitle} />
     </View>
   );
 }
@@ -179,6 +207,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   paper: { borderWidth: 1, borderRadius: radius.lg, borderCurve: 'continuous', padding: spacing.ms, gap: spacing.sm },
   rule: { height: 1 },
+  banner: { alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.xs },
+  // A fixed-size control (.claude/instruction_mds/frontend.md §4.6): the check's circle.
+  mark: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   pair: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   label: { flexBasis: '34%' },
 });

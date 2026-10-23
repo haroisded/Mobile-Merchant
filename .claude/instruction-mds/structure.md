@@ -109,7 +109,7 @@ src/
     pricing-rules/        index.tsx  pricing-rule-form.tsx (a Setup-stack page)
     dashboard/            index.tsx  sales-chart.tsx — the Dashboard destination: one screen, no index
     sell/                 index.tsx — the Sell destination's index, with the session box
-    register/             index.tsx  cart.tsx  cart-line.tsx — the items, then the cart and its payment
+    register/             index.tsx  cart.tsx  cart-line.tsx — the products and the cart (tabs narrow, panes wide), the payment
     pos-orders/           index.tsx  pos-invoice.tsx  pos-return.tsx — the sales, one sale's receipt, its return
     pos-opening-entries/  index.tsx  open-session.tsx
     pos-closing-entries/  index.tsx  close-session.tsx  pos-closing-entry.tsx
@@ -118,7 +118,7 @@ src/
                           the Features page: hide screens and pages, with what each is for (the shell destination systems/[id]/features/)
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  level-picker.tsx (Create Store and Features)  step-header.tsx  progress-bar.tsx  radio-button.tsx  …
+  components/             text.tsx  button.tsx  bottom-spacer.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  level-picker.tsx (Create Store and Features)  step-header.tsx  progress-bar.tsx  radio-button.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
@@ -183,13 +183,14 @@ Anything with no table, schema or query key behind it.
 src/app/(app)/systems/[id]/_layout.tsx   the shell — expo-router Drawer, permanent when wide
 src/app/(app)/systems/[id]/index.tsx     Home
 src/app/(app)/systems/[id]/dashboard.tsx Dashboard — one screen, so a file and no Stack
-src/app/(app)/systems/[id]/sell/         Sell — its own Stack: index.tsx, open-session.tsx, register.tsx, cart.tsx,
-                                         pos-invoices.tsx, pos-invoice.tsx, pos-return.tsx, pos-opening-entries.tsx,
+src/app/(app)/systems/[id]/sell/         Sell — its own Stack: index.tsx, open-session.tsx, register.tsx (its cart beside
+                                         or behind a tab; the payment is sheets/checkout.tsx narrow), pos-invoices.tsx,
+                                         pos-invoice.tsx, pos-return.tsx, pos-opening-entries.tsx,
                                          pos-closing-entries.tsx, close-session.tsx, pos-closing-entry.tsx
 src/app/(app)/systems/[id]/stock/        Stock — its own Stack: index.tsx, items.tsx, item.tsx, item-prices.tsx,
                                          import-items.tsx, stock-entries.tsx, stock-entry.tsx, stock-reconciliations.tsx,
                                          stock-reconciliation.tsx, stock-balance.tsx, stock-ledger.tsx
-src/app/(app)/systems/[id]/accounts/     Accounts — its own Stack: index.tsx, general-ledger.tsx
+src/app/(app)/systems/[id]/accounts/     Accounts — its own Stack: index.tsx (the General Ledger itself), general-ledger.tsx
 src/app/(app)/systems/[id]/employees/    Employees, the owner's alone — its own Stack: index.tsx, employee.tsx, roles.tsx,
                                          role.tsx, permissions.tsx (a tablet's two panes)
 
@@ -198,7 +199,7 @@ returns there. So a page reached from another destination is re-exported into it
 `accounts/stock-entry.tsx`, `accounts/stock-reconciliation.tsx`, `accounts/stock-ledger.tsx` and
 `stock/general-ledger.tsx`; a sale's page lives in `sell/pos-invoice.tsx` and is re-exported as
 `stock/pos-invoice.tsx` and `accounts/pos-invoice.tsx` — and its return, `sell/pos-return.tsx`, the same way,
-so Return works wherever the sale was opened — while `sell/` re-exports both reports and the two stock
+so Refund works wherever the sale was opened (its Return to Register opens Sell's Register from there) — while `sell/` re-exports both reports and the two stock
 documents (`useVoucherRoutes`, `src/components/ledger-filters.tsx`). A document's page takes
 `docId`, whatever its type. Rejected: pushing into the other destination's stack — Back pops that stack.
 src/app/(app)/systems/[id]/setup/        Setup — its own Stack: index.tsx, then one route per record (company.tsx, fiscal-years.tsx)
@@ -213,8 +214,10 @@ lists it by `showsDestination` (`src/features/permissions/access.ts`): for whoev
 holds one of the permissions it names (`permissions`: the Dashboard's four, Sell's Open/Close Register), or for
 the owner alone (`ownerOnly`: Employees). Home always shows.
 
-Sheet routes (confirms, pickers) live in `src/app/(app)/sheets/`, and small-form routes (a page narrow,
-a Dialog wide) in `src/app/(app)/forms/` — both leaf screens of the `(app)` Stack.
+Sheet routes (confirms, pickers, the Register's payment `checkout.tsx`) live in `src/app/(app)/sheets/`, and
+small-form routes (a page narrow, a Dialog wide) in `src/app/(app)/forms/` — `profile.tsx` too, the Account tab's
+body as a Dialog on a tablet — both leaf screens of the `(app)` Stack. Create Store (`create-system.tsx`) takes the
+`forms/` options on a tablet.
 
 ## 6. Build order for a new feature
 

@@ -56,10 +56,6 @@ type HeaderProps = SharedProps &
 type SavedHeaderProps = SharedProps &
   Partial<DraftProps> & {
     document: SavedDocument;
-    /** After the status in the header's meta line: what else the document is ("Return against …"). */
-    note?: string;
-    /** The document's own actions (a sale's Return), after Submit and Delete. */
-    extra?: ReactNode[];
   };
 
 /**
@@ -165,17 +161,26 @@ function useReportActions(merchantId: string, name: string, allow: { stockLedger
 }
 
 /**
- * A saved document's header: Submit and Delete on a draft, Cancel on a submitted one, Delete again on a
- * cancelled one where Accounts Settings let its entries go, then the entries it posted.
+ * What a saved document's status and the reader's roles allow, the confirms that ask before each, and the reports of
+ * what it posted — for DocumentHeader, and for a page that lays them out itself (a POS Invoice, around its receipt).
  */
-export function DocumentHeader(props: SavedHeaderProps) {
-  const { merchantId, doctype, document, dirty = false, note, extra = [] } = props;
-  const { colors } = useAppTheme();
+export function useDocumentActions(props: SavedHeaderProps) {
+  const { merchantId, doctype, document } = props;
   // Every member reads Accounts Settings; until it loads, a cancelled document is kept.
   const keepsEntries = !useAccountsSettingsQuery({ merchantId }).data?.delete_linked_ledger_entries;
   const allow = allowed(usePermissions({ merchantId }).data, doctype, document.docstatus, keepsEntries);
-  const ask = useDocumentConfirms(props);
-  const reports = useReportActions(merchantId, document.name, allow);
+
+  return { allow, ask: useDocumentConfirms(props), reports: useReportActions(merchantId, document.name, allow) };
+}
+
+/**
+ * A saved document's header: Submit and Delete on a draft, Cancel on a submitted one, Delete again on a
+ * cancelled one where Accounts Settings let its entries go, then the entries it posted.
+ */
+function DocumentHeader(props: SavedHeaderProps) {
+  const { doctype, document, dirty = false } = props;
+  const { colors } = useAppTheme();
+  const { allow, ask, reports } = useDocumentActions(props);
   const status = allow.submit && dirty ? 'Draft · save your changes before submitting' : DOCSTATUS[document.docstatus];
 
   const actions = [
@@ -189,7 +194,6 @@ export function DocumentHeader(props: SavedHeaderProps) {
         Delete
       </Button>
     ) : null,
-    ...extra,
     allow.cancel ? (
       <Button key="cancel" mode="outlined" textColor={colors.error} icon="close" onPress={ask.cancel}>
         Cancel
@@ -200,7 +204,7 @@ export function DocumentHeader(props: SavedHeaderProps) {
 
   return (
     <>
-      <PageHeader kicker={doctype} title={document.name} meta={note ? `${status} · ${note}` : status} onBack={() => router.back()} actions={actions.length > 0 ? actions : null} />
+      <PageHeader kicker={doctype} title={document.name} meta={status} onBack={() => router.back()} actions={actions.length > 0 ? actions : null} form />
       {ask.dialog}
     </>
   );
@@ -224,7 +228,7 @@ export function DocumentPage({ draft, editable, save, onSave, children, ...heade
 
   return (
     <View style={styles.fill}>
-      {document ? <DocumentHeader {...header} document={document} /> : <PageHeader kicker={doctype} title={`New ${noun}`} meta="Not saved yet" onBack={() => router.back()} />}
+      {document ? <DocumentHeader {...header} document={document} /> : <PageHeader kicker={doctype} title={`New ${noun}`} meta="Not saved yet" onBack={() => router.back()} form />}
       <PageForm
         editable={editable}
         readOnly={draft ? `Changing it needs ${doctype} write.` : 'It is no longer a draft, so it stays as it was posted.'}

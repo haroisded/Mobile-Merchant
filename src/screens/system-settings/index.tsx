@@ -43,7 +43,7 @@ export function SystemSettingsScreen({ merchantId }: { merchantId: string }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="System Settings" meta="Time zone, number format and precision" onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="System Settings" meta="Time zone, number format and precision" onBack={() => router.back()} form />
       {settings.data && countries.data ? (
         <SettingsForm merchantId={merchantId} saved={settings.data} countries={countries.data} />
       ) : (

@@ -115,6 +115,7 @@ function TemplateHeader({ merchant, existing }: { merchant: Merchant; existing: 
         kicker="Sales Taxes and Charges Template"
         title={existing?.title ?? 'New template'}
         onBack={() => router.back()}
+        form
         actions={
           existing && can(permissions, 'Sales Taxes and Charges Template', 'delete') ? (
             <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>

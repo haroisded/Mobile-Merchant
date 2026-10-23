@@ -14,7 +14,7 @@ import { SectionHeading } from '../../../components/section-heading';
 import { RowBox } from '../../../components/row-box';
 import { Text } from '../../../components/text';
 import { TextInput } from '../../../components/text-input';
-import { useShellWide } from '../../../lib/columns';
+import { useBottomInset, useShellWide } from '../../../lib/columns';
 import { displayDate } from '../../../lib/dates';
 import { useAppTheme } from '../../../lib/theme';
 import { radius, spacing } from '../../../themes';
@@ -493,6 +493,7 @@ export function Orders() {
 export function SalePage() {
   const { store, params, back, did } = useSandbox();
   const [confirming, setConfirming] = useState(false);
+  const bottom = useBottomInset();
   const sale = store.sales.find((candidate) => candidate.id === params.saleId);
   if (!sale) {
     return (
@@ -516,7 +517,7 @@ export function SalePage() {
           actions={<SaleActions sale={sale} onCancel={() => setConfirming(true)} />}
         />
       </GuideTarget>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView contentContainerStyle={[styles.page, { paddingBottom: spacing.md + bottom }]}>
         <ReceiptBody sale={sale} />
       </ScrollView>
       {confirming ? <VoidDialog sale={sale} onClose={() => setConfirming(false)} /> : null}

@@ -24,7 +24,7 @@ export function PrintSettingsScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Print Settings" meta="What every printed receipt carries" onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Print Settings" meta="What every printed receipt carries" onBack={() => router.back()} form />
       {settings.data ? (
         <SettingsForm merchant={merchant} saved={settings.data} />
       ) : (

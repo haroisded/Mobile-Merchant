@@ -3,7 +3,7 @@ import Drawer from 'expo-router/drawer';
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../../../components/activity-indicator';
 import { Appbar } from '../../../../components/appbar';
@@ -18,7 +18,7 @@ import { useHiddenFeatures } from '../../../../features/feature-preferences/quer
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
 import { usePermissions } from '../../../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../../../features/system-settings/queries';
-import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../../lib/columns';
+import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useBottomInset, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import { useAppTheme } from '../../../../lib/theme';
 import { useSession } from '../../../../Store/StoreUser';
@@ -222,9 +222,12 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations, 
   }, [hiddenKey, active, navigation, id]);
   // The drawer always shows labels; the rail shows them only while expanded.
   const labelled = !wide || expanded;
+  // Scrolls, and ends above the navigation bar: eight rows and the badge outgrow a landscape tablet's height (~664dp
+  // above three-button navigation), and a large font scale outgrows a phone's — Features, the last row, stays reachable.
+  const bottom = useBottomInset();
 
   return (
-    <View>
+    <ScrollView contentContainerStyle={{ paddingBottom: bottom }}>
       {/* Narrow only: on the rail the name stands alone. */}
       <StoreBadge name={name} line={wide ? undefined : 'POS store'} wide={wide} labelled={labelled} />
 
@@ -251,7 +254,7 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations, 
           />
         ))}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

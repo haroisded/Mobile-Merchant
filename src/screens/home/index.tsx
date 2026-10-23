@@ -1,23 +1,24 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { Appbar } from '../../components/appbar';
 import { Avatar } from '../../components/avatar';
 import { BellAction } from '../../components/bell-action';
 import { Button } from '../../components/button';
+import { Icon } from '../../components/icon';
 import { RemoveSystemDialog } from '../../components/remove-system-dialog';
 import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { useMerchantsQuery } from '../../features/merchants/queries';
 import type { Merchant } from '../../features/merchants/queries';
-import { SYSTEM_CARD, useColumns, useShellWide } from '../../lib/columns';
+import { SYSTEM_CARD, useBottomInset, useColumns, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
-import { spacing } from '../../themes';
+import { radius, spacing } from '../../themes';
 import { CreateCard } from './create-card';
 import { PendingRequests } from './pending-requests';
 import { SystemCard } from './system-card';
@@ -39,6 +40,9 @@ export function HomeScreen() {
   // wide. The measured column count only sizes the grid.
   const narrow = !useShellWide();
   const numColumns = narrow ? 1 : columns;
+  // Wide, the floating toolbar lies over the list's end: the last row scrolls clear of it and of the navigation bar.
+  const bottom = useBottomInset(true);
+  const [toolbar, setToolbar] = useState(0);
 
   const systems = merchants.data ?? [];
   const owned = systems.filter((merchant) => merchant.owner_id === userId);
@@ -89,7 +93,7 @@ export function HomeScreen() {
           // key only changes when the container crosses a column boundary — a rotation or a
           // resize, which is already a full relayout — and it costs nothing the rest of the time.
           key={numColumns}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, narrow ? null : { paddingBottom: GUTTER + toolbar + bottom }]}
           ListHeaderComponent={<HomeHeader narrow={narrow} />}
           // The create card is always first, so the list is never empty: the load state goes under it.
           ListFooterComponent={
@@ -121,6 +125,7 @@ export function HomeScreen() {
       {/* Mounted only while rows are awaiting confirmation, which is what makes the typed-
           confirmation field empty again on every open with no reset logic. */}
       {removing ? <RemoveSystemDialog merchants={removing} onDismiss={() => setRemoving(null)} /> : null}
+      {narrow || selecting ? null : <HomeToolbar bottom={bottom} onHeight={setToolbar} />}
     </Surface>
   );
 }
@@ -163,7 +168,7 @@ function SelectionBar({ count, onClose, onSelectAll, onDelete }: SelectionBarPro
   );
 }
 
-/** The header: the logo and name, then Enter Access Code, Store Guide and the bell; wide adds Access Codes and Account. */
+/** The header: the logo and name, then — narrow — Enter Access Code and Store Guide, the bell; wide, the bell and Account. */
 function HomeBar({ narrow }: { narrow: boolean }) {
   return (
     <Appbar.Header>
@@ -179,15 +184,53 @@ function HomeBar({ narrow }: { narrow: boolean }) {
         <Avatar.Text label="" size={40} />
       </View>
       <Appbar.Content title="Merchant" />
-      {/* A code someone sent — the one way into their store — and the Store Guide, at every width. */}
-      <Appbar.Action icon="enter-code" onPress={() => router.push('/forms/enter-access-code')} accessibilityLabel="Enter Access Code" />
-      <Appbar.Action icon="help" onPress={() => router.push('/guide')} accessibilityLabel="Store Guide" />
-      {/* Wide, the tab bar is hidden: the key and the account icon are the ways to Access Codes and Account. */}
-      {narrow ? null : <Appbar.Action icon="key" onPress={() => router.navigate('/access-codes')} accessibilityLabel="Access Codes" />}
+      {/* A code someone sent — the one way into their store — and the Store Guide. Wide, they float in HomeToolbar. */}
+      {narrow ? <Appbar.Action icon="enter-code" onPress={() => router.push('/forms/enter-access-code')} accessibilityLabel="Enter Access Code" /> : null}
+      {narrow ? <Appbar.Action icon="help" onPress={() => router.push('/guide')} accessibilityLabel="Store Guide" /> : null}
       <BellAction onPress={() => router.push('/notifications')} />
-      {/* navigate, not push: the tab is a sibling in the same tab navigator. */}
-      {narrow ? null : <Appbar.Action icon="account-circle" onPress={() => router.navigate('/account')} accessibilityLabel="Account" />}
+      {/* Wide, the tab bar is hidden: Account opens as a Dialog over the stores (the forms/ profile route). */}
+      {narrow ? null : <Appbar.Action icon="account-circle" onPress={() => router.push('/forms/profile')} accessibilityLabel="Account" />}
     </Appbar.Header>
+  );
+}
+
+const TOOLS = [
+  { icon: 'enter-code', label: 'Enter Code', accessibilityLabel: 'Enter Access Code', open: () => router.push('/forms/enter-access-code') },
+  // navigate, not push: Access Codes is a sibling tab, hidden with the tab bar on a tablet.
+  { icon: 'key', label: 'Access Codes', accessibilityLabel: 'Access Codes', open: () => router.navigate('/access-codes') },
+  { icon: 'help', label: 'Store Guide', accessibilityLabel: 'Store Guide', open: () => router.push('/guide') },
+] as const;
+
+/**
+ * Wide only: Enter Access Code, Access Codes and the Store Guide, floating in a pill at the bottom centre over the
+ * stores (the human, 2026-10-23), above the navigation bar. Its height is reported so the list's end scrolls clear.
+ */
+function HomeToolbar({ bottom, onHeight }: { bottom: number; onHeight: (height: number) => void }) {
+  const { colors } = useAppTheme();
+
+  return (
+    <View pointerEvents="box-none" style={[styles.toolbarWrap, { bottom: spacing.md + bottom }]}>
+      <Surface
+        elevation={2}
+        style={[styles.toolbar, { borderColor: colors.outlineVariant }]}
+        onLayout={(event) => onHeight(event.nativeEvent.layout.height + spacing.md)}
+      >
+        {TOOLS.map((tool) => (
+          <Pressable
+            key={tool.label}
+            onPress={tool.open}
+            // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
+            android_ripple={{ color: colors.ripple, borderless: true }}
+            accessibilityRole="button"
+            accessibilityLabel={tool.accessibilityLabel}
+            style={styles.tool}
+          >
+            <Icon source={tool.icon} size={24} color={colors.onSurface} />
+            <Text variant="labelSmall">{tool.label}</Text>
+          </Pressable>
+        ))}
+      </Surface>
+    </View>
   );
 }
 
@@ -270,4 +313,9 @@ const styles = StyleSheet.create({
   // Insets from the bar's edge and from the title beside it — the circle is Avatar's own, not drawn
   // here. Paper spaces Appbar.Content only after its own action components, not after a View.
   logo: { paddingHorizontal: spacing.sm },
+  // A position over the list, not spacing between siblings.
+  toolbarWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  toolbar: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1, borderRadius: radius.xl, borderCurve: 'continuous' },
+  // A 48dp touch target at least (.claude/instruction_mds/frontend.md rule 19).
+  tool: { alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minWidth: 88, minHeight: 56, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
 });

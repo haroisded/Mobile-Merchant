@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 
+import { AdaptiveDialog } from '../../components/adaptive-dialog';
 import { Appbar } from '../../components/appbar';
 import { Button } from '../../components/button';
 import { CountryCurrencyFields } from '../../components/country-currency-fields';
@@ -11,6 +13,7 @@ import { HelperText } from '../../components/helper-text';
 import { LevelPicker } from '../../components/level-picker';
 import { QueryState } from '../../components/query-state';
 import { StepHeader } from '../../components/step-header';
+import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { TextInput } from '../../components/text-input';
 import { countryForTimeZone, useCountriesQuery } from '../../features/countries/queries';
@@ -20,12 +23,14 @@ import type { CurrencyPreset } from '../../features/currency-presets/queries';
 import { useCreateSystemMutation } from '../../features/merchants/queries';
 import { createStoreSchema } from '../../features/merchants/schema';
 import type { CreateStoreValues } from '../../features/merchants/schema';
-import { FORM_MEASURE, useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
 
 /**
- * Create Store, on the full-screen route (src/app/(app)/create-system.tsx) at every width, in two steps. A store is
+ * Create Store, in two steps: a full-screen route on a phone, a floating Dialog over the stores on a tablet (the
+ * route a transparentModal there, src/app/(app)/_layout.tsx; the human, 2026-10-23). The long Country list opens as a
+ * second Dialog over it, its search box over a list that scrolls inside (SearchSelect). A store is
  * ERPNext's Company with no branches, so step 1 is its setup wizard cut to three fields: name, country and currency —
  * no abbreviation, which only tells several companies apart. Step 2 is its level (src/features/merchants/levels.ts):
  * how much of the system it uses. Creating it sets up the rest (the store's first fiscal year, its chart of accounts,
@@ -36,25 +41,49 @@ type Props = { onDismiss: () => void };
 export function CreateSystem({ onDismiss }: Props) {
   const countries = useCountriesQuery();
   const currencies = useCurrencyPresetsQuery();
+  const wide = useShellWide();
+
+  const content =
+    countries.data && currencies.data ? (
+      <CreateForm countries={countries.data} currencies={currencies.data} onDismiss={onDismiss} />
+    ) : (
+      <View style={wide ? undefined : styles.state}>
+        <QueryState
+          query={countries.data ? currencies : countries}
+          offline="You're offline. Creating a store needs a connection."
+          failure="Couldn't load the list of countries. Try again."
+        />
+      </View>
+    );
+
+  if (wide) {
+    return (
+      <AdaptiveDialog asPage title="Create Store" onDismiss={onDismiss} onClose={onDismiss}>
+        {content}
+      </AdaptiveDialog>
+    );
+  }
 
   return (
-    <>
+    <Surface style={styles.fill}>
       <Appbar.Header>
         <Appbar.BackAction onPress={onDismiss} />
         <Appbar.Content title="Merchant" />
       </Appbar.Header>
-      {countries.data && currencies.data ? (
-        <CreateForm countries={countries.data} currencies={currencies.data} onDismiss={onDismiss} />
-      ) : (
-        <View style={styles.state}>
-          <QueryState
-            query={countries.data ? currencies : countries}
-            offline="You're offline. Creating a store needs a connection."
-            failure="Couldn't load the list of countries. Try again."
-          />
-        </View>
-      )}
-    </>
+      {content}
+    </Surface>
+  );
+}
+
+/** A step's fields: a page's scroll on a phone; on a tablet the Dialog's own scrolling body holds them. */
+function StepBody({ children }: { children: ReactNode }) {
+  const wide = useShellWide();
+  const bottom = useBottomInset();
+  if (wide) return <View style={styles.dialogBody}>{children}</View>;
+  return (
+    <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
+      {children}
+    </ScrollView>
   );
 }
 
@@ -62,8 +91,9 @@ type FormProps = Props & { countries: Country[]; currencies: CurrencyPreset[] };
 
 function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   const createSystem = useCreateSystemMutation();
+  const wide = useShellWide();
   // Wide, the button hugs its label: a 640dp primary button reads as a banner.
-  const buttonStyle = useShellWide() ? styles.hug : undefined;
+  const buttonStyle = wide ? styles.hug : undefined;
   // A paused write is queued, not in flight: it must not hold the button in its spinner while the
   // device is offline (.claude/instruction_mds/data-layer.md §5). The button still stays disabled (below).
   const inFlight = createSystem.isPending && !createSystem.isPaused;
@@ -110,8 +140,8 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   if (step === 1) {
     return (
       <>
-        <StepHeader index={1} count={2} title="Its level" backLabel="Back to the store" onBack={() => setStep(0)} />
-        <ScrollView contentContainerStyle={styles.body}>
+        <StepHeader index={1} count={2} title="Its level" backLabel="Back to the store" onBack={() => setStep(0)} flush={wide} />
+        <StepBody>
           <Text variant="headlineSmall">How much do you want to manage?</Text>
           <Text variant="bodyMedium">
             Pick how much of the system this store uses. A lower level sets more up for you and shows fewer screens. You can change it
@@ -137,7 +167,7 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
           <HelperText type={notice?.type ?? 'error'} visible={notice !== null}>
             {notice?.text}
           </HelperText>
-        </ScrollView>
+        </StepBody>
       </>
     );
   }
@@ -145,8 +175,8 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   return (
     <>
       {/* The first step has nothing before it: its back is greyed out, and the app bar's leaves. */}
-      <StepHeader index={0} count={2} title="Your store" backLabel="Back" onBack={() => undefined} />
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <StepHeader index={0} count={2} title="Your store" backLabel="Back" onBack={() => undefined} flush={wide} />
+      <StepBody>
         <Text variant="headlineSmall">Name your store</Text>
         <Text variant="bodyMedium">One store: its name, and the country and currency its books are kept in.</Text>
         <FieldGrid>
@@ -185,13 +215,15 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
         <Button mode="contained" style={buttonStyle} contentStyle={styles.leading} onPress={next}>
           Next
         </Button>
-      </ScrollView>
+      </StepBody>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
+  dialogBody: { gap: spacing.ms },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   leading: { justifyContent: 'flex-start' },
   // Capped at the single-column measure and left-aligned (.claude/instruction_mds/frontend.md rule 18, §9), so a

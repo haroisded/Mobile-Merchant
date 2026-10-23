@@ -14,9 +14,10 @@ import { useLedgerFilters } from '../../Store/ledger-filters';
 /**
  * The General Ledger (docs.frappe.io/erpnext/general-ledger): every debit and credit a submitted document
  * posted, newest first, narrowed by account, date and voucher. Read-only — only a posting writes it — and
- * each row opens the document it came from.
+ * each row opens the document it came from. `root`: Accounts' own first screen (the destination's root, no back arrow,
+ * the store as kicker); otherwise a report pushed from a document.
  */
-export function GeneralLedger({ merchant }: { merchant: Merchant }) {
+export function GeneralLedger({ merchant, root = false }: { merchant: Merchant; root?: boolean }) {
   const { from, to, account, voucher } = useLedgerFilters(merchant.id, 'general-ledger');
   const entries = useGlEntriesQuery({ merchantId: merchant.id, from, to, account, voucher });
   const names = useLedgerNames(merchant.id);
@@ -32,7 +33,12 @@ export function GeneralLedger({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Accounts" title="General Ledger" meta={ledgerMeta(entries.data?.length, 'entry', 'entries')} onBack={() => router.back()} />
+      <PageHeader
+        kicker={root ? merchant.name : 'Accounts'}
+        title="General Ledger"
+        meta={ledgerMeta(entries.data?.length, 'entry', 'entries')}
+        onBack={root ? undefined : () => router.back()}
+      />
       <LedgerFilterBar merchantId={merchant.id} report="general-ledger" names={names} />
       <RecordList
         query={entries}

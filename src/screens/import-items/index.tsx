@@ -21,7 +21,7 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useSellingSettingsQuery } from '../../features/selling-settings/queries';
 import { useStockSettingsQuery } from '../../features/stock-settings/queries';
 import { useUomsQuery } from '../../features/uoms/queries';
-import { FORM_MEASURE, useShellWide } from '../../lib/columns';
+import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
 import { failureMessage, itemRefusal, mutationNotice, postgrestError } from '../../lib/errors';
 import type { Notice } from '../../lib/errors';
 import { PickerUnavailableError, pickTextFile, saveTextFile } from '../../lib/files';
@@ -59,7 +59,7 @@ export function ImportItems({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Stock" title="Import Items" meta="Add many items at once from a CSV file" onBack={() => router.back()} />
+      <PageHeader kicker="Stock" title="Import Items" meta="Add many items at once from a CSV file" onBack={() => router.back()} form />
       {lookups ? <Importer merchantId={merchant.id} lookups={lookups} mayCreate={mayCreate} /> : null}
       {!lookups && waiting ? (
         <View style={styles.state}>
@@ -298,9 +298,10 @@ type ImportLogProps = {
 function ImportLog({ merchantId, created, sent, onAnother }: ImportLogProps) {
   const { colors } = useAppTheme();
   const wide = useShellWide();
+  const bottom = useBottomInset();
 
   return (
-    <ScrollView contentContainerStyle={styles.body}>
+    <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]}>
       <View style={styles.summary}>
         <Text variant="titleMedium">{`Imported ${counted(created.length, 'item')}`}</Text>
         <Text variant="bodySmall" style={{ color: colors.onSurfaceMuted }}>

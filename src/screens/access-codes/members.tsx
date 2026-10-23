@@ -82,6 +82,7 @@ export function Members() {
         />
       </View>
       <RecordList
+        underTabs
         query={{ ...members, data: found }}
         keyOf={(member) => member.id}
         columns={[

@@ -45,7 +45,7 @@ export function StockSettingsScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Stock Settings" meta="What new items start with, and how stock is valued" onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Stock Settings" meta="What new items start with, and how stock is valued" onBack={() => router.back()} form />
       {settings.data && groups.data && uoms.data && warehouses.data ? (
         <SettingsForm merchant={merchant} saved={settings.data} records={{ groups: groups.data, uoms: uoms.data, warehouses: warehouses.data }} />
       ) : (

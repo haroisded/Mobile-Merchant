@@ -108,6 +108,7 @@ export function Codes({ owned }: { owned: Merchant[] }) {
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
       </View>
       <RecordList
+        underTabs
         query={{ ...codes, data: found }}
         keyOf={(code) => code.id}
         columns={[

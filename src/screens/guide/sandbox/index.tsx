@@ -10,7 +10,7 @@ import { Button } from '../../../components/button';
 import { NavItem, StoreBadge } from '../../../components/shell-nav';
 import { Surface } from '../../../components/surface';
 import { Text } from '../../../components/text';
-import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useShellWide } from '../../../lib/columns';
+import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useBottomInset, useShellWide } from '../../../lib/columns';
 import { useAppTheme } from '../../../lib/theme';
 import { radius, spacing } from '../../../themes';
 import { AccountsIndex, GeneralLedger } from '../pages/accounts';
@@ -218,11 +218,12 @@ type NavProps = { role: Role; wide: boolean; labelled: boolean; active: string; 
 /** The rail or drawer: the practice store's badge, then the destinations this role reaches (menuFor). */
 function SandboxNav({ role, wide, labelled, active, onOpen }: NavProps) {
   const { colors } = useAppTheme();
+  const bottom = useBottomInset();
   return (
     <View style={[styles.fill, { backgroundColor: colors.primary }]}>
       <StoreBadge name={STORE_NAME} line="Practice store" wide={wide} labelled={labelled} />
       {/* Scrolls: the owner's nine destinations outgrow a landscape tablet's rail, and any menu at a large font size. */}
-      <ScrollView contentContainerStyle={styles.items}>
+      <ScrollView contentContainerStyle={[styles.items, { paddingBottom: bottom }]}>
         {menuFor(role).map((entry) => (
           <NavItem key={entry.name} label={entry.label} icon={entry.icon} wide={wide} labelled={labelled} active={entry.name === active} onPress={() => onOpen(entry.page)} />
         ))}

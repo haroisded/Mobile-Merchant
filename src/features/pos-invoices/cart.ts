@@ -604,3 +604,39 @@ export function returnPayload(
     payments: refunds.filter((refund) => refund.amount > 0).map((refund) => ({ mode_of_payment_id: refund.mode_of_payment_id, amount: -refund.amount })),
   };
 }
+
+/**
+ * Where a refund goes, the whole of it (the human, 2026-10-23: the Refund page asks no amounts): the method the sale
+ * was paid most by, of those the POS Profile allows in returns; else the profile's default where returns may use
+ * it; else the first that may. Undefined: returns may use none.
+ */
+export function refundMethod(
+  paid: { mode_of_payment_id: string; amount: number }[],
+  methods: { mode_of_payment_id: string; is_default: boolean; allow_in_returns: boolean }[]
+) {
+  const allowed = methods.filter((method) => method.allow_in_returns);
+  const largest = paid
+    .filter((payment) => allowed.some((method) => method.mode_of_payment_id === payment.mode_of_payment_id))
+    .reduce<{ mode_of_payment_id: string; amount: number } | undefined>((best, payment) => (best && best.amount >= payment.amount ? best : payment), undefined);
+  return largest?.mode_of_payment_id ?? (allowed.find((method) => method.is_default) ?? allowed[0])?.mode_of_payment_id;
+}
+
+// The Sell page's session figures (src/screens/sell/index.tsx).
+
+/**
+ * What a session's drawer holds now, as public.close_pos_session will expect it to: the Cash-type methods' opening
+ * amounts, and each submitted sale's and return's Cash-type payments, less its change — which the database takes
+ * off the sale's first Cash-type payment, else its first payment, so a sale paid with no cash gives none from here.
+ */
+export function drawerCash(
+  opening: { mode_of_payment_id: string; opening_amount: number }[],
+  invoices: { change_amount: number; pos_invoice_payments: { mode_of_payment_id: string; amount: number }[] }[],
+  isCash: (modeId: string) => boolean
+) {
+  const cash = (rows: { mode_of_payment_id: string; amount: number }[]) => rows.filter((row) => isCash(row.mode_of_payment_id)).reduce((sum, row) => sum + row.amount, 0);
+  const sold = invoices.reduce(
+    (sum, invoice) => sum + cash(invoice.pos_invoice_payments) - (invoice.pos_invoice_payments.some((payment) => isCash(payment.mode_of_payment_id)) ? invoice.change_amount : 0),
+    0
+  );
+  return cash(opening.map((row) => ({ mode_of_payment_id: row.mode_of_payment_id, amount: row.opening_amount }))) + sold;
+}

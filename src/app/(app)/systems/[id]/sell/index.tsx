@@ -10,5 +10,5 @@ export default function SellRoute() {
   const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === id);
   const userId = useSession()?.user.id;
 
-  return <SellIndex merchantId={id} merchantName={merchant?.name ?? ''} isOwner={merchant !== undefined && merchant.owner_id === userId} />;
+  return merchant ? <SellIndex merchant={merchant} isOwner={merchant.owner_id === userId} /> : null;
 }

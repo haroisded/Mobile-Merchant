@@ -13,7 +13,7 @@ import type { Merchant } from '../../features/merchants/queries';
 import { useDeleteRoleMutation } from '../../features/roles/queries';
 import { roleSchema } from '../../features/roles/schema';
 import type { RoleValues } from '../../features/roles/schema';
-import { useShellWide } from '../../lib/columns';
+import { useBottomInset, useShellWide } from '../../lib/columns';
 import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
@@ -72,11 +72,13 @@ export function RolesScreen({ merchant, isOwner }: { merchant: Merchant; isOwner
 function RoleRows({ data, selected, onOpen }: { data: EmployeesData; selected?: string; onOpen: (roleId: string) => void }) {
   const { colors } = useAppTheme();
   const held = (roleId: string) => data.members.filter((member) => member.role_id === roleId).length;
+  const bottom = useBottomInset();
 
   return (
     <FlatList
       data={data.roles}
       keyExtractor={(role) => role.id}
+      contentContainerStyle={{ paddingBottom: bottom }}
       ListEmptyComponent={<Text variant="bodyMedium" style={styles.state}>No roles yet. Make one, then give it to your employees.</Text>}
       renderItem={({ item: role }) => {
         const holders = held(role.id);

@@ -231,8 +231,16 @@ export function useVoucherRoutes(merchantId: string) {
     },
     /** The page a sale is returned from. */
     openReturn: (docId: string) => router.push({ pathname: `/systems/[id]/${destination}/pos-return`, params: { id: merchantId, docId } }),
-    /** A return just made, in place of the page that made it: Back from its receipt is the sale. */
-    showReturn: (docId: string) => router.replace({ pathname: `/systems/[id]/${destination}/pos-invoice`, params: { id: merchantId, docId } }),
+    /**
+     * After a sale or a refund: the Register. In Sell's stack it is popped back to — or, opened from Orders, put in
+     * the refund's place. From a ledger in another destination, the refund's page goes and Sell opens on the Register.
+     */
+    toRegister: () => {
+      const register = { pathname: '/systems/[id]/sell/register', params: { id: merchantId } } as const;
+      if (destination === 'sell') return router.dismissTo(register);
+      router.back();
+      router.navigate(register);
+    },
     /** A report narrowed first: to a document's own entries, or to one item's movements in one warehouse. */
     openReport: (report: 'general-ledger' | 'stock-ledger', filters: Partial<LedgerFilters>) => {
       setLedgerFilters(merchantId, report, { ...NO_FILTERS, ...filters });

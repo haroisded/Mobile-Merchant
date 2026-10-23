@@ -41,6 +41,7 @@ export function RecordPageHeader({ kicker, title, remove }: Props) {
         kicker={kicker}
         title={title}
         onBack={() => router.back()}
+        form
         actions={
           remove ? (
             <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(remove)}>

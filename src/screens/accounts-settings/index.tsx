@@ -31,7 +31,7 @@ export function AccountsSettingsScreen({ merchantId }: { merchantId: string }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Accounts Settings" meta="Cancellation, discounts and frozen dates" onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Accounts Settings" meta="Cancellation, discounts and frozen dates" onBack={() => router.back()} form />
       {settings.data && roles.data ? (
         <SettingsForm merchantId={merchantId} saved={settings.data} roles={roles.data} />
       ) : (

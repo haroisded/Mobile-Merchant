@@ -32,7 +32,7 @@ export function SellingSettingsScreen({ merchantId }: { merchantId: string }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Selling Settings" meta="The price list a sale starts on, and how prices may change" onBack={() => router.back()} />
+      <PageHeader kicker="Setup" title="Selling Settings" meta="The price list a sale starts on, and how prices may change" onBack={() => router.back()} form />
       {settings.data && priceLists.data ? (
         <SettingsForm merchantId={merchantId} saved={settings.data} priceLists={priceLists.data} />
       ) : (

@@ -1,6 +1,7 @@
 import { createContext, use, useState } from 'react';
 import { PixelRatio, useWindowDimensions } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ponytail: one number, tune it on a real tablet.
 //
@@ -28,6 +29,8 @@ export const RAIL_COLLAPSED = 72; // icons only, after the menu action
 // The narrow shell's off-canvas drawer. A multiple of 8 so it is whole pixels at the 1.75-3.5 densities: at 300 a
 // 2.625 phone lays it 787.5px wide, and the closed drawer, translated by that, leaves a 1px sliver at the left edge.
 export const DRAWER_WIDTH = 304;
+// The product scan's panel beside the camera on a tablet: its hint, buttons and Scanned list.
+export const SCAN_PANEL = 380;
 
 // The Home systems grid's card: three across a 1180dp tablet, four at 1440, five at 1920. A system card
 // carries two buttons under its name, so it is wider than MIN_CARD.
@@ -49,6 +52,21 @@ export const RECEIPT_80MM = 336;
 export const ShellWideContext = createContext(false);
 
 export const useShellWide = () => use(ShellWideContext);
+
+/**
+ * How far the end of a scrolling page or a floating control keeps above the system navigation bar. The Android
+ * build is edge-to-edge, so the bar — three buttons, or the gesture handle — lies over the window's bottom; the
+ * last row or button of a page that ignores it sits under the Back / Home / Recents buttons.
+ *
+ * `underTabs`: a (tabs) screen. On a phone the tab bar sits over the navigation bar and pads itself, while Android
+ * still reports the bar's height here (expo-router adds no SafeAreaProvider under its tabs there) — a second gap.
+ * On a tablet the tab bar is hidden, and the page meets the navigation bar itself.
+ */
+export function useBottomInset(underTabs = false) {
+  const { bottom } = useSafeAreaInsets();
+  const wide = useShellWide();
+  return underTabs && !wide ? 0 : bottom;
+}
 
 /**
  * A width that holds text, grown with the OS font scale up to the Text wrapper's 1.5 cap on scanned
