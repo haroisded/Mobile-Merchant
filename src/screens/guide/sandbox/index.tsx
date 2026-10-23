@@ -17,7 +17,7 @@ import { AccountsIndex, GeneralLedger } from '../pages/accounts';
 import { Dashboard } from '../pages/dashboard';
 import { STORE_NAME } from '../pages/frame';
 import { AccessCodes, EmployeePage, Employees, FeaturesPage, HomePage, StoreLevel } from '../pages/owner';
-import { CartPage, ClosingEntries, CloseSession, OpeningEntries, OpenSession, Orders, ReceiptPage, Register, ReturnPage, SalePage, ScanSell, SellIndex } from '../pages/sell';
+import { ClosingEntries, CloseSession, OpeningEntries, OpenSession, Orders, RegisterPage, ReturnPage, SalePage, ScanSell, SellPage } from '../pages/sell';
 import { SetupForm, SetupIndex, SetupList } from '../pages/setup';
 import { ImportPage, ItemPage, ItemPricePage, ItemPrices, Items, ReconPage, Recons, ScanItem, StockBalance, StockEntries, StockEntryPage, StockIndex, StockLedger } from '../pages/stock';
 import { roleById } from '../roles';
@@ -136,7 +136,7 @@ function PracticeStore({ role }: { role: Role }) {
           <PageView key={`${history.length}-${current.page}`} page={current.page} />
         </View>
       </SafeAreaInsetsContext>
-      <TourBar tour={tour} page={current.page} wide={wide} />
+      <TourBar tour={tour} page={current.page} />
     </View>
   );
 
@@ -196,7 +196,7 @@ function SandboxLayout({ wide, expanded, drawerOpen, setDrawerOpen, nav, childre
 }
 
 /** The guided task's bar, while a task runs. */
-function TourBar({ tour, page, wide }: { tour: ReturnType<typeof useTour>; page: Page; wide: boolean }) {
+function TourBar({ tour, page }: { tour: ReturnType<typeof useTour>; page: Page }) {
   const { tour: running, step } = tour;
   if (!running || !step) return null;
   return (
@@ -205,8 +205,7 @@ function TourBar({ tour, page, wide }: { tour: ReturnType<typeof useTour>; page:
       step={step}
       index={running.step}
       count={tour.count}
-      // On a tablet the cart is the Register's right pane, so a cart step is on the Register page.
-      elsewhere={step.page !== page && !(wide && step.page === 'cart' && page === 'register')}
+      elsewhere={step.page !== page}
       onRestart={() => tour.start(running.task)}
       onStop={tour.stop}
     />
@@ -251,12 +250,12 @@ function SandboxPops({ role, pop, done, setPop, onStart }: PopsProps) {
 const PAGES = {
   home: <HomePage />,
   dashboard: <Dashboard />,
-  sell: <SellIndex />,
+  sell: <SellPage />,
   'open-session': <OpenSession />,
-  register: <Register />,
-  cart: <CartPage />,
+  register: <RegisterPage />,
   'scan-sell': <ScanSell />,
-  receipt: <ReceiptPage />,
+  // The sale's page opened by the sale just made: its own page key, as a cashier opens it without Orders' permissions.
+  receipt: <SalePage after />,
   orders: <Orders />,
   sale: <SalePage />,
   return: <ReturnPage />,

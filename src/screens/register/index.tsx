@@ -42,7 +42,7 @@ export function Register({ merchant }: { merchant: Merchant }) {
   return <Counter merchant={merchant} session={session} profile={profile} />;
 }
 
-type Pane = 'items' | 'cart';
+export type Pane = 'items' | 'cart';
 
 function Counter({ merchant, session, profile }: { merchant: Merchant; session: PosOpeningEntry; profile: PosProfile }) {
   const wide = useShellWide();
@@ -162,7 +162,7 @@ function scanIntoCart(code: string, sessionId: string, sale: SaleData, offer: Of
  * Which pane a phone shows. A sale completed or the cart cleared: the next sale starts from the products — adjusted
  * while rendering, as React has a changed prop adjust state, not in an effect a frame later.
  */
-function usePane(empty: boolean) {
+export function usePane(empty: boolean) {
   const [pane, setPane] = useState<Pane>('items');
   const [wasEmpty, setWasEmpty] = useState(empty);
   if (empty !== wasEmpty) {
@@ -237,7 +237,7 @@ function OrderBar({ session, profile, sale, money, onPay }: BarProps) {
 }
 
 /** One item to sell: its name and facts, and the circle that says whether it is in the cart — + to add, ✓ once in. */
-function ProductRow({ name, facts, picked, onPress }: { name: string; facts: string; picked: boolean; onPress: () => void }) {
+export function ProductRow({ name, facts, picked, onPress }: { name: string; facts: string; picked: boolean; onPress: () => void }) {
   const { colors } = useAppTheme();
 
   return (
@@ -266,7 +266,7 @@ function ProductRow({ name, facts, picked, onPress }: { name: string; facts: str
 }
 
 /** Narrow: the Products and Cart tabs under the page header, the cart's line count on its own. */
-function PaneTabs({ pane, count, onPane }: { pane: Pane; count: number; onPane: (pane: Pane) => void }) {
+export function PaneTabs({ pane, count, onPane }: { pane: Pane; count: number; onPane: (pane: Pane) => void }) {
   const { colors } = useAppTheme();
   const tabs: { value: Pane; label: string }[] = [
     { value: 'items', label: 'Products' },

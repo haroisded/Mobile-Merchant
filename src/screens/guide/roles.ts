@@ -278,6 +278,6 @@ export const LIMITS: { topic: string; detail: string }[] = [
   {
     topic: 'Store level',
     detail:
-      'Employees appears from Level 3, General Ledger from Level 4, Chart of Accounts and Tax Rules only at Level 5. A person with the permission can turn a hidden screen on in Features.',
+      'Accounts and its General Ledger show from Level 1, Employees from Level 3, Chart of Accounts and Tax Rules only at Level 5. A person with the permission can turn a hidden screen on in Features.',
   },
 ];

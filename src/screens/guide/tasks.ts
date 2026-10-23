@@ -12,7 +12,6 @@ export type Page =
   | 'sell'
   | 'open-session'
   | 'register'
-  | 'cart'
   | 'scan-sell'
   | 'receipt'
   | 'orders'
@@ -76,7 +75,6 @@ export const PAGE_RULES = {
   sell: { destination: 'sell', any: ['open_close_register', ...ORDERS, 'view_shift_totals', 'close_any_register'] },
   'open-session': { destination: 'sell', any: ['open_close_register'] },
   register: { destination: 'sell', any: SELLING },
-  cart: { destination: 'sell', any: SELLING },
   'scan-sell': { destination: 'sell', any: SELLING },
   receipt: { destination: 'sell', any: [...SELLING, ...ORDERS] },
   orders: { destination: 'sell', any: ORDERS },
@@ -140,8 +138,11 @@ export const T = {
   registerItem: 'register:item',
   registerScan: 'register:scan',
   registerCart: 'register:cart',
+  registerPay: 'register:pay',
   scanBarcode: 'scan:barcode',
   scanDone: 'scan:done',
+  cartMore: 'cart:more',
+  cartChip: 'cart:chip',
   cartDiscount: 'cart:discount',
   cartComplete: 'cart:complete',
   receiptDone: 'receipt:done',
@@ -150,6 +151,7 @@ export const T = {
   saleCancel: 'sale:cancel',
   saleBack: 'sale:back',
   returnComplete: 'return:complete',
+  returnSave: 'return:save',
   closeCounted: 'close:counted',
   closeSubmit: 'close:submit',
   openingsOpenRow: 'openings:open-row',
@@ -207,7 +209,7 @@ export type Step = {
   target: Target;
   title: string;
   body: string;
-  /** Only on a phone: the tablet shows what this step opens beside the page already (the Register's cart). */
+  /** Only on a phone: the tablet shows what this step opens beside the page already (the Register's Cart tab). */
   narrowOnly?: true;
 };
 
@@ -255,7 +257,7 @@ export const TASKS: Task[] = [
     needs: ['open_close_register'],
     prepare: 'no-session',
     steps: [
-      { page: 'sell', target: T.sellOpen, title: 'Open a session', body: 'In Sell, tap Open Session in the box at the top.' },
+      { page: 'sell', target: T.sellOpen, title: 'Open a session', body: 'In Sell, tap Open Session in the session card.' },
       { page: 'open-session', target: T.openAmount, title: 'Count your drawer', body: 'Type the cash in your drawer in the CASH field — for example 500.' },
       { page: 'open-session', target: T.openSubmit, title: 'Start the shift', body: 'Tap Open Session at the bottom.' },
     ],
@@ -263,17 +265,19 @@ export const TASKS: Task[] = [
   {
     id: 'ring-sale',
     title: 'Ring up a sale',
-    line: 'Sell two items: add them at the Register, then take payment in the Cart.',
+    line: 'Sell two items: tick them at the Register, set a quantity in the cart, then take payment.',
     done: 'A real sale takes the stock out of the warehouse and posts to the books at once. Its receipt reopens from Orders.',
     needs: ['process_sales'],
     prepare: 'session',
     steps: [
-      { page: 'sell', target: T.sellRegister, title: 'Go to the Register', body: 'In Sell, tap Register in the session box.' },
-      { page: 'register', target: T.registerItem, title: 'Add an item', body: 'Tap an item in the list — each tap adds one.' },
-      { page: 'register', target: T.registerItem, title: 'Add another', body: 'Tap the same item again, or a different one.' },
-      { page: 'register', target: T.registerCart, title: 'Open the cart', body: 'Tap the Cart bar at the bottom.', narrowOnly: true },
-      { page: 'cart', target: T.cartComplete, title: 'Take payment', body: 'Cash is filled with the total. Tap Complete Order.' },
-      { page: 'receipt', target: T.receiptDone, title: 'Read the receipt', body: 'This is the receipt the customer gets. Tap Done.' },
+      { page: 'sell', target: T.sellRegister, title: 'Go to the Register', body: 'In Sell, tap Register in the session card.' },
+      { page: 'register', target: T.registerItem, title: 'Add an item', body: 'Tap an item: it goes into the cart at one, with a tick. Tapping it again takes it out.' },
+      { page: 'register', target: T.registerItem, title: 'Add another', body: 'Tap a different item.' },
+      { page: 'register', target: T.registerCart, title: 'Open the cart', body: 'Tap the Cart tab at the top.', narrowOnly: true },
+      { page: 'register', target: T.cartMore, title: 'Sell two', body: "Tap + on a card's quantity: two of that item." },
+      { page: 'register', target: T.registerPay, title: 'Take payment', body: 'Tap Complete Order at the bottom.' },
+      { page: 'register', target: T.cartComplete, title: 'Complete the order', body: 'Cash is filled with the total, or tap a quick amount. Tap Complete Order.' },
+      { page: 'receipt', target: T.receiptDone, title: 'Read the receipt', body: 'This is the receipt the customer gets. Tap Return to Register.' },
     ],
   },
   {
@@ -284,10 +288,10 @@ export const TASKS: Task[] = [
     needs: ['process_sales'],
     prepare: 'session',
     steps: [
-      { page: 'sell', target: T.sellRegister, title: 'Go to the Register', body: 'In Sell, tap Register in the session box.' },
+      { page: 'sell', target: T.sellRegister, title: 'Go to the Register', body: 'In Sell, tap Register in the session card.' },
       { page: 'register', target: T.registerScan, title: 'Open the scanner', body: 'Tap the barcode button beside the search box.' },
       { page: 'scan-sell', target: T.scanBarcode, title: 'Point at a barcode', body: 'This practice camera has a barcode ready: tap Show a Barcode.' },
-      { page: 'scan-sell', target: T.scanDone, title: 'Back to the Register', body: 'The line says what was added. Tap Done.' },
+      { page: 'scan-sell', target: T.scanDone, title: 'Back to the Register', body: 'The Scanned list shows what went into the cart; its ✕ takes it back out. Tap Done.' },
     ],
   },
   {
@@ -299,25 +303,27 @@ export const TASKS: Task[] = [
     prepare: 'cart-line',
     steps: [
       { page: 'sell', target: T.sellRegister, title: 'Go to the Register', body: 'A coffee is already in the cart. In Sell, tap Register.' },
-      { page: 'register', target: T.registerCart, title: 'Open the cart', body: 'Tap the Cart bar at the bottom.', narrowOnly: true },
-      { page: 'cart', target: T.cartDiscount, title: 'Type the discount', body: 'Type 10 in Discount (%). Watch the totals change.' },
-      { page: 'cart', target: T.cartComplete, title: 'Take payment', body: 'Tap Complete Order.' },
-      { page: 'receipt', target: T.receiptDone, title: 'Read the receipt', body: 'The discount is on the receipt. Tap Done.' },
+      { page: 'register', target: T.registerCart, title: 'Open the cart', body: 'Tap the Cart tab at the top.', narrowOnly: true },
+      { page: 'register', target: T.cartChip, title: 'Open the discount', body: "Tap Discount on the coffee's card." },
+      { page: 'register', target: T.cartDiscount, title: 'Type the discount', body: 'Type 10 in Discount (%). Watch the line and the total change.' },
+      { page: 'register', target: T.registerPay, title: 'Take payment', body: 'Tap Complete Order at the bottom.' },
+      { page: 'register', target: T.cartComplete, title: 'Complete the order', body: 'Tap Complete Order.' },
+      { page: 'receipt', target: T.receiptDone, title: 'Read the receipt', body: 'The discount is on the receipt. Tap Return to Register.' },
     ],
   },
   {
     id: 'return',
     title: 'Take a return',
     line: 'A customer brings items back: find their sale and refund it.',
-    done: 'In a real store a return goes into your own open session, and the refund uses only the payment methods that allow returns.',
+    done: 'In a real store a refund goes into your own open session, all of it back by one payment method that allows returns.',
     needs: ['process_refunds'],
     prepare: 'session',
     steps: [
       { page: 'sell', target: T.sellOrders, title: 'Find the sale', body: 'Tap Orders in Sell.' },
       { page: 'orders', target: T.ordersSale, title: 'Open it', body: 'Tap a sale marked SUBMITTED.' },
-      { page: 'sale', target: T.saleReturn, title: 'Start the return', body: 'Tap Return at the top.' },
-      { page: 'return', target: T.returnComplete, title: 'Refund it', body: 'Everything left on the sale comes back. Tap Complete Return.' },
-      { page: 'receipt', target: T.receiptDone, title: 'The return receipt', body: 'Amounts are below zero: money handed back. Tap Done.' },
+      { page: 'sale', target: T.saleReturn, title: 'Start the refund', body: 'Tap Refund under the receipt.' },
+      { page: 'return', target: T.returnComplete, title: 'Approve it', body: 'Everything left on the sale is filled in; change a quantity if less comes back. Tap Approve Refund.' },
+      { page: 'return', target: T.returnSave, title: 'Save it', body: "The refund's receipt shows. Nothing is saved yet: tap Return to Register." },
     ],
   },
   {
@@ -330,7 +336,7 @@ export const TASKS: Task[] = [
     steps: [
       { page: 'sell', target: T.sellOrders, title: 'Find the sale', body: 'Tap Orders in Sell.' },
       { page: 'orders', target: T.ordersSale, title: "Open today's sale", body: "Tap one of today's sales by Ana Reyes." },
-      { page: 'sale', target: T.saleCancel, title: 'Cancel it', body: 'Tap the red Cancel at the top.' },
+      { page: 'sale', target: T.saleCancel, title: 'Cancel it', body: 'Tap the red Cancel under the receipt.' },
       { page: 'sale', target: T.confirmYes, title: 'Confirm', body: 'Tap Cancel Sale in the box that opens.' },
     ],
   },
@@ -378,7 +384,7 @@ export const TASKS: Task[] = [
     needs: ['open_close_register'],
     prepare: 'session',
     steps: [
-      { page: 'sell', target: T.sellClose, title: 'Close the session', body: 'In Sell, tap Close Session in the box at the top.' },
+      { page: 'sell', target: T.sellClose, title: 'Close the session', body: 'In Sell, tap Close Session in the session card.' },
       { page: 'close-session', target: T.closeCounted, title: 'Count your drawer', body: 'Type the cash you counted in the CASH field.' },
       { page: 'close-session', target: T.closeSubmit, title: 'Close it', body: 'Tap Close Session at the bottom.' },
     ],
@@ -559,5 +565,5 @@ export function tasksFor(role: Role): Task[] {
   return TASKS.filter((task) => !task.owner && !task.noRole && task.needs.some((key) => role.permissions.includes(key)));
 }
 
-/** A task's steps at this width: a phone opens the Register's cart as a page, a tablet shows it beside the items. */
+/** A task's steps at this width: a phone opens the Register's Cart tab, a tablet shows the cart beside the items. */
 export const stepsAt = (task: Task, wide: boolean) => task.steps.filter((step) => !(wide && step.narrowOnly));

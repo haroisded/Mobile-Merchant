@@ -73,7 +73,7 @@ export function NumberField({ label, hint, value, placeholder, onChange, blank, 
 }
 
 /** The line's quantity: − and + a whole one at a time, down to 1, and the field between them for any other number. */
-function Stepper({ value, unit, onChange }: { value: number; unit: string; onChange: (qty: number) => void }) {
+export function Stepper({ value, unit, onChange }: { value: number; unit: string; onChange: (qty: number) => void }) {
   const { colors } = useAppTheme();
   const number = useNumberText(value, (qty) => onChange(qty ?? 1), false, 0.000001);
 
@@ -198,7 +198,7 @@ function UnitSelect({ item, value, unitName, onChange }: UnitProps) {
 }
 
 /** The line's Discount chip, with an "on" badge while a typed rate or discount stands in for the price list's. */
-function DiscountChip({ open, on, onPress }: { open: boolean; on: boolean; onPress: () => void }) {
+export function DiscountChip({ open, on, onPress }: { open: boolean; on: boolean; onPress: () => void }) {
   const { colors } = useAppTheme();
 
   return (

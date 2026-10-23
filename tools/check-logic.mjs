@@ -34,11 +34,15 @@ import {
   newRecon,
   openSession,
   prepare,
+  removeFromCart,
+  returnable,
   returnSale,
   setCount,
   setDiscount,
+  setQty,
   submitEntry,
   submitRecon,
+  takeFromCart,
   totals,
   voidRefusal,
   voidSale,
@@ -796,22 +800,34 @@ assert.deepEqual([plainWords(1), plainWords(2), plainWords(3)], [true, true, fal
   assert.equal(tasksFor(roleById('cash-custodian')).some((task) => task.id === 'ring-sale'), false);
   assert.equal(new Set(TASKS.map((task) => task.id)).size, TASKS.length);
   for (const permission of PERMISSIONS) assert.ok(TASKS.some((task) => task.needs.includes(permission.key)), `no task practises ${permission.label}`);
-  // A tablet shows the cart beside the Register, so its sale has one step fewer.
+  // A tablet shows the cart beside the products, so its sale has one step fewer: no Cart tab.
   const ringSale = TASKS.find((task) => task.id === 'ring-sale');
   assert.equal(stepsAt(ringSale, true).length + 1, stepsAt(ringSale, false).length);
 
   // The practice store (sandbox-state.ts): a sale, its return, a void, a close, the stock documents.
-  assert.deepEqual(totals([{ code: 'x', name: 'x', qty: 2, rate: 12 }], 10), { gross: 24, off: 2.4, net: 21.6, tax: 2.59, total: 24.19, rounded: 24 });
+  assert.deepEqual(totals([{ code: 'x', name: 'x', qty: 2, rate: 12, discount: 10 }]), { gross: 24, off: 2.4, net: 21.6, tax: 2.59, total: 24.19, rounded: 24 });
+  // Each line's own discount: 10% off the first only.
+  assert.equal(totals([{ code: 'x', name: 'x', qty: 2, rate: 12, discount: 10 }, { code: 'y', name: 'y', qty: 1, rate: 48 }]).net, 69.6);
   let practice = initialStore();
   assert.equal(completeOrder(practice), null); // no session
   practice = openSession(practice, 500);
   assert.equal(openSession(practice, 100), practice); // one session at a time
   practice = addToCart(addToCart(addToCart(practice, 'ITEM-0001'), 'ITEM-0001'), 'ITEM-0004');
+  // The Register's controls: a row toggled off drops the line; the stepper holds 1 at least; a scan taken back is one less.
+  assert.deepEqual(removeFromCart(practice, 'ITEM-0004').cart.map((entry) => entry.code), ['ITEM-0001']);
+  assert.equal(setQty(practice, 'ITEM-0001', 0).cart[0].qty, 1);
+  assert.equal(takeFromCart(practice, 'ITEM-0001').cart[0].qty, 1);
+  assert.equal(takeFromCart(takeFromCart(practice, 'ITEM-0001'), 'ITEM-0001').cart.length, 1);
   const sold = completeOrder(practice);
   assert.equal(sold.store.sales.at(-1).total, 81); // 2 × 12 + 48 = 72, VAT 8.64 → 80.64 → 81
   assert.equal(sold.store.items.find((item) => item.code === 'ITEM-0001').stock, 46);
   assert.deepEqual(sold.store.cart, []);
   assert.equal(expectedCash(sold.store, sold.store.mine), 581);
+  // A refund of less than was sold, and of more than is left.
+  assert.equal(returnSale(sold.store, sold.id, { 'ITEM-0001': 3 }), null);
+  const part = returnSale(sold.store, sold.id, { 'ITEM-0001': 1, 'ITEM-0004': 0 });
+  assert.deepEqual(part.store.sales.at(-1).lines.map((line) => [line.code, line.qty]), [['ITEM-0001', -1]]);
+  assert.deepEqual(returnable(part.store, sold.id).map((line) => [line.code, line.qty]), [['ITEM-0001', 1], ['ITEM-0004', 1]]);
   const back = returnSale(sold.store, sold.id);
   assert.equal(back.store.sales.at(-1).total, -81);
   assert.equal(back.store.items.find((item) => item.code === 'ITEM-0001').stock, 48);
@@ -842,7 +858,11 @@ assert.deepEqual([plainWords(1), plainWords(2), plainWords(3)], [true, true, fal
   // Preparing a task: no session for Open Session, a line in the cart for a discount.
   assert.equal(prepare(practice, 'no-session').mine, null);
   assert.equal(prepare(initialStore(), 'cart-line').cart.length, 1);
-  assert.equal(setDiscount(practice, 150).discount, 100);
+  assert.equal(setDiscount(prepare(initialStore(), 'cart-line'), 'ITEM-0001', 150).cart[0].discount, 100);
+  // A discounted line sells, and its refund gives back the discounted figures.
+  const discounted = completeOrder(setDiscount(prepare(initialStore(), 'cart-line'), 'ITEM-0001', 10));
+  assert.equal(discounted.store.sales.at(-1).net, 10.8);
+  assert.equal(returnSale(discounted.store, discounted.id).store.sales.at(-1).net, -10.8);
 }
 
 console.log('check:logic — all assertions passed.');

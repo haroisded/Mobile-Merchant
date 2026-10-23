@@ -13,7 +13,8 @@ export const ME = 'You';
 const VAT = 0.12;
 
 export type Item = { code: string; name: string; barcode: string; group: string; price: number; stock: number; cost: number; reorder: number };
-export type OrderLine = { code: string; name: string; qty: number; rate: number };
+/** A line as sold: `discount` is its Discount (%), off the rate (the cart card's chip). */
+export type OrderLine = { code: string; name: string; qty: number; rate: number; discount?: number };
 export type Order = {
   id: string;
   number: string;
@@ -21,7 +22,6 @@ export type Order = {
   cashier: string;
   sessionId: string;
   lines: OrderLine[];
-  discount: number;
   net: number;
   tax: number;
   total: number;
@@ -46,9 +46,8 @@ export type Store = {
   sessions: Session[];
   /** The session the person practising has open, if any. */
   mine: string | null;
-  cart: { code: string; qty: number }[];
-  /** The cart's line discount, in percent of each line. */
-  discount: number;
+  /** The Register's cart: each line's quantity and its Discount (%). */
+  cart: { code: string; qty: number; discount: number }[];
   entries: StockEntry[];
   recons: Reconciliation[];
   moves: Move[];
@@ -165,10 +164,10 @@ const ITEMS: Item[] = [
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-/** A cart's or a sale's figures: lines less the discount, VAT on top, and the Rounded Total to the peso. */
-export function totals(lines: OrderLine[], discount: number) {
+/** A cart's or a sale's figures: lines less each one's discount, VAT on top, and the Rounded Total to the peso. */
+export function totals(lines: OrderLine[]) {
   const gross = round2(lines.reduce((sum, line) => sum + line.qty * line.rate, 0));
-  const off = round2((gross * discount) / 100);
+  const off = round2(lines.reduce((sum, line) => sum + (line.qty * line.rate * (line.discount ?? 0)) / 100, 0));
   const net = round2(gross - off);
   const tax = round2(net * VAT);
   const total = round2(net + tax);
@@ -176,8 +175,8 @@ export function totals(lines: OrderLine[], discount: number) {
 }
 
 function seededSale(id: string, number: string, date: string, sessionId: string, lines: OrderLine[]): Order {
-  const figures = totals(lines, 0);
-  return { id, number, date, cashier: 'Ana Reyes', sessionId, lines, discount: 0, net: figures.net, tax: figures.tax, total: figures.rounded, status: 'Submitted' };
+  const figures = totals(lines);
+  return { id, number, date, cashier: 'Ana Reyes', sessionId, lines, net: figures.net, tax: figures.tax, total: figures.rounded, status: 'Submitted' };
 }
 
 const line = (code: string, qty: number): OrderLine => {
@@ -202,7 +201,6 @@ export function initialStore(): Store {
     ],
     mine: null,
     cart: [],
-    discount: 0,
     entries: [{ id: 'e1', number: 'MAT-STE-2026-00001', date: YESTERDAY, rows: [{ code: 'ITEM-0006', qty: 12, rate: 21 }], status: 'Submitted' }],
     recons: [{ id: 'r1', number: 'MAT-RECO-2026-00001', date: '2026-10-01', rows: ITEMS.map((item) => ({ code: item.code, qty: item.stock })), status: 'Submitted' }],
     moves: [
@@ -243,7 +241,7 @@ const withStock = (store: Store, code: string, delta: number): Item[] =>
 export function cartLines(store: Store): OrderLine[] {
   return store.cart.map((entry) => {
     const item = findItem(store, entry.code);
-    return { code: entry.code, name: item?.name ?? entry.code, qty: entry.qty, rate: item?.price ?? 0 };
+    return { code: entry.code, name: item?.name ?? entry.code, qty: entry.qty, rate: item?.price ?? 0, discount: entry.discount };
   });
 }
 
@@ -254,31 +252,48 @@ export function openSession(store: Store, opening: number): Store {
   return { ...store, sessions: [...store.sessions, session], mine: id, seq: store.seq + 1 };
 }
 
+/** One more of an item: a scan, or a row tapped while out of the cart. */
 export function addToCart(store: Store, code: string): Store {
   const has = store.cart.some((entry) => entry.code === code);
-  const cart = has ? store.cart.map((entry) => (entry.code === code ? { ...entry, qty: entry.qty + 1 } : entry)) : [...store.cart, { code, qty: 1 }];
+  const cart = has ? store.cart.map((entry) => (entry.code === code ? { ...entry, qty: entry.qty + 1 } : entry)) : [...store.cart, { code, qty: 1, discount: 0 }];
   return { ...store, cart };
 }
 
+/** The whole line out: a row tapped while in the cart, or the card's trash. */
 export function removeFromCart(store: Store, code: string): Store {
   return { ...store, cart: store.cart.filter((entry) => entry.code !== code) };
 }
 
-/** A discount in percent, held to 0–100. */
-export const setDiscount = (store: Store, percent: number): Store => ({ ...store, discount: Math.min(100, Math.max(0, percent)) });
+/** One less, the line going at none: a scan taken back from the Scanned list. */
+export function takeFromCart(store: Store, code: string): Store {
+  const cart = store.cart.map((entry) => (entry.code === code ? { ...entry, qty: entry.qty - 1 } : entry)).filter((entry) => entry.qty > 0);
+  return { ...store, cart };
+}
+
+/** The card's stepper: a whole quantity, 1 at least. */
+export const setQty = (store: Store, code: string, qty: number): Store => ({
+  ...store,
+  cart: store.cart.map((entry) => (entry.code === code ? { ...entry, qty: Math.max(1, Math.round(qty)) } : entry)),
+});
+
+/** A line's Discount (%), held to 0–100. */
+export const setDiscount = (store: Store, code: string, percent: number): Store => ({
+  ...store,
+  cart: store.cart.map((entry) => (entry.code === code ? { ...entry, discount: Math.min(100, Math.max(0, percent)) } : entry)),
+});
 
 /** Complete Order: the cart becomes a sale in the person's session, its stock goes out. Null without a session or a line. */
 export function completeOrder(store: Store): Created | null {
   if (!store.mine || store.cart.length === 0) return null;
   const lines = cartLines(store);
-  const figures = totals(lines, store.discount);
+  const figures = totals(lines);
   const id = `v-me-${store.seq}`;
   const number = `ACC-PSINV-2026-${pad(store.sales.length + 1)}`;
-  const sale: Order = { id, number, date: TODAY, cashier: ME, sessionId: store.mine, lines, discount: store.discount, net: figures.net, tax: figures.tax, total: figures.rounded, status: 'Submitted' };
+  const sale: Order = { id, number, date: TODAY, cashier: ME, sessionId: store.mine, lines, net: figures.net, tax: figures.tax, total: figures.rounded, status: 'Submitted' };
   let items = store.items;
   for (const entry of lines) items = items.map((item) => (item.code === entry.code ? { ...item, stock: item.stock - entry.qty } : item));
   const moves = [...store.moves, ...lines.map((entry) => ({ date: TODAY, code: entry.code, qty: -entry.qty, voucher: number }))];
-  return { store: { ...store, items, moves, sales: [...store.sales, sale], cart: [], discount: 0, seq: store.seq + 1 }, id };
+  return { store: { ...store, items, moves, sales: [...store.sales, sale], cart: [], seq: store.seq + 1 }, id };
 }
 
 /** What a sale still has to give back: each line less what earlier returns took. */
@@ -291,20 +306,32 @@ export function returnable(store: Store, saleId: string): OrderLine[] {
     .filter((entry) => entry.qty > 0);
 }
 
-/** Complete Return: everything left on the sale comes back, in the person's own open session (as the real poster asks). */
-export function returnSale(store: Store, saleId: string): Created | null {
+/** What a refund takes back of each line: what was typed, else all that is left; lines at none go. */
+export function refundLines(store: Store, saleId: string, taking: Record<string, number> = {}): OrderLine[] {
+  return returnable(store, saleId)
+    .map((entry) => ({ ...entry, qty: taking[entry.code] ?? entry.qty }))
+    .filter((entry) => entry.qty > 0);
+}
+
+/**
+ * Return to Register on an approved refund: what `taking` names (all that is left by default) comes back, in the
+ * person's own open session (as the real poster asks). Null for more than is left, or for nothing.
+ */
+export function returnSale(store: Store, saleId: string, taking: Record<string, number> = {}): Created | null {
   const sale = store.sales.find((candidate) => candidate.id === saleId);
   const left = returnable(store, saleId);
-  if (!store.mine || !sale || sale.status !== 'Submitted' || sale.returnAgainst || left.length === 0) return null;
-  const lines = left.map((entry) => ({ ...entry, qty: -entry.qty }));
-  const figures = totals(lines, sale.discount);
+  const back = refundLines(store, saleId, taking);
+  const over = back.some((entry) => entry.qty > (left.find((other) => other.code === entry.code)?.qty ?? 0));
+  if (!store.mine || !sale || sale.status !== 'Submitted' || sale.returnAgainst || back.length === 0 || over) return null;
+  const lines = back.map((entry) => ({ ...entry, qty: -entry.qty }));
+  const figures = totals(lines);
   const id = `v-me-${store.seq}`;
   const number = `ACC-PSINV-2026-${pad(store.sales.length + 1)}`;
-  const back: Order = { id, number, date: TODAY, cashier: ME, sessionId: store.mine, lines, discount: sale.discount, net: figures.net, tax: figures.tax, total: figures.rounded, status: 'Submitted', returnAgainst: saleId };
+  const refund: Order = { id, number, date: TODAY, cashier: ME, sessionId: store.mine, lines, net: figures.net, tax: figures.tax, total: figures.rounded, status: 'Submitted', returnAgainst: saleId };
   let items = store.items;
-  for (const entry of left) items = items.map((item) => (item.code === entry.code ? { ...item, stock: item.stock + entry.qty } : item));
-  const moves = [...store.moves, ...left.map((entry) => ({ date: TODAY, code: entry.code, qty: entry.qty, voucher: number }))];
-  return { store: { ...store, items, moves, sales: [...store.sales, back], seq: store.seq + 1 }, id };
+  for (const entry of back) items = items.map((item) => (item.code === entry.code ? { ...item, stock: item.stock + entry.qty } : item));
+  const moves = [...store.moves, ...back.map((entry) => ({ date: TODAY, code: entry.code, qty: entry.qty, voucher: number }))];
+  return { store: { ...store, items, moves, sales: [...store.sales, refund], seq: store.seq + 1 }, id };
 }
 
 /** Why a sale cannot be cancelled, or null when it can: its session must be open and no return may stand. */

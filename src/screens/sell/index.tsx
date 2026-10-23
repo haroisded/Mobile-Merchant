@@ -156,7 +156,7 @@ function SessionCard({ merchant, onOpen }: { merchant: Merchant; onOpen: (route:
 }
 
 /** Open or Closed, in a pill: an open session's in `success`, a closed one's muted. */
-function StatusPill({ open }: { open: boolean }) {
+export function StatusPill({ open }: { open: boolean }) {
   const { colors } = useAppTheme();
 
   return (
@@ -173,18 +173,26 @@ function StatusPill({ open }: { open: boolean }) {
  * opened with — Cash-type methods only (drawerCash, src/features/pos-invoices/cart.ts), as closing will expect.
  */
 function SessionFigures({ merchant, session }: { merchant: Merchant; session: PosOpeningEntry }) {
-  const { colors } = useAppTheme();
   const money = useMoney(merchant);
   const invoices = useSessionInvoicesQuery({ sessionId: session.id }, true).data;
   const modes = useModesOfPaymentQuery({ merchantId: merchant.id }).data;
   if (!invoices || !modes) return null;
 
   const isCash = (modeId: string) => modes.some((mode) => mode.id === modeId && mode.type === 'Cash');
-  const figures = [
-    { label: 'Orders', value: String(invoices.filter((invoice) => !invoice.is_return).length) },
-    { label: 'Cash in drawer', value: money(drawerCash(session.pos_opening_entry_balances, invoices, isCash)) },
-    { label: 'Opening cash', value: money(drawerCash(session.pos_opening_entry_balances, [], isCash)) },
-  ];
+  return (
+    <FigureStrip
+      figures={[
+        { label: 'Orders', value: String(invoices.filter((invoice) => !invoice.is_return).length) },
+        { label: 'Cash in drawer', value: money(drawerCash(session.pos_opening_entry_balances, invoices, isCash)) },
+        { label: 'Opening cash', value: money(drawerCash(session.pos_opening_entry_balances, [], isCash)) },
+      ]}
+    />
+  );
+}
+
+/** Figures side by side in one box, a rule between each: the session card's, and the Store Guide's copy of it. */
+export function FigureStrip({ figures }: { figures: { label: string; value: string }[] }) {
+  const { colors } = useAppTheme();
 
   return (
     <View style={[styles.figures, { borderColor: colors.outlineVariant }]}>

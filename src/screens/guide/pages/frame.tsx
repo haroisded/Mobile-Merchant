@@ -27,6 +27,8 @@ export const peso = (value: number) => formatMoney(value, PHP, 2, "Banker's Roun
 export const STORE_NAME = 'Sample Cafe';
 
 type FrameProps = {
+  /** Over the title: the store's name, unless the real page puts its kind there (Refund). */
+  kicker?: string;
   title: string;
   meta?: string;
   onBack?: () => void;
@@ -37,12 +39,12 @@ type FrameProps = {
 };
 
 /** A practice page: the page header, the page scrolling at the form measure, and its footer. */
-export function Frame({ title, meta, onBack, actions, footer, children }: FrameProps) {
+export function Frame({ kicker = STORE_NAME, title, meta, onBack, actions, footer, children }: FrameProps) {
   // With no footer, the page's end keeps clear of the navigation bar (0 while a task's bar is under it).
   const bottom = useBottomInset();
   return (
     <View style={styles.fill}>
-      <PageHeader kicker={STORE_NAME} title={title} meta={meta} onBack={onBack} actions={actions} />
+      <PageHeader kicker={kicker} title={title} meta={meta} onBack={onBack} actions={actions} />
       <ScrollView contentContainerStyle={[styles.body, footer ? null : { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
