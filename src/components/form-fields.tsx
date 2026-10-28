@@ -418,10 +418,14 @@ const styles = StyleSheet.create({
   // 45% plus flexGrow rather than 50%: the column gap would otherwise push the second cell to a row
   // of its own. The gap spaces label row, control and error, so none of them carries a margin.
   half: { flexBasis: '45%', flexGrow: 1, minWidth: 0, gap: spacing.xs },
-  full: { flexBasis: '100%', gap: spacing.xs },
+  // A width, not a 100% basis: with the basis, a live resize (a tablet turned upright or back) left a whole-row field
+  // at its old width, a multiline input running off the screen (Fabric, Medium Tablet, 2026-10-28).
+  full: { width: '100%', gap: spacing.xs },
   // Grows and sits its label on its bottom edge: a row's two half fields stretch to the taller, so when one hint
-  // wraps to two lines the other label row grows too and both controls start level.
-  labelRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.sm, minHeight: 24, flexGrow: 1 },
+  // wraps to two lines the other label row grows too and both controls start level. It wraps: a hint that does not
+  // fit beside its label goes under it, where it was squeezed into a few letters a line beside a long label
+  // ("The cu / rrency" under Default Currency, Create Store as a tablet Dialog, 2026-10-28).
+  labelRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.xs, columnGap: spacing.sm, minHeight: 24, flexGrow: 1 },
   hint: { flexShrink: 1, textAlign: 'right' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
 });

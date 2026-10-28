@@ -29,7 +29,7 @@ src/lib/query.ts           QueryClient factory, STALE constants, onlineManager +
 src/lib/columns.ts         useColumns, the pane widths, ShellWideContext — the shell's width decision;
                            useTableFits, a list's table-vs-rows choice
 src/lib/errors.ts          failureMessage — the copy a failed action shows, never the provider's;
-                           mutationNotice, the line under a form's buttons; postgrestError, its SQLSTATE
+                           mutationNotice, the line above a form's buttons; postgrestError, its SQLSTATE
 src/lib/dates.ts           stored dates ("YYYY-MM-DD"): display, today, a fiscal year's full-year end;
                            displayDateTime, an instant in the device's words
 src/lib/money.ts           ERPNext's money: Banker's / Commercial rounding, cash rounding to the

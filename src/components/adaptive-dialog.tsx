@@ -36,7 +36,7 @@ type Props = {
   kickerTone?: 'accent' | 'error';
   title: string;
   children?: ReactNode;
-  /** The write's line under the body: an offline wait, or what went wrong (mutationNotice). */
+  /** The write's line above the buttons: an offline wait, or what went wrong (mutationNotice). */
   notice?: Notice | null;
   /** Buttons. Laid out in a row in the Dialog and stacked full width in a sheet or page. None: no footer at all. */
   actions?: ReactNode;
@@ -77,19 +77,38 @@ export function AdaptiveDialog({
   const { colors } = useAppTheme();
   const wide = useShellWide();
   const kickerColor = kickerTone === 'error' ? colors.error : colors.accent;
-  const children = <WithNotice notice={notice}>{body}</WithNotice>;
 
   if (inSheet || (asPage && !wide)) {
     return (
-      <SheetBody page={!!asPage} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} onClose={onClose} scroll={scroll}>
-        {children}
+      <SheetBody
+        page={!!asPage}
+        dismissable={dismissable}
+        kicker={kicker}
+        kickerColor={kickerColor}
+        title={title}
+        notice={notice}
+        actions={actions}
+        onClose={onClose}
+        scroll={scroll}
+      >
+        {body}
       </SheetBody>
     );
   }
 
   const dialog = (
-    <WideDialog onDismiss={onDismiss} dismissable={dismissable} kicker={kicker} kickerColor={kickerColor} title={title} actions={actions} onClose={onClose} scroll={scroll}>
-      {children}
+    <WideDialog
+      onDismiss={onDismiss}
+      dismissable={dismissable}
+      kicker={kicker}
+      kickerColor={kickerColor}
+      title={title}
+      notice={notice}
+      actions={actions}
+      onClose={onClose}
+      scroll={scroll}
+    >
+      {body}
     </WideDialog>
   );
 
@@ -136,6 +155,7 @@ type SheetProps = {
   kickerColor: string;
   title: string;
   children?: ReactNode;
+  notice?: Notice | null;
   actions?: ReactNode;
   /** The header's close X, drawn at its end. */
   onClose?: () => void;
@@ -156,7 +176,7 @@ type SheetProps = {
 type WideDialogProps = SheetProps & { onDismiss: () => void; dismissable: boolean };
 
 /** The Paper Dialog: kicker, title, body and a row of buttons, held to a maximum width. */
-function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, actions, onClose, scroll, children }: WideDialogProps) {
+function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, notice, actions, onClose, scroll, children }: WideDialogProps) {
   return (
     <Portal>
       <Dialog
@@ -183,6 +203,7 @@ function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, action
             {children}
           </Body>
         </Dialog.ScrollArea>
+        <NoticeLine notice={notice} style={styles.dialogNotice} />
         {/* A plain row, not Dialog.Actions: that clones `compact` onto each child, and the child here is
             the caller's Fragment. No actions: only the inset under the body. */}
         {actions ? <View style={styles.dialogActions}>{actions}</View> : <View style={styles.dialogEnd} />}
@@ -204,12 +225,11 @@ function Body({ scroll, style, fill, scrollStyle, children }: BodyProps) {
   );
 }
 
-function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, children, actions, onClose }: SheetProps & { page: boolean; dismissable: boolean }) {
+function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, children, notice, actions, onClose }: SheetProps & { page: boolean; dismissable: boolean }) {
   const { colors } = useAppTheme();
   // A sheet or page reaches the bottom edge, so its last button would sit under the gesture bar. The
   // native formSheet does not pad for it, and neither does a page on the edge-to-edge Android build.
   const { top, bottom } = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
   useHoldRoute(dismissable);
 
   const content = (
@@ -230,7 +250,7 @@ function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, chil
       <Body scroll={scroll} style={styles.sheetBody} fill={styles.sheetFill} scrollStyle={styles.sheetScroll}>
         {children}
       </Body>
-      <SheetFooter actions={actions} bottom={bottom} borderColor={colors.outlineVariant} />
+      <SheetFooter notice={notice} actions={actions} bottom={bottom} borderColor={colors.outlineVariant} />
     </>
   );
 
@@ -241,19 +261,33 @@ function SheetBody({ page, dismissable, scroll, kicker, kickerColor, title, chil
           <View style={styles.pageColumn}>{content}</View>
         </KeyboardAvoidingView>
       ) : (
-        // maxHeight: a fitToContents sheet is laid out at its content's full height, so a body taller than the
-        // screen ran off the bottom with nothing to scroll. Held to the window, the ScrollView takes the rest.
-        // A body that scrolls itself (a picker) is held AT the window's height instead: filtered down to a row or two
-        // it would shrink to the bottom of the screen, under the keyboard its own search box raised (phone, 2026-10-22).
-        <View style={[styles.routeSheet, scroll ? { maxHeight: height - top } : { height: height - top }, { backgroundColor: colors.surface, borderTopColor: colors.primary }]}>
-          {/* A picker's sheet reaches the bottom of the screen, and the keyboard its Search box raises would lie over
-              its buttons: the window does not resize for it (edge-to-edge), so the sheet makes the room itself. */}
-          <KeyboardAvoidingView behavior="padding" style={scroll ? undefined : styles.sheetFill}>
-            {content}
-          </KeyboardAvoidingView>
-        </View>
+        <RouteSheet scroll={scroll}>{content}</RouteSheet>
       )}
     </Portal.Host>
+  );
+}
+
+/** The formSheet route's frame: held to the window's height, and making its own room for the keyboard. */
+function RouteSheet({ scroll, children }: { scroll: boolean; children: ReactNode }) {
+  const { colors } = useAppTheme();
+  const { top } = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+
+  return (
+    // maxHeight: a fitToContents sheet is laid out at its content's full height, so a body taller than the
+    // screen ran off the bottom with nothing to scroll. Held to the window, the ScrollView takes the rest.
+    // A body that scrolls itself (a picker) is held AT the window's height instead: filtered down to a row or two
+    // it would shrink to the bottom of the screen, under the keyboard its own search box raised (phone, 2026-10-22).
+    <View style={[styles.routeSheet, scroll ? { maxHeight: height - top } : { height: height - top }, { backgroundColor: colors.surface, borderTopColor: colors.primary }]}>
+      {/* A picker's sheet reaches the bottom of the screen, and the keyboard its Search box raises would lie over
+          its buttons: the window does not resize for it (edge-to-edge), so the sheet makes the room itself. It shrinks
+          with the sheet: unstyled, it grew to its content past the maxHeight, the ScrollView inside never had less
+          room than its content, and the payment sheet's buttons sat under the navigation bar, out of reach (phone
+          width, 2026-10-28). */}
+      <KeyboardAvoidingView behavior="padding" style={scroll ? styles.sheetScroll : styles.sheetFill}>
+        {children}
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -262,22 +296,31 @@ function CloseX({ onClose }: { onClose?: () => void }) {
   return onClose ? <IconButton icon="close" onPress={onClose} accessibilityLabel="Close" /> : null;
 }
 
-/** A sheet's stacked buttons over the gesture bar — or, with none, only the room the gesture bar needs. */
-function SheetFooter({ actions, bottom, borderColor }: { actions?: ReactNode; bottom: number; borderColor: string }) {
-  if (!actions) return <View style={{ paddingBottom: spacing.sm + bottom }} />;
-  return <View style={[styles.sheetActions, { borderTopColor: borderColor, paddingBottom: spacing.md + bottom }]}>{actions}</View>;
+type FooterProps = { notice?: Notice | null; actions?: ReactNode; bottom: number; borderColor: string };
+
+/** A sheet's notice and stacked buttons over the gesture bar — or, with neither, only the room the gesture bar needs. */
+function SheetFooter({ notice, actions, bottom, borderColor }: FooterProps) {
+  if (!actions && !notice) return <View style={{ paddingBottom: spacing.sm + bottom }} />;
+  return (
+    <View style={[styles.sheetActions, { borderTopColor: borderColor, paddingBottom: spacing.md + bottom }]}>
+      <NoticeLine notice={notice} />
+      {actions}
+    </View>
+  );
 }
 
-/** The body, then the write's notice line — reserved only when the caller passes a notice slot. */
-function WithNotice({ notice, children }: { notice: Notice | null | undefined; children: ReactNode }) {
-  if (notice === undefined) return children;
+/**
+ * The write's notice, above the buttons as PageForm's footer has it. At the end of the scrolling body it was below the
+ * fold: the payment's "Waiting for a connection" and "still to pay" showed only once scrolled to (phone, 2026-10-28).
+ */
+function NoticeLine({ notice, style }: { notice?: Notice | null; style?: StyleProp<ViewStyle> }) {
+  if (!notice) return null;
   return (
-    <>
-      {children}
-      <HelperText type={notice?.type ?? 'error'} visible={notice !== null} padding="none">
-        {notice?.text}
+    <View style={style}>
+      <HelperText type={notice.type} padding="none">
+        {notice.text}
       </HelperText>
-    </>
+    </View>
   );
 }
 
@@ -396,5 +439,6 @@ const styles = StyleSheet.create({
   dialogClose: { position: 'absolute', top: spacing.sm, right: spacing.sm },
   titleBesideClose: { marginRight: spacing.xxl },
   dialogEnd: { height: spacing.md },
+  dialogNotice: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   sheetActions: { gap: spacing.sm, padding: spacing.md, borderTopWidth: 1 },
 });

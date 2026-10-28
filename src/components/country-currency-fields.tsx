@@ -40,6 +40,9 @@ export function CountryCurrencyFields<T extends CompanyValues>({ control: form, 
             value={field.value}
             onChange={(code) => {
               field.onChange(code);
+              // A pick is the field's touch, as in ControlledSelect: a picker never blurs, and an onTouched form left
+              // "Select a country." under a picked country (Create Store, tablet, 2026-10-28).
+              field.onBlur();
               const country = countries.find((candidate) => candidate.code === code);
               if (country) onCountryPicked?.(country);
             }}
@@ -59,7 +62,10 @@ export function CountryCurrencyFields<T extends CompanyValues>({ control: form, 
             hint="The currency the books are kept in"
             title="Default Currency"
             value={field.value}
-            onChange={field.onChange}
+            onChange={(code) => {
+              field.onChange(code);
+              field.onBlur();
+            }}
             error={fieldState.error?.message}
             options={currencies.map((currency) => ({
               value: currency.code,

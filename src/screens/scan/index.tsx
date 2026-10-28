@@ -77,6 +77,11 @@ export function Scan({ onDismiss }: { onDismiss: () => void }) {
     scannedList.clear();
     setNotice(null);
   };
+  // A scan taken back takes its pill with it: "Barcode … Now read the label" stayed over an empty list (2026-10-28).
+  const remove = (entry: Listed) => {
+    scannedList.remove(entry);
+    setNotice(null);
+  };
 
   return (
     <Surface style={styles.fill}>
@@ -85,17 +90,7 @@ export function Scan({ onDismiss }: { onDismiss: () => void }) {
         <Appbar.Content title={request.title} />
       </Appbar.Header>
       <View style={wide ? styles.row : styles.fill}>
-        <View style={[styles.camera, wide ? styles.fill : styles.cameraNarrow, { backgroundColor: colors.primary }]}>
-          {allowed ? (
-            <>
-              <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: BARCODES }} onBarcodeScanned={scanned} />
-              <Viewfinder reading={reading} />
-              <StatusPill notice={notice} reading={reading} />
-            </>
-          ) : (
-            <CameraAccess permission={permission} onAsk={requestPermission} />
-          )}
-        </View>
+        <ScanCamera camera={camera} permission={permission} onAsk={requestPermission} onScanned={scanned} notice={notice} reading={reading} />
         <View
           style={[
             styles.panel,
@@ -128,7 +123,7 @@ export function Scan({ onDismiss }: { onDismiss: () => void }) {
             </View>
           </View>
           <ScrollView style={styles.fill} contentContainerStyle={styles.list}>
-            <ScannedList entries={scannedList.entries} empty={EMPTY[request.mode]} onRemove={scannedList.remove} />
+            <ScannedList entries={scannedList.entries} empty={EMPTY[request.mode]} onRemove={remove} />
           </ScrollView>
           <ScanFooter canClear={scannedList.entries.length > 0} onDone={onDismiss} onClear={clear} />
         </View>
@@ -195,13 +190,45 @@ function ScanFooter({ canClear, onDone, onClear }: { canClear: boolean; onDone: 
   );
 }
 
+type ScanCameraProps = {
+  camera: RefObject<CameraView | null>;
+  permission: PermissionResponse | null;
+  onAsk: () => void;
+  onScanned: (result: BarcodeScanningResult) => void;
+  notice: Notice | null;
+  reading: boolean;
+};
+
+/** The camera, its viewfinder and status pill — or, until the camera is allowed, the ask for it. */
+function ScanCamera({ camera, permission, onAsk, onScanned, notice, reading }: ScanCameraProps) {
+  const wide = useShellWide();
+  const bottom = useBottomInset();
+  const { colors } = useAppTheme();
+
+  return (
+    <View style={[styles.camera, wide ? styles.fill : styles.cameraNarrow, { backgroundColor: colors.primary }]}>
+      {permission?.granted === true ? (
+        <>
+          <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: BARCODES }} onBarcodeScanned={onScanned} />
+          <Viewfinder reading={reading} />
+          {/* Wide, the camera reaches the screen's foot, under the navigation bar (edge-to-edge): the pill sat
+              behind a tablet's three buttons (2026-10-28). Narrow, the panel is under it instead. */}
+          <StatusPill notice={notice} reading={reading} lift={wide ? bottom : 0} />
+        </>
+      ) : (
+        <CameraAccess permission={permission} onAsk={onAsk} />
+      )}
+    </View>
+  );
+}
+
 /** At the camera's foot: what the scan is doing, or what the last barcode did — an error in the accent. */
-function StatusPill({ notice, reading }: { notice: Notice | null; reading: boolean }) {
+function StatusPill({ notice, reading, lift }: { notice: Notice | null; reading: boolean; lift: number }) {
   const { colors } = useAppTheme();
   const failed = notice?.type === 'error' && !reading;
 
   return (
-    <View style={[styles.pill, { backgroundColor: colors.backdrop }]} accessibilityLiveRegion="polite">
+    <View style={[styles.pill, { bottom: spacing.ml + lift, backgroundColor: colors.backdrop }]} accessibilityLiveRegion="polite">
       <Text variant="bodySmall" numberOfLines={2} style={{ color: failed ? colors.accent : colors.onPrimary }}>
         {reading ? 'Reading label…' : (notice?.text ?? 'Ready to scan')}
       </Text>
@@ -363,7 +390,7 @@ const styles = StyleSheet.create({
   // Out of flow and childless: its `top` moves nothing else (expo-animation, step 4).
   sweep: { position: 'absolute', left: '4%', right: '4%', height: 2 },
   sweepStill: { top: '50%' },
-  pill: { position: 'absolute', bottom: spacing.ml, maxWidth: '90%', borderRadius: radius.xl, borderCurve: 'continuous', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  pill: { position: 'absolute', maxWidth: '90%', borderRadius: radius.xl, borderCurve: 'continuous', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   panel: { gap: spacing.ms, paddingTop: spacing.md },
   panelTop: { gap: spacing.ms, paddingHorizontal: spacing.md },

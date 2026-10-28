@@ -34,7 +34,7 @@ type Props = {
 };
 
 /**
- * A confirm: Cancel, the confirm — red unless `tone` is `accent` — and the write's notice under the body.
+ * A confirm: Cancel, the confirm — red unless `tone` is `accent` — and the write's notice above the buttons.
  * Every Setup master's Delete opens one (.claude/instruction_mds/structure.md rule 7), and so do a
  * document's Submit and Cancel.
  */

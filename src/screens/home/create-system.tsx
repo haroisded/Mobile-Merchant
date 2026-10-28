@@ -43,10 +43,10 @@ export function CreateSystem({ onDismiss }: Props) {
   const currencies = useCurrencyPresetsQuery();
   const wide = useShellWide();
 
-  const content =
-    countries.data && currencies.data ? (
-      <CreateForm countries={countries.data} currencies={currencies.data} onDismiss={onDismiss} />
-    ) : (
+  if (countries.data && currencies.data) return <CreateForm countries={countries.data} currencies={currencies.data} onDismiss={onDismiss} />;
+
+  return (
+    <Frame onDismiss={onDismiss}>
       <View style={wide ? undefined : styles.state}>
         <QueryState
           query={countries.data ? currencies : countries}
@@ -54,12 +54,19 @@ export function CreateSystem({ onDismiss }: Props) {
           failure="Couldn't load the list of countries. Try again."
         />
       </View>
-    );
+    </Frame>
+  );
+}
 
-  if (wide) {
+/**
+ * Wide, the Dialog over the stores, with the step's button (Next, Create Store) pinned in its footer: in the body it
+ * sat under the five levels, out of sight until the Dialog was scrolled (tablet, 2026-10-28). Narrow, the full page.
+ */
+function Frame({ onDismiss, action, children }: Props & { action?: ReactNode; children: ReactNode }) {
+  if (useShellWide()) {
     return (
-      <AdaptiveDialog asPage title="Create Store" onDismiss={onDismiss} onClose={onDismiss}>
-        {content}
+      <AdaptiveDialog asPage title="Create Store" onDismiss={onDismiss} onClose={onDismiss} actions={action}>
+        {children}
       </AdaptiveDialog>
     );
   }
@@ -70,19 +77,30 @@ export function CreateSystem({ onDismiss }: Props) {
         <Appbar.BackAction onPress={onDismiss} />
         <Appbar.Content title="Merchant" />
       </Appbar.Header>
-      {content}
+      {children}
     </Surface>
   );
 }
 
-/** A step's fields: a page's scroll on a phone; on a tablet the Dialog's own scrolling body holds them. */
-function StepBody({ children }: { children: ReactNode }) {
+type StepBodyProps = { action: ReactNode; notice?: ReactNode; children: ReactNode };
+
+/** A step's fields: a page's scroll on a phone, its button at the end; on a tablet the Dialog's own scrolling body. */
+function StepBody({ action, notice, children }: StepBodyProps) {
   const wide = useShellWide();
   const bottom = useBottomInset();
-  if (wide) return <View style={styles.dialogBody}>{children}</View>;
+  if (wide) {
+    return (
+      <View style={styles.dialogBody}>
+        {children}
+        {notice}
+      </View>
+    );
+  }
   return (
     <ScrollView contentContainerStyle={[styles.body, { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
       {children}
+      {action}
+      {notice}
     </ScrollView>
   );
 }
@@ -138,10 +156,24 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   });
 
   if (step === 1) {
+    const create = (
+      <Button mode="contained" style={buttonStyle} contentStyle={styles.leading} onPress={submit} loading={inFlight} disabled={createSystem.isPending}>
+        Create Store
+      </Button>
+    );
     return (
-      <>
+      <Frame onDismiss={onDismiss} action={create}>
         <StepHeader index={1} count={2} title="Its level" backLabel="Back to the store" onBack={() => setStep(0)} flush={wide} />
-        <StepBody>
+        <StepBody
+          action={create}
+          // The write's own state, distinct from a field being invalid: a provider string is replaced by copy the user
+          // can act on, and an offline wait says so.
+          notice={
+            <HelperText type={notice?.type ?? 'error'} visible={notice !== null}>
+              {notice?.text}
+            </HelperText>
+          }
+        >
           <Text variant="headlineSmall">How much do you want to manage?</Text>
           <Text variant="bodyMedium">
             Pick how much of the system this store uses. A lower level sets more up for you and shows fewer screens. You can change it
@@ -152,31 +184,21 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
             name="level"
             render={({ field }) => <LevelPicker value={field.value} onChange={field.onChange} disabled={createSystem.isPending} />}
           />
-          <Button
-            mode="contained"
-            style={buttonStyle}
-            contentStyle={styles.leading}
-            onPress={submit}
-            loading={inFlight}
-            disabled={createSystem.isPending}
-          >
-            Create Store
-          </Button>
-          {/* The write's own state, distinct from a field being invalid: a provider string is replaced by
-              copy the user can act on, and an offline wait says so. */}
-          <HelperText type={notice?.type ?? 'error'} visible={notice !== null}>
-            {notice?.text}
-          </HelperText>
         </StepBody>
-      </>
+      </Frame>
     );
   }
 
+  const nextButton = (
+    <Button mode="contained" style={buttonStyle} contentStyle={styles.leading} onPress={next}>
+      Next
+    </Button>
+  );
   return (
-    <>
+    <Frame onDismiss={onDismiss} action={nextButton}>
       {/* The first step has nothing before it: its back is greyed out, and the app bar's leaves. */}
       <StepHeader index={0} count={2} title="Your store" backLabel="Back" onBack={() => undefined} flush={wide} />
-      <StepBody>
+      <StepBody action={nextButton}>
         <Text variant="headlineSmall">Name your store</Text>
         <Text variant="bodyMedium">One store: its name, and the country and currency its books are kept in.</Text>
         <FieldGrid>
@@ -212,11 +234,8 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
             }}
           />
         </FieldGrid>
-        <Button mode="contained" style={buttonStyle} contentStyle={styles.leading} onPress={next}>
-          Next
-        </Button>
       </StepBody>
-    </>
+    </Frame>
   );
 }
 

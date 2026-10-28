@@ -58,14 +58,14 @@ export const useShellWide = () => use(ShellWideContext);
  * build is edge-to-edge, so the bar — three buttons, or the gesture handle — lies over the window's bottom; the
  * last row or button of a page that ignores it sits under the Back / Home / Recents buttons.
  *
- * `underTabs`: a (tabs) screen. On a phone the tab bar sits over the navigation bar and pads itself, while Android
- * still reports the bar's height here (expo-router adds no SafeAreaProvider under its tabs there) — a second gap.
- * On a tablet the tab bar is hidden, and the page meets the navigation bar itself.
+ * `underTabs`: a (tabs) screen. NativeTabs ends its page above the navigation bar at every width — over the tab bar
+ * on a phone, and still above the bar on a tablet, where the tab bar is hidden — while Android still reports the
+ * bar's height here (expo-router adds no SafeAreaProvider under its tabs): counting it again is a second gap. On
+ * the tablet emulator with three buttons the Home pill sat 56dp too high (2026-10-28).
  */
 export function useBottomInset(underTabs = false) {
   const { bottom } = useSafeAreaInsets();
-  const wide = useShellWide();
-  return underTabs && !wide ? 0 : bottom;
+  return underTabs ? 0 : bottom;
 }
 
 /**

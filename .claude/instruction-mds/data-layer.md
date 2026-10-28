@@ -218,7 +218,7 @@ A case the screen expects gets its own copy from the SQLSTATE: `postgrestError(m
 (`src/lib/errors.ts`) — `23505` a duplicate name, `23P01` an exclusion constraint (overlapping fiscal
 years).
 
-**A form's or confirm's line under its buttons** is `mutationNotice(mutation, errorText, fallback)`
+**A form's or confirm's line above its buttons** is `mutationNotice(mutation, errorText, fallback)`
 (`src/lib/errors.ts`): the paused copy first (§5), then `errorText` on a failed write, then the
 screen's own `fallback` error (a failed validation). Do not re-wrap its result. Copy two screens
 share lives in that file too.
