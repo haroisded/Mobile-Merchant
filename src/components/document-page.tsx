@@ -166,8 +166,10 @@ function useReportActions(merchantId: string, name: string, allow: { stockLedger
  */
 export function useDocumentActions(props: SavedHeaderProps) {
   const { merchantId, doctype, document } = props;
-  // Every member reads Accounts Settings; until it loads, a cancelled document is kept.
-  const keepsEntries = !useAccountsSettingsQuery({ merchantId }).data?.delete_linked_ledger_entries;
+  // Every member reads Accounts Settings; until it loads, a cancelled document is kept. Immutable Ledger keeps it too
+  // (public.delete_document, ledger_immutable).
+  const settings = useAccountsSettingsQuery({ merchantId }).data;
+  const keepsEntries = !settings?.delete_linked_ledger_entries || settings.enable_immutable_ledger;
   const allow = allowed(usePermissions({ merchantId }).data, doctype, document.docstatus, keepsEntries);
 
   return { allow, ask: useDocumentConfirms(props), reports: useReportActions(merchantId, document.name, allow) };
