@@ -9,6 +9,7 @@ import { spacing } from '../themes';
 import { Button } from './button';
 import { HelperText } from './helper-text';
 import { NoteCallout } from './note-callout';
+import { useLeaveGuard } from './use-leave-guard';
 
 /**
  * A full-page form's bottom bar, under PageForm: the save or offline notice above the buttons. The Register's
@@ -49,6 +50,8 @@ type PageFormProps = {
   mutation: { isPending: boolean; isPaused: boolean };
   /** Nothing to save until something changed. */
   dirty: boolean;
+  /** Fields changed and not saved: leaving the page asks first (useLeaveGuard). A new record's `dirty` is always true. */
+  unsaved?: boolean;
   onSave: () => void;
   /** The button's own words where the write is not a save: "Complete Order", "Open Session". */
   saveLabel?: string;
@@ -65,12 +68,14 @@ type PageFormProps = {
  * (adaptive-dialog.tsx), and React Native only reports the keyboard (ReactRootView.java) — nothing makes
  * room for it. Without it the keyboard lies over the end of the fields and over Save.
  */
-export function PageForm({ editable, readOnly, notice, mutation, dirty, onSave, saveLabel = 'Save', children }: PageFormProps) {
+export function PageForm({ editable, readOnly, notice, mutation, dirty, unsaved = false, onSave, saveLabel = 'Save', children }: PageFormProps) {
   const wide = useShellWide();
   const bottom = useBottomInset();
+  const leaveGuard = useLeaveGuard(unsaved, mutation.isPending);
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.fill}>
+      {leaveGuard}
       <ScrollView contentContainerStyle={[styles.body, editable ? null : { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
         {editable ? null : <NoteCallout>{`You can see this page. ${readOnly}`}</NoteCallout>}
         {children}

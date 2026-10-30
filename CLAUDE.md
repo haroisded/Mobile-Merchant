@@ -434,6 +434,19 @@ Then a saved item's price and stock: `20261022221436_item_edit_price_stock.sql` 
 re-created, same signature — a saved item's changed Standard Selling Rate updates or writes its undated stock-unit price
 in Selling Settings' list, and a changed Stock on Hand or Valuation Rate posts one submitted Stock Reconciliation;
 ARCHITECTURE.md, Register, sale and refund).
+Then the sale's price and taxes, held to the store's own: `20261030125645_pos_price_and_tax_anchor.sql`
+(`private.resolve_item_price()`, the app's price resolver in SQL; `private.submit_pos_invoices()` re-created so a sale
+line's `price_list_rate` must be the price its list gives (`price_list_rate_mismatch`), the tax template must be the
+profile's, the default or a Tax Rule's (`tax_template_invalid`), and each tax row must be that template's row, never
+negative, with extra rows only for an item tax template's rate-0 accounts (`tax_row_invalid`); `private.own_user_id()`
+behind `pos_invoices_own_user` and `pos_opening_entries_own_user`, so a draft names whoever wrote it; ARCHITECTURE.md,
+Price and tax anchor). The tax amounts are still the app's — the ceiling tenancy.md §7 names.
+Then abuse hardening: `20261030130236_abuse_hardening.sql` (`delete_document` refuses while Immutable Ledger is on,
+and only the owner changes it or Delete Ledger Entries; a series counter held to 0–999999999999; a pending access
+request counts against its code for one day, and one person's claims run one at a time; Moving Average stays once
+stock has moved; Material Issue and Transfer need Adjust Inventory; a role change clears the member's exceptions; a
+barcode may not equal another item's code; `stock_alerts` capped at 200, a profile's name and picture bounded, 20
+stores per owner; ARCHITECTURE.md, Abuse hardening).
 `authenticated` keeps `usage` on
 `private` and `execute` on `current_merchant_ids()`, `owned_merchant_ids()` and the permission functions so
 business tables' policies can call them (`.claude/instruction_mds/tenancy.md` §4). Each migration
@@ -538,7 +551,7 @@ Two kinds post, and each has one rule that must hold:
   `submit_*` / `cancel_*` pair per document — the same lock, `auth.uid()` and permission check repeated,
   each one another definer function PostgREST serves. A cancelled document is removed only by
   `public.delete_document(doctype, id)`, which takes its ledger rows with it and refuses unless Accounts
-  Settings' `delete_linked_ledger_entries` is on — never delete from a ledger any other way. What a void
+  Settings' `delete_linked_ledger_entries` is on and `enable_immutable_ledger` off (both the owner's to change) — never delete from a ledger any other way. What a void
   must refuse for one doctype is a trigger on that table (`private.guard_pos_invoice_void()`), not a branch
   inside `cancel_document`.
 - **A `ledger`** (GL Entry, Stock Ledger Entry, Bin) gets a select policy and no other: nobody writes it,

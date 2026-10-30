@@ -83,7 +83,7 @@ function SettingsForm({ merchantId, saved, countries }: { merchantId: string; sa
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs System Settings write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs System Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       {/* ERPNext: set the time zone before transactions begin; changing it later moves every timestamp. */}
       {timeZone === saved.time_zone ? null : (
         <NoteCallout tone="error">Change the time zone only before the first sale: every date and time already recorded would read differently.</NoteCallout>

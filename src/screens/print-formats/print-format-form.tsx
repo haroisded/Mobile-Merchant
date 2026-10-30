@@ -125,6 +125,7 @@ function Form({ merchant, existing }: { merchant: Merchant; existing: PrintForma
         mutation={save}
         // A format not yet saved always has something to check: Save names what is missing ("Enter a name.").
         dirty={!existing || formState.isDirty}
+        unsaved={formState.isDirty}
         onSave={submit}
       >
         <FieldGrid>

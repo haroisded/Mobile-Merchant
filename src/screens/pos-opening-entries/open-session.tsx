@@ -13,13 +13,11 @@ import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries'
 import { useOpenPosSessionMutation } from '../../features/pos-opening-entries/queries';
 import { usePosProfilesQuery } from '../../features/pos-profiles/queries';
 import { can, usePermissions } from '../../features/role-permissions/queries';
-import { failureMessage, postgrestError } from '../../lib/errors';
+import { failureMessage } from '../../lib/errors';
 import { spacing } from '../../themes';
 
-const openFailure = (error: Error | null) =>
-  postgrestError(error)?.code === '23505'
-    ? 'You already have an open session on this POS Profile. Close it first.'
-    : failureMessage("Couldn't open the session. Try again.");
+// A session already open on the profile is no failure: the mutation goes on with it (useOpenPosSessionMutation).
+const openFailure = () => failureMessage("Couldn't open the session. Try again.");
 
 /**
  * Open a session (docs.frappe.io/erpnext/pos-opening-entry): the POS Profile to sell on, and what each of its

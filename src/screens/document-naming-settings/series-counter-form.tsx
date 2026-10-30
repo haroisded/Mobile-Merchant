@@ -24,10 +24,12 @@ export function SeriesCounterForm({ merchantId, onDismiss }: Props) {
 }
 
 /** The database's refusals in words (supabase/migrations/20261010064803_naming_series.sql). */
-const saveFailure = (error: Error | null) =>
-  postgrestError(error)?.message === 'no_fiscal_year'
-    ? 'No fiscal year covers today, so this series has no number to set. Add the year in Fiscal Years.'
-    : failureMessage("Couldn't update the series. Try again.");
+const saveFailure = (error: Error | null) => {
+  const message = postgrestError(error)?.message;
+  if (message === 'no_fiscal_year') return 'No fiscal year covers today, so this series has no number to set. Add the year in Fiscal Years.';
+  if (message === 'counter_out_of_range') return 'Enter a whole number from 0 to 999,999,999,999.';
+  return failureMessage("Couldn't update the series. Try again.");
+};
 
 function Form({ merchantId, preview, onDismiss }: { merchantId: string; preview: SeriesPreview[]; onDismiss: () => void }) {
   const save = useUpdateSeriesCounterMutation({ merchantId });

@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AdaptiveDialog } from '../../components/adaptive-dialog';
+import { AdaptiveDialog, saveOnce } from '../../components/adaptive-dialog';
 import { Appbar } from '../../components/appbar';
 import { Button } from '../../components/button';
 import { CountryCurrencyFields } from '../../components/country-currency-fields';
@@ -16,6 +16,7 @@ import { StepHeader } from '../../components/step-header';
 import { Surface } from '../../components/surface';
 import { Text } from '../../components/text';
 import { TextInput } from '../../components/text-input';
+import { useBackAs } from '../../components/use-back-as';
 import { countryForTimeZone, useCountriesQuery } from '../../features/countries/queries';
 import type { Country } from '../../features/countries/queries';
 import { useCurrencyPresetsQuery } from '../../features/currency-presets/queries';
@@ -24,7 +25,7 @@ import { useCreateSystemMutation } from '../../features/merchants/queries';
 import { createStoreSchema } from '../../features/merchants/schema';
 import type { CreateStoreValues } from '../../features/merchants/schema';
 import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
-import { failureMessage, mutationNotice } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
 import { spacing } from '../../themes';
 
 /**
@@ -115,7 +116,12 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   // A paused write is queued, not in flight: it must not hold the button in its spinner while the
   // device is offline (.claude/instruction_mds/data-layer.md §5). The button still stays disabled (below).
   const inFlight = createSystem.isPending && !createSystem.isPaused;
-  const notice = mutationNotice(createSystem, failureMessage("Couldn't create this store. Try again."));
+  const notice = mutationNotice(
+    createSystem,
+    postgrestError(createSystem.error)?.message === 'store_limit'
+      ? 'You already have 20 stores, the most one owner keeps. Remove one first.'
+      : failureMessage("Couldn't create this store. Try again.")
+  );
 
   // The device's own time zone picks the starting country, and the country its currency: a shop in
   // Manila starts on the Philippines and the peso. Both stay a choice.
@@ -134,26 +140,20 @@ function CreateForm({ countries, currencies, onDismiss }: FormProps) {
   // The step: 0 the store, 1 its level. Step 2 needs step 1 right first, so Next checks those three fields.
   const [step, setStep] = useState(0);
   const next = async () => {
-    if (await trigger(['name', 'country_code', 'default_currency'])) setStep(1);
+    if (!(await trigger(['name', 'country_code', 'default_currency']))) return;
+    // The name field is focused (autoFocus) and goes with step 1: an open keyboard over a field that is gone leaves
+    // Android's Back with nowhere to go (TC-STR-09). Closed first.
+    Keyboard.dismiss();
+    setStep(1);
   };
   // Android's back on the level returns to the store's fields, as the step's own back does; on the fields it leaves.
-  useEffect(() => {
-    if (step === 0) return undefined;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setStep(0);
-      return true;
-    });
-    return () => subscription.remove();
-  }, [step]);
+  const backToStore = useCallback(() => setStep(0), []);
+  useBackAs(step === 1 ? backToStore : null);
 
-  // mutate, not mutateAsync: it does not throw, so there is no catch block whose only job is to
-  // swallow an error that is already being rendered from the notice below. Refused while a create is
-  // pending, paused included: a second tap offline would queue a second insert, and reconnecting
-  // would make two stores. Guarded here, not only on the button, because the keyboard's Done
-  // submits too.
-  const submit = handleSubmit((values) => {
-    if (!createSystem.isPending) createSystem.mutate(values, { onSuccess: onDismiss });
-  });
+  // One store per tap however fast they come, paused included: saveOnce marks the write itself, so two taps
+  // before a re-render make one insert (TC-STR-10 made two, 172 ms apart). Guarded here, not only on the
+  // button, because the keyboard's Done submits too.
+  const submit = handleSubmit(saveOnce(createSystem, onDismiss));
 
   if (step === 1) {
     const create = (

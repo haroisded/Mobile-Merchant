@@ -16,7 +16,7 @@ import type { AccountsSettingsValues } from '../../features/accounts-settings/sc
 import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useRolesQuery } from '../../features/roles/queries';
 import type { Role } from '../../features/roles/queries';
-import { failureMessage, mutationNotice } from '../../lib/errors';
+import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
 import { spacing } from '../../themes';
 
 /**
@@ -62,8 +62,17 @@ const roleOptions = (roles: Role[]) => [{ value: '', label: 'None' }, ...roles.m
 
 function SettingsForm({ merchantId, saved, roles }: { merchantId: string; saved: AccountsSettings; roles: Role[] }) {
   const update = useUpdateAccountsSettingsMutation({ merchantId });
-  const editable = can(usePermissions({ merchantId }).data, 'Accounts Settings', 'write');
-  const notice = mutationNotice(update, failureMessage("Couldn't save Accounts Settings. Try again."));
+  const permissions = usePermissions({ merchantId }).data;
+  const editable = can(permissions, 'Accounts Settings', 'write');
+  // Whether a ledger can ever be erased is the owner's call (accounts_settings_guard_ledger_switches).
+  const ledgerSwitches = editable && permissions?.is_owner === true;
+  const ownerHint = ledgerSwitches ? undefined : 'Only the owner changes it';
+  const notice = mutationNotice(
+    update,
+    postgrestError(update.error)?.message === 'ledger_switch_owner_only'
+      ? 'Only the owner changes Immutable Ledger and Delete Ledger Entries with the Document.'
+      : failureMessage("Couldn't save Accounts Settings. Try again.")
+  );
 
   const { control, handleSubmit, reset, formState } = useForm<AccountsSettingsValues>({
     resolver: zodResolver(accountsSettingsSchema),
@@ -73,16 +82,17 @@ function SettingsForm({ merchantId, saved, roles }: { merchantId: string; saved:
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Accounts Settings write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Accounts Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledSwitch
           control={control}
           name="enable_immutable_ledger"
           label="Immutable Ledger"
           span="full"
-          on="A cancelled sale keeps its entries and gains reversing ones"
+          on="A cancelled sale keeps its entries and gains reversing ones; no document's entries are deleted"
           off="A cancelled sale's entries are rewritten"
-          disabled={!editable}
+          hint={ownerHint}
+          disabled={!ledgerSwitches}
         />
         <ControlledSwitch
           control={control}
@@ -98,9 +108,10 @@ function SettingsForm({ merchantId, saved, roles }: { merchantId: string; saved:
           name="delete_linked_ledger_entries"
           label="Delete Ledger Entries with the Document"
           span="full"
-          on="Deleting a cancelled document removes its entries too"
+          on="Deleting a cancelled document removes its entries too, once Immutable Ledger is off"
           off="A cancelled document's entries stay in the books"
-          disabled={!editable}
+          hint={ownerHint}
+          disabled={!ledgerSwitches}
         />
         <ControlledSwitch
           control={control}

@@ -15,6 +15,7 @@ import { SessionState, useRegisterSession } from '../../components/pos-session';
 import { SampleBox, SampleLine } from '../../components/sample-box';
 import { SectionHeading } from '../../components/section-heading';
 import { Text } from '../../components/text';
+import { useBackAs } from '../../components/use-back-as';
 import { useMoney } from '../../features/currencies/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { useModesOfPaymentQuery } from '../../features/modes-of-payment/queries';
@@ -31,7 +32,7 @@ import { failureMessage, mutationNotice, postingRefusal } from '../../lib/errors
 import { useAppTheme } from '../../lib/theme';
 import { radius, spacing } from '../../themes';
 import { NumberField } from '../register/cart-line';
-import { InvoiceReceipt, useBackAs } from './pos-invoice';
+import { InvoiceReceipt } from './pos-invoice';
 
 /**
  * The refund of a sale (docs.frappe.io/erpnext/sales-return; POS-System-Added-Features 19.1): what to take back of

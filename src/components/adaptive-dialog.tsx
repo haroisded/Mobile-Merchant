@@ -331,32 +331,36 @@ function NoticeLine({ notice, style }: { notice?: Notice | null; style?: StylePr
  * Pass it to react-hook-form's handleSubmit.
  *
  * `isPending` alone is not enough: it is the value from the render this handler was made in, so two taps
- * landing before the next render both read false and both write. `sent` closes that gap for the handler
- * the taps share; the render after the first write hands out a new handler that reads `isPending` true.
+ * landing before the next render both read false and both write — two stores 172 ms apart (TC-STR-10). Nor is
+ * a flag in this handler: a render between the taps (react-hook-form validates asynchronously first) hands the
+ * second tap a new handler. So the write itself is marked: `mutate` is the same function every render of one
+ * useMutation, and stays marked until the write settles — a failed one may be sent again.
  */
-export function saveOnce<V>(
-  mutation: { isPending: boolean; mutate: (values: V, options: { onSuccess: () => void }) => void },
-  onDone: (values: V) => void
-) {
-  let sent = false;
-  return (values: V) => {
-    if (sent || mutation.isPending) return;
-    sent = true;
-    mutation.mutate(values, { onSuccess: () => onDone(values) });
-  };
+export function saveOnce<V>(mutation: OnceMutation<V, () => void>, onDone: (values: V) => void) {
+  return (values: V) => writeOnce(mutation, values, () => onDone(values));
 }
 
 /**
  * saveOnce for a write whose answer the caller goes on with — the id of the sale a checkout made, of the
  * closing entry a closed session left. The same guard, for the same reason.
  */
-export function sendOnce<V, D>(mutation: { isPending: boolean; mutate: (values: V, options: { onSuccess: (data: D) => void }) => void }, onDone: (data: D) => void) {
-  let sent = false;
-  return (values: V) => {
-    if (sent || mutation.isPending) return;
-    sent = true;
-    mutation.mutate(values, { onSuccess: onDone });
-  };
+export function sendOnce<V, D>(mutation: OnceMutation<V, (data: D) => void>, onDone: (data: D) => void) {
+  return (values: V) => writeOnce(mutation, values, onDone);
+}
+
+type OnceMutation<V, S> = {
+  isPending: boolean;
+  mutate: (values: V, options: { onSuccess: S; onSettled: () => void }) => void;
+};
+
+// The writes out right now, by their mutation's `mutate`.
+const writing = new WeakSet<object>();
+
+function writeOnce<V, S>(mutation: OnceMutation<V, S>, values: V, onSuccess: S) {
+  const key = mutation.mutate;
+  if (writing.has(key) || mutation.isPending) return;
+  writing.add(key);
+  mutation.mutate(values, { onSuccess, onSettled: () => writing.delete(key) });
 }
 
 type ActionsProps = {

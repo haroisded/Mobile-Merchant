@@ -10,7 +10,7 @@ import type { Notice } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { openConfirm } from '../Store/confirm';
 import type { ConfirmRequest } from '../Store/confirm';
-import { AdaptiveDialog } from './adaptive-dialog';
+import { AdaptiveDialog, saveOnce } from './adaptive-dialog';
 import { Button } from './button';
 import { HelperText } from './helper-text';
 import { Text } from './text';
@@ -98,9 +98,7 @@ export function RequestConfirm({ request, inSheet, onDismiss }: { request: Confi
       title={request.title}
       confirmLabel={request.confirmLabel}
       dismissLabel={request.dismissLabel}
-      onConfirm={() => {
-        if (!write.isPending) write.mutate(undefined, { onSuccess: request.onDone });
-      }}
+      onConfirm={() => saveOnce(write, request.onDone)(undefined)}
       mutation={write}
       notice={notice}
     >

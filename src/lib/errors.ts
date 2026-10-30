@@ -133,12 +133,20 @@ const POSTING_REFUSALS = new Map([
   ['session_closed', "Its session is already closed, so it can't be cancelled. Return it instead."],
   ['not_cancelled', 'Only a cancelled document can be deleted. Go back and open it again.'],
   ['ledger_entries_kept', 'Accounts Settings keeps ledger entries, so a cancelled document stays. Turn on Delete Ledger Entries with the Document first.'],
+  // supabase/migrations/20261030130236_abuse_hardening.sql.
+  ['ledger_immutable', 'Accounts Settings has Immutable Ledger on, so a cancelled document stays. Only the owner can turn it off.'],
+  ['stock_purpose_not_permitted', 'Taking stock out or moving it needs Adjust Inventory. Ask the owner, or record a Material Receipt.'],
   ['document_in_use', "Another document still names this one, so it can't be deleted."],
   // Discounts (supabase/migrations/20261012085548_pos_invoice_discounts.sql).
   ['discount_locked', "The POS Profile doesn't allow that discount. Go back and open the cart again."],
   ['max_discount_exceeded', "One of the items is discounted by more than its Max Discount allows."],
   ['pricing_rule_mismatch', "A pricing rule has changed since, or no longer applies. Go back and open the cart again."],
   ['below_valuation', "One of the items would sell for less than it is valued at, which Selling Settings don't allow."],
+  // The sale's price and taxes, checked against the store's records (supabase/migrations/20261030125645_pos_price_and_tax_anchor.sql).
+  // The checkout refetches what the cart reads on these three (useCheckoutMutation), so the totals shown are new.
+  ['price_list_rate_mismatch', "An item's price has changed since. Check the new total and complete the order again."],
+  ['tax_template_invalid', 'The taxes have changed since. Check the new total and complete the order again.'],
+  ['tax_row_invalid', 'The taxes have changed since. Check the new total and complete the order again.'],
   // Employees & permissions (supabase/migrations/20261014034106_employees_and_permissions.sql): the owner took the
   // permission away while this screen was open.
   ['sales_not_permitted', "You can't ring up sales any more. Ask the owner for Process Sales."],
@@ -163,6 +171,7 @@ const ITEM_REFUSALS = new Map([
   ['price_list_disabled', "Selling Settings' Default Price List is disabled, so the Standard Selling Rate has nowhere to go. Clear the rate, or enable the list."],
   ['no_item_series', 'Document Naming Settings has no series for Item. Add one there first.'],
   ['no_fiscal_year', "No fiscal year covers today, so the Item series can't number this item."],
+  ['valuation_locked', 'This item has stock movements, so it keeps Moving Average. It can go from FIFO to Moving Average, not back.'],
 ]);
 
 /**
@@ -171,7 +180,9 @@ const ITEM_REFUSALS = new Map([
  */
 export function itemRefusal(cause: Error | null): string | null {
   const error = postgrestError(cause);
-  // Two unique keys: the code (items_code_unique) and the barcode (items_barcode_unique).
+  // Two unique keys: the code (items_code_unique) and the barcode (items_barcode_unique) — and neither may be another
+  // item's other one (barcode_conflict), since the Register's scan looks for both.
+  if (error?.message === 'barcode_conflict') return "Another item's code or barcode is already this value.";
   if (error?.code === '23505') return error.message.includes('items_barcode_unique') ? 'Another item already has this barcode.' : 'There is already an item with this code.';
   return ITEM_REFUSALS.get(error?.message ?? '') ?? postingRefusal(cause);
 }

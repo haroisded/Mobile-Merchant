@@ -4,7 +4,14 @@ import { numberText } from '../item-tax-templates/schema';
 import { atLeastZero } from '../items/schema';
 
 /** Stock received, issued — damage, wastage, own use — or moved between two warehouses (docs.frappe.io/erpnext/stock-entry-purpose). */
-export const STOCK_ENTRY_PURPOSES = ['Material Receipt', 'Material Issue', 'Material Transfer'];
+const STOCK_ENTRY_PURPOSES = ['Material Receipt', 'Material Issue', 'Material Transfer'];
+
+/**
+ * The purposes someone may submit: Receive Shipments is receipts, and taking stock out or moving it is Adjust
+ * Inventory's (private.submit_stock_entries, stock_purpose_not_permitted). A saved entry keeps its own purpose listed.
+ */
+export const purposesFor = (adjustsInventory: boolean, saved?: string) =>
+  STOCK_ENTRY_PURPOSES.filter((purpose) => adjustsInventory || purpose === 'Material Receipt' || purpose === saved);
 
 /** Whether a purpose has a Source Warehouse: every one but a receipt takes stock out of somewhere. */
 export const takesFrom = (purpose: string) => purpose !== 'Material Receipt';

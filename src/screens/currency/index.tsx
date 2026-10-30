@@ -77,7 +77,7 @@ function CurrencyForm({ merchantId, saved }: { merchantId: string; saved: Curren
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Currency write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Currency write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledText control={control} name="symbol" label="Symbol" placeholder="e.g. ₱" maxLength={10} disabled={!editable} />
         <ControlledSwitch

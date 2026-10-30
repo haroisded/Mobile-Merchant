@@ -78,7 +78,7 @@ export function AccessEditor({ member, roles, catalog, form, onDiscard }: Props)
     saveOnce(
       {
         isPending: save.isPending,
-        mutate: (values: AccessValues, options: { onSuccess: () => void }) =>
+        mutate: (values: AccessValues, options: { onSuccess: () => void; onSettled: () => void }) =>
           save.mutate({ roleId: values.role_id || null, overrides: overridesFor(catalog, roleKeys(roleOf(values.role_id)), values.permissions) }, options),
       },
       (values) => reset(values)

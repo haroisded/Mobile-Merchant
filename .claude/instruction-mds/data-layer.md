@@ -239,6 +239,14 @@ It never errors and `isPending` stays true for as long as the device is offline.
   `src/components/remove-system-dialog.tsx`. A form gets both for free from
   `handleSubmit(saveOnce(mutation, onDone))` (`src/components/adaptive-dialog.tsx`) and `FormActions`
   or `PageForm`; a confirm from `useConfirm()` (`src/components/confirm-dialog.tsx`).
+- **`saveOnce` / `sendOnce` mark the write itself**, not the handler: a write is refused while its mutation's `mutate`
+  (the same function every render) is out, until it settles. A per-handler flag let a re-render between two taps hand
+  the second a fresh handler — two stores 172 ms apart (TC-STR-10, 2026-10-22). Every write a button fires goes through
+  one of them — a confirm's too (`useConfirm`, the remove-store panel).
+- **A write that is done is reported done, even when its answer was lost.** A close or an open that committed while the
+  connection dropped is refused when tapped again; `useClosePosSessionMutation` answers `session_not_open` with the
+  session's own closing entry, `useOpenPosSessionMutation` takes `pos_opening_entries_one_open` (23505) as opened, and
+  both invalidate on settle, not only on success (TC-POS-18).
 - **A paused state gets a line of copy and no retry control.** It resumes on its own.
 
 Worked examples: `src/app/(app)/(tabs)/index.tsx`, `src/components/remove-system-dialog.tsx`

@@ -161,6 +161,7 @@ function Form({ merchant, accounts, categories, existing }: FormProps) {
         mutation={save}
         // A template not yet saved always has something to check: Save names what is missing ("Enter a title.").
         dirty={!existing || formState.isDirty}
+        unsaved={formState.isDirty}
         onSave={submit}
       >
         <FieldGrid>

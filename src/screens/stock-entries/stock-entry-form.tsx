@@ -14,7 +14,8 @@ import { useMoney } from '../../features/currencies/queries';
 import type { Merchant } from '../../features/merchants/queries';
 import { invalidateStockEntries, useDeleteStockEntryMutation, useSaveStockEntryMutation, useStockEntryQuery } from '../../features/stock-entries/queries';
 import type { StockEntryDocument } from '../../features/stock-entries/queries';
-import { bringsTo, STOCK_ENTRY_PURPOSES, stockEntrySchema, takesFrom } from '../../features/stock-entries/schema';
+import { has, usePermissions } from '../../features/role-permissions/queries';
+import { bringsTo, purposesFor, stockEntrySchema, takesFrom } from '../../features/stock-entries/schema';
 import type { StockEntryValues } from '../../features/stock-entries/schema';
 import { warehouseOptions } from '../../features/warehouses/queries';
 
@@ -118,8 +119,9 @@ type SectionProps = {
 };
 
 /** What kind of movement it is, when, and between which warehouses (docs.frappe.io/erpnext/stock-entry-purpose). */
-function Details({ control, records, existing, disabled }: SectionProps) {
+function Details({ control, merchant, records, existing, disabled }: SectionProps) {
   const purpose = useWatch({ control, name: 'purpose' });
+  const adjusts = has(usePermissions({ merchantId: merchant.id }).data, 'adjust_inventory');
 
   return (
     <FieldGrid>
@@ -129,7 +131,7 @@ function Details({ control, records, existing, disabled }: SectionProps) {
         label="Purpose"
         required
         title="Purpose"
-        options={STOCK_ENTRY_PURPOSES.map((value) => ({ value, label: value }))}
+        options={purposesFor(adjusts, existing?.purpose).map((value) => ({ value, label: value }))}
         disabled={disabled}
       />
       <ControlledDate control={control} name="posting_date" label="Posting Date" required disabled={disabled} />

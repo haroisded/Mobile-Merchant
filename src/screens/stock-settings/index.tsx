@@ -77,10 +77,12 @@ const METHOD_OPTIONS = [
   { value: 'Moving Average', label: 'Moving Average', hint: 'Every unit costs the running average' },
 ];
 
-const saveFailure = (error: Error | null) =>
-  postgrestError(error)?.message === 'default_invalid'
-    ? "One of the defaults can't be used any more — pick it again."
-    : failureMessage("Couldn't save Stock Settings. Try again.");
+const saveFailure = (error: Error | null) => {
+  const message = postgrestError(error)?.message;
+  if (message === 'default_invalid') return "One of the defaults can't be used any more — pick it again.";
+  if (message === 'valuation_locked') return 'Items that follow this setting have stock movements, so they keep Moving Average.';
+  return failureMessage("Couldn't save Stock Settings. Try again.");
+};
 
 type Records = { groups: ItemGroup[]; uoms: Uom[]; warehouses: Warehouse[] };
 
@@ -101,7 +103,7 @@ function SettingsForm({ merchant, saved, records }: { merchant: Merchant; saved:
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Stock Settings write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Stock Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       {fallback && autoInsert ? <NoteCallout tone="error">{FALLBACK_WITH_AUTO_INSERT}</NoteCallout> : null}
       <FieldGrid>
         <ControlledSelect control={control} name="item_naming_by" label="Item Naming By" title="Item Naming By" options={NAMING_OPTIONS} disabled={!editable} />

@@ -136,6 +136,7 @@ function Form({ merchant, records, existing, parentId }: FormProps) {
         mutation={save}
         // A group not yet saved always has something to check: Save names what is missing ("Enter a name.").
         dirty={!existing || formState.isDirty}
+        unsaved={formState.isDirty}
         onSave={submit}
       >
         <FieldGrid>

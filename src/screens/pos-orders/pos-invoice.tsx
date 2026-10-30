@@ -1,7 +1,6 @@
-import { router, useFocusEffect, useNavigation } from 'expo-router';
-import { useCallback } from 'react';
+import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActivityIndicator } from '../../components/activity-indicator';
 import { BottomSpacer } from '../../components/bottom-spacer';
@@ -12,6 +11,7 @@ import { PageHeader } from '../../components/page-header';
 import { paperWidth, Receipt, useReceiptRecords } from '../../components/receipt';
 import { SectionHeading } from '../../components/section-heading';
 import { Text } from '../../components/text';
+import { useBackAs } from '../../components/use-back-as';
 import { useMoney } from '../../features/currencies/queries';
 import { DOCSTATUS } from '../../features/documents/queries';
 import { useItemsQuery } from '../../features/items/queries';
@@ -43,26 +43,6 @@ export function PosInvoicePage({ merchant, docId, after = false }: { merchant: M
   if (!invoice.data) return <DocumentState doctype="POS Invoice" query={invoice} />;
 
   return <Invoice merchant={merchant} invoice={invoice.data} after={after} />;
-}
-
-/**
- * Back — Android's button, the iOS swipe — doing `action` instead of popping the page: Return to Register after a
- * sale, Cancel on a refund's preview (src/screens/pos-orders/pos-return.tsx). Null leaves Back as it is.
- */
-export function useBackAs(action: (() => void) | null) {
-  const navigation = useNavigation();
-
-  useFocusEffect(
-    useCallback(() => {
-      navigation.setOptions({ gestureEnabled: action === null });
-      if (!action) return undefined;
-      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-        action();
-        return true;
-      });
-      return () => subscription.remove();
-    }, [navigation, action])
-  );
 }
 
 /** The header's line: the sale's status, and for a refund the sale it refunds. */

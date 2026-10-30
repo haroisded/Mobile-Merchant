@@ -236,6 +236,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         mutation={save}
         // A profile not yet saved always has something to check: Save names what is missing.
         dirty={!existing || formState.isDirty}
+        unsaved={formState.isDirty}
         onSave={submit}
       >
         <FieldGrid>

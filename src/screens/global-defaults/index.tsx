@@ -54,7 +54,7 @@ function DefaultsForm({ merchant, saved }: { merchant: Merchant; saved: GlobalDe
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Global Defaults write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Global Defaults write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <Field label="Default Store" hint="Changed on the Store page" span="full">
           <Text variant="bodyMedium">{merchant.name}</Text>

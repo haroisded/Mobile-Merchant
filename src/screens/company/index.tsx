@@ -170,7 +170,7 @@ function CompanyForm({ merchant, countries, currencies, accounts }: FormProps) {
   );
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Store & Calendar." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Store & Calendar." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledText control={control} name="name" label="Store Name" required placeholder="e.g. Corner Cafe" maxLength={80} disabled={!editable} />
         <CountryCurrencyFields control={control} countries={countries} currencies={currencies} disabled={!editable} />

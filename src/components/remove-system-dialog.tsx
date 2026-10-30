@@ -5,7 +5,7 @@ import { useDeleteMerchantsMutation } from '../features/merchants/queries';
 import type { Merchant } from '../features/merchants/queries';
 import { failureMessage } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
-import { AdaptiveDialog } from './adaptive-dialog';
+import { AdaptiveDialog, saveOnce } from './adaptive-dialog';
 import { Button } from './button';
 import { HelperText } from './helper-text';
 import { Text } from './text';
@@ -128,10 +128,7 @@ export function RemoveSystemDialog({ merchants, inSheet, onDismiss }: Props) {
               // The dialog closes on success only. On failure it stays open with the message in
               // the HelperText below, so a network drop is retried from where the user already is
               // instead of sending them back to the card to start over.
-              deleteMerchant.mutate(
-                merchants.map((merchant) => merchant.id),
-                { onSuccess: onDismiss }
-              );
+              saveOnce(deleteMerchant, onDismiss)(merchants.map((merchant) => merchant.id));
             }}
           >
             Delete

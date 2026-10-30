@@ -343,6 +343,7 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
         mutation={save}
         // An item not yet saved always has something to check: Save names what is missing ("Enter a code.").
         dirty={!existing || formState.isDirty}
+        unsaved={formState.isDirty}
         onSave={handleSubmit((values) => submit(send(values)))}
       >
         {editable ? <ScanProduct form={{ getValues, setValue }} brands={records.brands} existing={existing} fromSeries={fromSeries} priced={priced} shows={shows} /> : null}

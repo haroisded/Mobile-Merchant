@@ -1,10 +1,9 @@
-import { Controller } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
 
 import type { Country } from '../features/countries/queries';
 import type { CurrencyPreset } from '../features/currency-presets/queries';
 import type { CompanyValues } from '../features/merchants/schema';
-import { SearchSelect } from './search-select';
+import { ControlledSelect } from './search-select';
 
 type Props<T extends CompanyValues> = {
   /** Create Store's form, or the Store page's, which adds the accounting defaults. */
@@ -19,7 +18,9 @@ type Props<T extends CompanyValues> = {
 
 /**
  * A store's Country and Default Currency — the pair both store forms carry, Create Store and the Store page,
- * which is what puts it in src/components/ (.claude/instruction_mds/structure.md rule 7).
+ * which is what puts it in src/components/ (.claude/instruction_mds/structure.md rule 7). Two ControlledSelects:
+ * a pick is the field's touch there, so an onTouched form clears "Select a country." the moment one is picked
+ * (TC-STR-07; a copy of the binding here had missed it).
  */
 export function CountryCurrencyFields<T extends CompanyValues>({ control: form, countries, currencies, onCountryPicked, disabled }: Props<T>) {
   // SAFETY: T extends CompanyValues, so country_code and default_currency are string fields of T; TypeScript
@@ -28,52 +29,32 @@ export function CountryCurrencyFields<T extends CompanyValues>({ control: form, 
 
   return (
     <>
-      <Controller
+      <ControlledSelect
         control={control}
         name="country_code"
-        render={({ field, fieldState }) => (
-          <SearchSelect
-            label="Country"
-            required
-            disabled={disabled}
-            title="Country"
-            value={field.value}
-            onChange={(code) => {
-              field.onChange(code);
-              // A pick is the field's touch, as in ControlledSelect: a picker never blurs, and an onTouched form left
-              // "Select a country." under a picked country (Create Store, tablet, 2026-10-28).
-              field.onBlur();
-              const country = countries.find((candidate) => candidate.code === code);
-              if (country) onCountryPicked?.(country);
-            }}
-            error={fieldState.error?.message}
-            options={countries.map((country) => ({ value: country.code, label: country.country_name, hint: country.code }))}
-          />
-        )}
+        label="Country"
+        required
+        disabled={disabled}
+        title="Country"
+        onPicked={(code) => {
+          const country = countries.find((candidate) => candidate.code === code);
+          if (country) onCountryPicked?.(country);
+        }}
+        options={countries.map((country) => ({ value: country.code, label: country.country_name, hint: country.code }))}
       />
-      <Controller
+      <ControlledSelect
         control={control}
         name="default_currency"
-        render={({ field, fieldState }) => (
-          <SearchSelect
-            label="Default Currency"
-            required
-            disabled={disabled}
-            hint="The currency the books are kept in"
-            title="Default Currency"
-            value={field.value}
-            onChange={(code) => {
-              field.onChange(code);
-              field.onBlur();
-            }}
-            error={fieldState.error?.message}
-            options={currencies.map((currency) => ({
-              value: currency.code,
-              label: `${currency.code} · ${currency.currency_name}`,
-              hint: currency.symbol ?? undefined,
-            }))}
-          />
-        )}
+        label="Default Currency"
+        required
+        disabled={disabled}
+        hint="The currency the books are kept in"
+        title="Default Currency"
+        options={currencies.map((currency) => ({
+          value: currency.code,
+          label: `${currency.code} · ${currency.currency_name}`,
+          hint: currency.symbol ?? undefined,
+        }))}
       />
     </>
   );

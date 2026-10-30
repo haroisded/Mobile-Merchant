@@ -76,7 +76,7 @@ function SettingsForm({ merchantId, saved, priceLists }: { merchantId: string; s
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Selling Settings write." notice={notice} mutation={update} dirty={formState.isDirty} onSave={save}>
+    <PageForm editable={editable} readOnly="Changing it needs Selling Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       {fallback && autoInsert ? <NoteCallout tone="error">{FALLBACK_WITH_AUTO_INSERT}</NoteCallout> : null}
       <FieldGrid>
         <ControlledSelect

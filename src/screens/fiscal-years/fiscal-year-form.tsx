@@ -185,9 +185,7 @@ export function DeleteFiscalYear({ year, inSheet, onDismiss, onDeleted }: Delete
       kicker="Delete"
       title={`Delete fiscal year ${year.year}?`}
       confirmLabel="Delete"
-      onConfirm={() => {
-        if (!remove.isPending) remove.mutate(year.id, { onSuccess: onDeleted });
-      }}
+      onConfirm={() => saveOnce(remove, onDeleted)(year.id)}
       mutation={remove}
       notice={notice}
     >

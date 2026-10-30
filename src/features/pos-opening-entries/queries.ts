@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { postgrestError } from '../../lib/errors';
 import { LEDGER_PAGE, STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { invalidateDashboard } from '../dashboard/queries';
@@ -60,8 +61,15 @@ export function useOpenPosSessionMutation({ merchantId }: { merchantId: string }
         pos_profile_id: profileId,
         balances: values.amounts.map((row) => ({ mode_of_payment_id: row.mode_of_payment_id, opening_amount: Number(row.amount || 0) })),
       };
-      await supabase.rpc('open_pos_session', { payload }).throwOnError();
+      try {
+        await supabase.rpc('open_pos_session', { payload }).throwOnError();
+      } catch (cause) {
+        // The person's session on this profile is open already — a first open whose answer was lost, or one from
+        // another phone (pos_opening_entries_one_open): opening is done, as closing is (useClosePosSessionMutation).
+        if (!(cause instanceof Error) || postgrestError(cause)?.code !== '23505') throw cause;
+      }
     },
-    onSuccess: () => invalidatePosOpeningEntries(queryClient),
+    // Settled, not only succeeded: the session list asks again whatever the answer.
+    onSettled: () => invalidatePosOpeningEntries(queryClient),
   });
 }

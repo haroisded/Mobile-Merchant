@@ -100,8 +100,9 @@ async function browserOAuth(provider: 'google' | 'facebook'): Promise<SignInResu
 
   if (result.type !== 'success') {
     // A Supabase allow-list miss looks identical to a user cancel here — the auth session only
-    // reports that it closed, not why. Log the exact redirectTo the allow-list has to match.
-    console.warn('[auth] auth session closed without a redirect', { redirectTo, result });
+    // reports that it closed, not why. Log the exact redirectTo the allow-list has to match — in development only,
+    // as every other warning in the app is (pentest F-04: it reached a release build's logcat).
+    if (__DEV__) console.warn('[auth] auth session closed without a redirect', { redirectTo, result });
     return 'cancelled';
   }
 

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 
+import { postgrestError } from '../../lib/errors';
 import { LEDGER_PAGE, STALE } from '../../lib/query';
 import { supabase } from '../../lib/supabase';
 import { invalidateLedgers } from '../documents/queries';
@@ -127,5 +128,13 @@ export function useCheckoutMutation({ merchantId }: { merchantId: string }) {
     onSuccess: async () => {
       await Promise.all([invalidatePosInvoices(queryClient), invalidateLedgers(queryClient), invalidateItemPrices(queryClient)]);
     },
+    // A price or tax the database no longer agrees with (private.submit_pos_invoices) means a record the cart reads
+    // changed meanwhile: refetch every query on screen — the prices, lists, rules and templates — so the cart shows
+    // what the next try is checked against.
+    onError: (error) => {
+      if (STALE_SALE.has(postgrestError(error)?.message ?? '')) void queryClient.invalidateQueries();
+    },
   });
 }
+
+const STALE_SALE = new Set(['price_list_rate_mismatch', 'tax_template_invalid', 'tax_row_invalid']);

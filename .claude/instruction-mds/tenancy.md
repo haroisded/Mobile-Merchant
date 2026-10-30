@@ -179,9 +179,12 @@ document, Read for a ledger, Read and Write for a single.
 **Delete on a document means two things.** A draft is deleted through its policy, like any record. A
 cancelled one goes only through `public.delete_document` — definer, the same merchant lookup and
 `permitted_merchant_ids(doctype, 'delete')` check — because its ledger rows go with it and no one may
-delete from a ledger. A return is a POS Invoice created and submitted, so the rules alone cannot tell it
+delete from a ledger — and only once the owner has turned Accounts Settings' Immutable Ledger off and Delete
+Ledger Entries with the Document on; those two switches are the owner's alone (`ledger_immutable`,
+`accounts_settings_guard_ledger_switches`, 2026-10-30). A return is a POS Invoice created and submitted, so the rules alone cannot tell it
 from a sale: `private.submit_pos_invoices()` asks for **Process Refunds** on a return and **Process Sales**
-on a sale (`refunds_not_permitted`, `sales_not_permitted`). Undoing a sale is **Cancel** — Void Transactions,
+on a sale (`refunds_not_permitted`, `sales_not_permitted`). Taking stock out or moving it (a Material Issue or Transfer) needs **Adjust Inventory**: Receive Shipments
+is receipts (`private.submit_stock_entries`, `stock_purpose_not_permitted`, 2026-10-30). Undoing a sale is **Cancel** — Void Transactions,
 which a Cashier does not hold.
 
 **What the device applies, the cashier must look up.** A Pricing Rule is chosen on the device
@@ -249,8 +252,13 @@ Rejected, with reasons:
 - **A `select` rule is a full read through the API.** RLS cannot tell a lookup from a list, so Process Sales
   can read every sale through the API, though no screen lists them without View Sales. Named, not fixed:
   splitting a lookup from a list needs a view per lookup.
-- **Apply Discounts is checked against the Price List Rate the app sends** — the poster's "app calculates,
-  database checks" ceiling (ARCHITECTURE.md, the Register). A second price engine in SQL is the upgrade.
+- **Which tax template and which Tax Rule win, and a percentage row's amounts, are still the app's.** Since
+  2026-10-30 a sale's Price List Rate is the store's own (`private.resolve_item_price`, so Apply Discounts, Max Discount
+  and the profile's switches measure against the real price), and its tax rows are its template's rows, none below zero
+  (`20261030125645_pos_price_and_tax_anchor.sql`; the 2026-10-29 exploit F-2026-1029-01). A second tax engine in SQL
+  is the upgrade.
+- **An employee's exceptions last only as long as their role**: a change of role, or none, clears them
+  (`merchant_members_clear_overrides`, 2026-10-30), so someone with no role sees Home only, as §6 says.
 - **An access change reaches an open app within a minute**, not at once: `usePermissions` asks again every
   minute and on coming back (no Realtime). A card or list a widened permission reveals may first show what
   was fetched before, until its own refresh (the Dashboard's Open Registers card was seen to, 2026-10-14).
