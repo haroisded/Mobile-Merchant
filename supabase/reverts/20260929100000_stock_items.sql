@@ -11,6 +11,14 @@
 -- expects the new shape — src/features/products and src/lib/database.types.ts — so regenerate the types
 -- after running this.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 drop function if exists public.save_stock_item(jsonb);
 drop trigger if exists products_sync_register_faces on public.products;
 drop function if exists private.sync_register_faces();
@@ -40,3 +48,5 @@ drop table if exists public.product_groups;
 
 drop type if exists public.stock_role;
 drop type if exists public.stock_sell_by;
+end
+$revert$;

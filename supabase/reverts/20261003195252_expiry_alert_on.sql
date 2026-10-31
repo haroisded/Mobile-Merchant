@@ -2,6 +2,14 @@
 --
 -- DESTROYS DATA: every Inventory item's Expiry alert date. Regenerate src/lib/database.types.ts after.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 -- save_stock_item as 20261001052003_group_category.sql §4.
 create or replace function public.save_stock_item(payload jsonb)
 returns uuid
@@ -75,3 +83,5 @@ revoke execute on function public.save_stock_item(jsonb) from public, anon, auth
 grant execute on function public.save_stock_item(jsonb) to authenticated;
 
 alter table public.products drop column if exists expiry_alert_on;
+end
+$revert$;

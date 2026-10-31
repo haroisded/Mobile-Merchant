@@ -10,6 +10,14 @@
 --
 -- Newest revert, so nothing has to run before it (.claude/instruction-mds/migrations.md rule 6).
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 drop trigger if exists set_product_scope on public.products;
 drop function if exists private.set_product_scope();
 
@@ -162,3 +170,5 @@ $$;
 
 revoke execute on function public.save_product(jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.save_product(jsonb) to authenticated;
+end
+$revert$;

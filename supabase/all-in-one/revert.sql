@@ -4850,6 +4850,7 @@ begin
     where id = v_id and merchant_id = v_merchant
     returning id into v_id;
 
+    -- RLS filters an UPDATE rather than refusing it.
     if v_id is null then
       raise exception 'member_not_found' using errcode = 'P0002';
     end if;
@@ -7675,6 +7676,14 @@ drop extension if exists btree_gist;
 --
 -- DESTROYS DATA: every Inventory item's Expiry alert date. Regenerate src/lib/database.types.ts after.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 -- save_stock_item as 20261001052003_group_category.sql §4.
 create or replace function public.save_stock_item(payload jsonb)
 returns uuid
@@ -7748,6 +7757,8 @@ revoke execute on function public.save_stock_item(jsonb) from public, anon, auth
 grant execute on function public.save_stock_item(jsonb) to authenticated;
 
 alter table public.products drop column if exists expiry_alert_on;
+end
+$revert$;
 
 
 -- ===== 20261001052003_group_category.sql =====
@@ -7755,6 +7766,14 @@ alter table public.products drop column if exists expiry_alert_on;
 -- Reverts 20261001052003_group_category.sql.
 --
 -- Items keep the category §2 and §3 gave them; only the group's own category and the triggers go.
+
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
 
 drop trigger if exists product_groups_category_to_items on public.product_groups;
 drop trigger if exists products_group_category on public.products;
@@ -7836,6 +7855,8 @@ alter table if exists public.product_groups
   drop column if exists scope,
   drop column if exists subcategory_id,
   drop column if exists category_id;
+end
+$revert$;
 
 
 -- ===== 20261001051320_category_optional.sql =====
@@ -7845,9 +7866,19 @@ alter table if exists public.product_groups
 -- FAILS while any product that is neither a draft nor a stock item has no category: give those a
 -- category, or set them back to draft, first.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 alter table public.products drop constraint if exists products_category_required;
 alter table public.products
   add constraint products_category_required check (category_id is not null or status = 'draft' or type = 'stock');
+end
+$revert$;
 
 
 -- ===== 20260930110000_sales.sql =====
@@ -7858,6 +7889,14 @@ alter table public.products
 -- the ledger is append-only and the packs already reflect them. The Register and Receipts screens expect
 -- these tables — src/features/sales and src/lib/database.types.ts — so regenerate the types after.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 drop function if exists public.void_sale(uuid, text);
 drop function if exists public.record_sale(jsonb);
 
@@ -7867,6 +7906,8 @@ drop table if exists public.sale_lines;
 drop table if exists public.sales;
 
 delete from private.merchant_counters where kind = 'sale';
+end
+$revert$;
 
 
 -- ===== 20260930100000_receipt_inputs.sql =====
@@ -7881,6 +7922,14 @@ delete from private.merchant_counters where kind = 'sale';
 --
 -- Run this before 20260929100100_stock_ledger.sql's revert (.claude/instruction-mds/migrations.md rule 6), and
 -- regenerate src/lib/database.types.ts after.
+
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
 
 -- One lot, its cases and a row per pack, and a receive movement per pack. Shared by save_receipt,
 -- add_inventory_stock and §7. The caller has locked the item and checked membership.
@@ -8136,6 +8185,8 @@ alter table if exists public.stock_lots drop column if exists packs_expected;
 alter table if exists public.stock_lots alter column code set not null;
 
 alter table if exists public.stock_receipts alter column supplier_id set not null;
+end
+$revert$;
 
 
 -- ===== 20260929100100_stock_ledger.sql =====
@@ -8190,6 +8241,14 @@ drop type if exists public.stock_movement_kind;
 -- expects the new shape — src/features/products and src/lib/database.types.ts — so regenerate the types
 -- after running this.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 drop function if exists public.save_stock_item(jsonb);
 drop trigger if exists products_sync_register_faces on public.products;
 drop function if exists private.sync_register_faces();
@@ -8219,6 +8278,8 @@ drop table if exists public.product_groups;
 
 drop type if exists public.stock_role;
 drop type if exists public.stock_sell_by;
+end
+$revert$;
 
 
 -- ===== 20260928100300_supplier_code_default.sql =====
@@ -8229,6 +8290,14 @@ drop type if exists public.stock_sell_by;
 -- turns into a failed insert (suppliers_details_length), so regenerate src/lib/database.types.ts and
 -- have the form send a code after running it.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 drop trigger if exists suppliers_assign_code on public.suppliers;
 create trigger suppliers_assign_code
   before insert or update of code on public.suppliers
@@ -8236,6 +8305,8 @@ create trigger suppliers_assign_code
   execute function private.assign_code('supplier', 'SUP-', '4', 'code');
 
 alter table if exists public.suppliers alter column code drop default;
+end
+$revert$;
 
 
 -- ===== 20260928100000_suppliers_extend.sql =====
@@ -8305,6 +8376,14 @@ drop table if exists private.merchant_counters;
 -- so regenerate src/lib/database.types.ts after running this.
 --
 -- Newest revert, so nothing has to run before it (.claude/instruction-mds/migrations.md rule 6).
+
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
 
 drop trigger if exists set_product_scope on public.products;
 drop function if exists private.set_product_scope();
@@ -8458,6 +8537,8 @@ $$;
 
 revoke execute on function public.save_product(jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.save_product(jsonb) to authenticated;
+end
+$revert$;
 
 
 -- ===== 20260914092147_products.sql =====

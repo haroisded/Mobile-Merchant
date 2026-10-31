@@ -1137,6 +1137,7 @@ begin
     where id = v_id and merchant_id = v_merchant
     returning id into v_id;
 
+    -- RLS filters an UPDATE rather than refusing it.
     if v_id is null then
       raise exception 'member_not_found' using errcode = 'P0002';
     end if;

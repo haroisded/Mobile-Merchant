@@ -9,6 +9,14 @@
 -- Run this before 20260929100100_stock_ledger.sql's revert (.claude/instruction-mds/migrations.md rule 6), and
 -- regenerate src/lib/database.types.ts after.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 -- One lot, its cases and a row per pack, and a receive movement per pack. Shared by save_receipt,
 -- add_inventory_stock and §7. The caller has locked the item and checked membership.
 --
@@ -263,3 +271,5 @@ alter table if exists public.stock_lots drop column if exists packs_expected;
 alter table if exists public.stock_lots alter column code set not null;
 
 alter table if exists public.stock_receipts alter column supplier_id set not null;
+end
+$revert$;

@@ -2,6 +2,14 @@
 --
 -- Items keep the category §2 and §3 gave them; only the group's own category and the triggers go.
 
+-- Does nothing once 20261008050254_revamp_drop_business_schema.sql has run: that drop-only migration took
+-- public.products and every object below, and all-in-one/revert.sql reaches this block after it.
+do $revert$
+begin
+  if to_regclass('public.products') is null then
+    return;
+  end if;
+
 drop trigger if exists product_groups_category_to_items on public.product_groups;
 drop trigger if exists products_group_category on public.products;
 drop function if exists private.group_category_to_items();
@@ -82,3 +90,5 @@ alter table if exists public.product_groups
   drop column if exists scope,
   drop column if exists subcategory_id,
   drop column if exists category_id;
+end
+$revert$;
