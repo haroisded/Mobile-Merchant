@@ -5,7 +5,7 @@ import { BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, useWindowDim
 import type { StyleProp, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DIALOG_MAX, useShellWide } from '../lib/columns';
+import { DIALOG_MAX, FORM_MEASURE, useShellWide } from '../lib/columns';
 import type { Notice } from '../lib/errors';
 import { useAppTheme } from '../lib/theme';
 import { spacing } from '../themes';
@@ -42,6 +42,10 @@ type Props = {
   actions?: ReactNode;
   /** A close X at the end of the header, for a list that closes with no footer (the Store Guide's role list). */
   onClose?: () => void;
+  /** A back arrow before the title, for a page opened inside the Dialog (Profile's legal documents). */
+  onBack?: () => void;
+  /** Wide: more room to read in — the form's measure, and most of the window's height (Profile's legal documents). */
+  roomy?: boolean;
   /**
    * False when the body scrolls itself — a picker's virtualized list (search-select.tsx). The body then sits in a
    * shrinking View instead of a ScrollView: a list inside a ScrollView renders every row and cannot scroll on its own.
@@ -60,57 +64,14 @@ type Props = {
  *
  * Mounted by its caller only while open, so every field inside starts empty with no reset logic.
  */
-export function AdaptiveDialog({
-  inSheet,
-  asPage,
-  onDismiss,
-  dismissable = true,
-  kicker,
-  kickerTone = 'accent',
-  title,
-  children: body,
-  notice,
-  actions,
-  onClose,
-  scroll = true,
-}: Props) {
+export function AdaptiveDialog({ inSheet, asPage, onDismiss, onBack, roomy, kickerTone, dismissable = true, scroll = true, ...frame }: Props) {
   const { colors } = useAppTheme();
   const wide = useShellWide();
-  const kickerColor = kickerTone === 'error' ? colors.error : colors.accent;
+  const shared = { ...frame, dismissable, scroll, kickerColor: kickerTone === 'error' ? colors.error : colors.accent };
 
-  if (inSheet || (asPage && !wide)) {
-    return (
-      <SheetBody
-        page={!!asPage}
-        dismissable={dismissable}
-        kicker={kicker}
-        kickerColor={kickerColor}
-        title={title}
-        notice={notice}
-        actions={actions}
-        onClose={onClose}
-        scroll={scroll}
-      >
-        {body}
-      </SheetBody>
-    );
-  }
+  if (inSheet || (asPage && !wide)) return <SheetBody {...shared} page={!!asPage} />;
 
-  const dialog = (
-    <WideDialog
-      onDismiss={onDismiss}
-      dismissable={dismissable}
-      kicker={kicker}
-      kickerColor={kickerColor}
-      title={title}
-      notice={notice}
-      actions={actions}
-      onClose={onClose}
-      scroll={scroll}
-    >
-      {body}
-    </WideDialog>
-  );
+  const dialog = <WideDialog {...shared} onDismiss={onDismiss} onBack={onBack} roomy={roomy} />;
 
   return asPage ? <PageDialog dismissable={dismissable}>{dialog}</PageDialog> : dialog;
 }
@@ -173,10 +134,11 @@ type SheetProps = {
  *
  * `Portal.Host` scopes any Portal inside to the sheet or page: the root host sits behind a native sheet.
  */
-type WideDialogProps = SheetProps & { onDismiss: () => void; dismissable: boolean };
+type DialogHeadProps = Pick<SheetProps, 'kicker' | 'kickerColor' | 'title' | 'onClose'> & { onBack?: () => void };
+type WideDialogProps = SheetProps & DialogHeadProps & { onDismiss: () => void; dismissable: boolean; roomy?: boolean };
 
 /** The Paper Dialog: kicker, title, body and a row of buttons, held to a maximum width. */
-function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, notice, actions, onClose, scroll, children }: WideDialogProps) {
+function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, notice, actions, onClose, onBack, roomy, scroll, children }: WideDialogProps) {
   return (
     <Portal>
       <Dialog
@@ -185,21 +147,11 @@ function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, notice
         dismissable={dismissable}
         dismissableBackButton={dismissable}
         // Dialog has no maximum width of its own (.claude/instruction_mds/frontend.md §7).
-        style={styles.dialog}
+        style={[styles.dialog, roomy ? styles.dialogRoomy : null]}
       >
-        {kicker ? (
-          <Text variant="labelMedium" style={[styles.dialogKicker, { color: kickerColor }]}>
-            {kicker}
-          </Text>
-        ) : null}
-        {/* No variant: Dialog.Title picks headlineSmall itself (.claude/instruction_mds/frontend.md §3.3). Its own
-            top margin is Paper's, not rhythm between siblings; under a kicker it closes up. */}
-        <Dialog.Title style={[kicker ? styles.titleUnderKicker : null, onClose ? styles.titleBesideClose : null]}>{title}</Dialog.Title>
-        <View style={styles.dialogClose}>
-          <CloseX onClose={onClose} />
-        </View>
-        <Dialog.ScrollArea style={styles.scrollArea}>
-          <Body scroll={scroll} style={styles.body} fill={styles.fixedBody}>
+        <DialogHead kicker={kicker} kickerColor={kickerColor} title={title} onClose={onClose} onBack={onBack} />
+        <Dialog.ScrollArea style={roomy ? styles.scrollAreaRoomy : styles.scrollArea}>
+          <Body scroll={scroll} style={[styles.body, roomy ? styles.bodyRoomy : null]} fill={styles.fixedBody}>
             {children}
           </Body>
         </Dialog.ScrollArea>
@@ -209,6 +161,30 @@ function WideDialog({ onDismiss, dismissable, kicker, kickerColor, title, notice
         {actions ? <View style={styles.dialogActions}>{actions}</View> : <View style={styles.dialogEnd} />}
       </Dialog>
     </Portal>
+  );
+}
+
+/** The Dialog's kicker and title, with its back arrow and close X in the corners. */
+function DialogHead({ kicker, kickerColor, title, onClose, onBack }: DialogHeadProps) {
+  return (
+    <>
+      {kicker ? (
+        <Text variant="labelMedium" style={[styles.dialogKicker, { color: kickerColor }]}>
+          {kicker}
+        </Text>
+      ) : null}
+      {/* No variant: Dialog.Title picks headlineSmall itself (.claude/instruction_mds/frontend.md §3.3). Its own
+          top margin is Paper's, not rhythm between siblings; under a kicker it closes up. */}
+      <Dialog.Title style={[kicker ? styles.titleUnderKicker : null, onClose ? styles.titleBesideClose : null, onBack ? styles.titleBesideBack : null]}>{title}</Dialog.Title>
+      {onBack ? (
+        <View style={styles.dialogBack}>
+          <IconButton icon="arrow-back" onPress={onBack} accessibilityLabel="Back" />
+        </View>
+      ) : null}
+      <View style={styles.dialogClose}>
+        <CloseX onClose={onClose} />
+      </View>
+    </>
   );
 }
 
@@ -409,13 +385,17 @@ const styles = StyleSheet.create({
   action: { justifyContent: 'flex-start' },
   // maxHeight: over a form route the rising keyboard shrinks the space the Dialog is centred in.
   dialog: { maxWidth: DIALOG_MAX, width: '100%', maxHeight: '90%', alignSelf: 'center' },
+  dialogRoomy: { maxWidth: FORM_MEASURE, height: '90%' },
   dialogKicker: { paddingHorizontal: spacing.lg, paddingTop: spacing.ml },
   titleUnderKicker: { marginTop: spacing.xs },
   // ScrollArea draws its own hairlines; the body pads itself instead. flexShrink: the body gives up
   // height first, so the title and buttons stay in view.
   scrollArea: { paddingHorizontal: 0, borderTopWidth: 0, borderBottomWidth: 0, maxHeight: 460, flexShrink: 1 },
+  // The rest of the Dialog's height, with no cap: not an override of scrollArea, whose 460 a later undefined leaves standing.
+  scrollAreaRoomy: { paddingHorizontal: 0, borderTopWidth: 0, borderBottomWidth: 0, flex: 1 },
   // Level with Dialog.Title's own 24 inset on the wide Dialog, and with the sheet's header on narrow.
   body: { gap: spacing.ms, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  bodyRoomy: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
   // Dialog.Actions' own MD3 layout: buttons at the end, inset level with the title.
   dialogActions: {
     flexDirection: 'row',
@@ -442,6 +422,8 @@ const styles = StyleSheet.create({
   // The close X at the Dialog's top right, beside the kicker and title; the title keeps clear of it.
   dialogClose: { position: 'absolute', top: spacing.sm, right: spacing.sm },
   titleBesideClose: { marginRight: spacing.xxl },
+  dialogBack: { position: 'absolute', top: spacing.sm, left: spacing.sm },
+  titleBesideBack: { marginLeft: spacing.xxl + spacing.md },
   dialogEnd: { height: spacing.md },
   dialogNotice: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   sheetActions: { gap: spacing.sm, padding: spacing.md, borderTopWidth: 1 },

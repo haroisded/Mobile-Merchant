@@ -32,6 +32,8 @@ type Props<D> = {
    * closing it. Without it the form is its page's — a phone's, and a session closed from POS Opening Entries.
    */
   dialog?: { kicker?: string; title: string; onCancel: () => void };
+  /** The page's header, handed its button (PageForm). Unused with `dialog`. */
+  header?: (save: ReactNode) => ReactNode;
 };
 
 /**
@@ -40,7 +42,7 @@ type Props<D> = {
  * (src/screens/pos-closing-entries/close-session.tsx). Key it by what the methods come from — the fields are
  * the form's defaults.
  */
-export function SessionAmountsForm<D>({ modes, hint, submitLabel, mutation, failure, ready, onDone, children, dialog }: Props<D>) {
+export function SessionAmountsForm<D>({ modes, hint, submitLabel, mutation, failure, ready, onDone, children, dialog, header }: Props<D>) {
   const { control, handleSubmit } = useForm<SessionAmountsValues>({
     resolver: zodResolver(sessionAmountsSchema),
     defaultValues: { amounts: modes.map((mode) => ({ mode_of_payment_id: mode.id, amount: '' })) },
@@ -85,6 +87,7 @@ export function SessionAmountsForm<D>({ modes, hint, submitLabel, mutation, fail
 
   return (
     <PageForm
+      header={header ?? (() => null)}
       editable
       readOnly=""
       notice={notice}

@@ -207,9 +207,9 @@ export const spacing = { xs: 4, sm: 8, ms: 12, md: 16, ml: 20, lg: 24, xl: 32, x
 
 // Radii for surfaces drawn by hand, in step with what Paper derives from ROUNDNESS: `sm` for a note
 // callout or an input-like box (×1), `md` for a badge or chip-like tag (×2), `lg` for a thumbnail or
-// card-like block (×3), `xl` for a modal surface that stands in for a Dialog (×7). Never a number at a
+// card-like block (×3), `button` for a hand-drawn mark beside a Button (×5), `xl` for a modal surface that stands in for a Dialog (×7). Never a number at a
 // call site (.claude/instruction_mds/frontend.md rule 7).
-export const radius = { sm: ROUNDNESS, md: ROUNDNESS * 2, lg: ROUNDNESS * 3, xl: ROUNDNESS * 7 };
+export const radius = { sm: ROUNDNESS, md: ROUNDNESS * 2, lg: ROUNDNESS * 3, button: ROUNDNESS * 5, xl: ROUNDNESS * 7 };
 
 // Both themes need every key: they are separate objects, and a key on one never reaches the other.
 export const LightTheme = {

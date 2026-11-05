@@ -22,6 +22,9 @@ import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { useSession } from '../../Store/StoreUser';
 import { spacing } from '../../themes';
+import { LEGAL_DOCS } from '../legal/documents';
+import type { LegalDoc } from '../legal/documents';
+import { LegalBody } from '../legal/legal-body';
 import { PreferencesCard } from './preferences-card';
 
 type Props = {
@@ -49,17 +52,33 @@ export function ProfileScreen({ onBack }: Props) {
   );
 }
 
-/** A tablet's Account: the same body, as a floating Dialog over the stores (the human, 2026-10-23), closed by its X. */
+/**
+ * A tablet's Account: the same body, as a floating Dialog over the stores (the human, 2026-10-23), closed by its X. A
+ * legal document opens inside it, with room to read: Back returns to Profile, the X closes (the human, 2026-11-06).
+ */
 export function ProfileDialog({ onDismiss }: { onDismiss: () => void }) {
+  const [doc, setDoc] = useState<LegalDoc | null>(null);
+
+  if (doc) {
+    return (
+      <AdaptiveDialog asPage roomy title={LEGAL_DOCS[doc].title} onDismiss={() => setDoc(null)} onBack={() => setDoc(null)} onClose={onDismiss}>
+        <LegalBody doc={doc} />
+      </AdaptiveDialog>
+    );
+  }
+
   return (
     <AdaptiveDialog asPage title="Profile" onDismiss={onDismiss} onClose={onDismiss}>
-      <ProfileBody />
+      <ProfileBody onOpenDoc={setDoc} />
     </AdaptiveDialog>
   );
 }
 
+/** The legal page, where the body is not in a Dialog that opens the document itself. */
+const openDocPage = (doc: LegalDoc) => router.push({ pathname: '/legal/[doc]', params: { doc } });
+
 /** Who is signed in, the account and security lists, the preferences, Sign Out and Delete account. */
-function ProfileBody() {
+function ProfileBody({ onOpenDoc = openDocPage }: { onOpenDoc?: (doc: LegalDoc) => void }) {
   const session = useSession();
   const { data: profile } = useProfileQuery();
   // MD3's `error` role, read from whichever of themes.js's two palettes the root layout put in
@@ -100,7 +119,7 @@ function ProfileBody() {
         <Text variant="bodySmall">{email}</Text>
       </View>
 
-      <ProfileDetails />
+      <ProfileDetails onOpenDoc={onOpenDoc} />
 
       {/* Outside the width branch on purpose: a phone and a tablet both get it. */}
       <PreferencesCard />
@@ -166,7 +185,7 @@ function useSignOut() {
 }
 
 /** The account and security lists. Privacy Policy and Terms of Service open the documents (src/screens/legal/). */
-function ProfileDetails() {
+function ProfileDetails({ onOpenDoc }: { onOpenDoc: (doc: LegalDoc) => void }) {
   return (
     <>
       <Text variant="labelMedium">Account</Text>
@@ -176,9 +195,9 @@ function ProfileDetails() {
 
       <Text variant="labelMedium">Security &amp; Privacy</Text>
       <Card>
-        <List.Item title="Privacy Policy" left={(p) => <List.Icon {...p} icon="shield" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'privacy' } })} />
+        <List.Item title="Privacy Policy" left={(p) => <List.Icon {...p} icon="shield" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} onPress={() => onOpenDoc('privacy')} />
         <Divider />
-        <List.Item title="Terms of Service" left={(p) => <List.Icon {...p} icon="terms" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: 'terms' } })} />
+        <List.Item title="Terms of Service" left={(p) => <List.Icon {...p} icon="terms" />} right={(p) => <List.Icon {...p} icon="chevron-right" />} onPress={() => onOpenDoc('terms')} />
       </Card>
     </>
   );

@@ -89,12 +89,12 @@ function Invoice({ merchant, invoice, after }: { merchant: Merchant; invoice: Po
           source={invoice}
           banner={bannerOf(invoice, merchant.name)}
           above={
-            <View style={styles.heading}>
-              <Text variant="headlineSmall" style={styles.title}>
-                {invoice.is_return ? 'Refund' : 'Receipt'}
-              </Text>
-              {reports}
-            </View>
+            <>
+              <Text variant="headlineSmall">{invoice.is_return ? 'Refund' : 'Receipt'}</Text>
+              {/* A row of its own, each button half of it: beside the heading on a receipt's narrow column they wrapped,
+                  one above the other. */}
+              <View style={styles.pair}>{reports.filter((report) => report !== null).map((report) => <View key={report.key} style={styles.half}>{report}</View>)}</View>
+            </>
           }
         >
           <SaleButtons onRefund={returnable ? () => routes.openReturn(invoice.id) : undefined} onCancel={allow.cancel ? ask.cancel : undefined} />
@@ -270,8 +270,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   body: { padding: spacing.md },
   column: { gap: spacing.ms, width: '100%', maxWidth: FORM_MEASURE, alignSelf: 'center' },
-  heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
-  title: { flexGrow: 1 },
   pair: { flexDirection: 'row', gap: spacing.sm },
   half: { flex: 1 },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).

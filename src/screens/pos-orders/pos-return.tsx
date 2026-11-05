@@ -60,7 +60,7 @@ function Return(props: Props) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Refund" title={invoice.name} meta={`Session ${session.name}`} onBack={() => router.back()} form />
+      <PageHeader kicker="Refund" title={invoice.name} meta={`Session ${session.name}`} onBack={() => router.back()} />
       <View style={styles.state}>
         <ActivityIndicator />
       </View>
@@ -112,8 +112,8 @@ function ReturnForm({ merchant, invoice, session, profile, returns, rounding }: 
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Refund" title={invoice.name} meta={`Session ${session.name}`} onBack={() => router.back()} form />
       <PageForm
+        header={(save) => <PageHeader kicker="Refund" title={invoice.name} meta={`Session ${session.name}`} onBack={() => router.back()} actions={save} />}
         editable
         readOnly=""
         notice={gap === null ? null : { type: 'error', text: gap }}

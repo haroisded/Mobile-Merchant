@@ -241,7 +241,7 @@ function AlwaysOn({ on }: { on: boolean }) {
 /** The (i) beside a row: what it is for, and when to use it. */
 function AboutButton({ label, onPress }: { label: string; onPress: () => void }) {
   const { colors } = useAppTheme();
-  return <IconButton icon="info" size={20} iconColor={colors.onSurfaceMuted} mode="outlined" onPress={onPress} accessibilityLabel={`About ${label}`} style={styles.about} />;
+  return <IconButton icon="info" size={20} iconColor={colors.onSurfaceMuted} onPress={onPress} accessibilityLabel={`About ${label}`} style={styles.about} />;
 }
 
 const styles = StyleSheet.create({
@@ -257,6 +257,7 @@ const styles = StyleSheet.create({
   stripTitle: { flex: 1, paddingVertical: spacing.ms },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 64, paddingHorizontal: spacing.md, paddingVertical: spacing.ms },
   tag: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, borderWidth: 1, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  // IconButton ships a 6dp margin of its own; zeroed so the row's gap is the only spacing.
-  about: { margin: 0 },
+  // IconButton ships a 6dp margin of its own; zeroed so the row's gap is the only spacing. No outline: the glyph is its
+  // own circle (the human, 2026-11-06). Sized past the glyph, so the touch target stays 48.
+  about: { margin: 0, width: 48, height: 48 },
 });

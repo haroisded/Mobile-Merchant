@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useNavigation } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
@@ -63,7 +64,7 @@ const defaults = (existing: ItemGroup | undefined, parentId: string | undefined)
 });
 
 /** The page's header: kicker, title, and the red Delete with its confirm for whoever may delete. */
-function GroupHeader({ merchant, existing }: { merchant: Merchant; existing: ItemGroup | undefined }) {
+function GroupHeader({ merchant, existing, save }: { merchant: Merchant; existing: ItemGroup | undefined; save: ReactNode }) {
   const { colors } = useAppTheme();
   const navigation = useNavigation();
   const wide = useShellWide();
@@ -94,14 +95,14 @@ function GroupHeader({ merchant, existing }: { merchant: Merchant; existing: Ite
         kicker="Item Group"
         title={existing?.item_group_name ?? 'New item group'}
         onBack={() => router.back()}
-        form
-        actions={
+        actions={[
           existing && deletable ? (
-            <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
+            <Button key="delete" mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
               Delete
             </Button>
-          ) : null
-        }
+          ) : null,
+          save,
+        ]}
       />
       {confirm.dialog}
     </>
@@ -128,8 +129,8 @@ function Form({ merchant, records, existing, parentId }: FormProps) {
 
   return (
     <View style={styles.fill}>
-      <GroupHeader merchant={merchant} existing={existing} />
       <PageForm
+        header={(button) => <GroupHeader merchant={merchant} existing={existing} save={button} />}
         editable={editable}
         readOnly="Changing it needs Item Group write."
         notice={notice}

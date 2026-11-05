@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,6 +18,8 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
 
+const header = (save?: ReactNode) => <PageHeader kicker="Setup" title="Global Defaults" meta="What new records and receipts start with" onBack={() => router.back()} actions={save} />;
+
 /**
  * Global Defaults (docs.frappe.io/erpnext/global-defaults). ERPNext's Default Company, Country and Currency
  * are this store's own — ERPNext's Company, one per store — so they are shown, and changed on the Store page.
@@ -27,7 +30,7 @@ export function GlobalDefaultsScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Global Defaults" meta="What new records and receipts start with" onBack={() => router.back()} form />
+      {defaults.data ? null : header()}
       {defaults.data ? (
         <DefaultsForm merchant={merchant} saved={defaults.data} />
       ) : (
@@ -54,7 +57,7 @@ function DefaultsForm({ merchant, saved }: { merchant: Merchant; saved: GlobalDe
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Global Defaults write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={header} editable={editable} readOnly="Changing it needs Global Defaults write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <Field label="Default Store" hint="Changed on the Store page" span="full">
           <Text variant="bodyMedium">{merchant.name}</Text>

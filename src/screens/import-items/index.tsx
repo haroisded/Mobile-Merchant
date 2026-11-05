@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { sendOnce } from '../../components/adaptive-dialog';
@@ -21,7 +22,7 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { useSellingSettingsQuery } from '../../features/selling-settings/queries';
 import { useStockSettingsQuery } from '../../features/stock-settings/queries';
 import { useUomsQuery } from '../../features/uoms/queries';
-import { FORM_MEASURE, useBottomInset, useShellWide } from '../../lib/columns';
+import { useBottomInset, useShellWide } from '../../lib/columns';
 import { failureMessage, itemRefusal, mutationNotice, postgrestError } from '../../lib/errors';
 import type { Notice } from '../../lib/errors';
 import { PickerUnavailableError, pickTextFile, saveTextFile } from '../../lib/files';
@@ -54,12 +55,14 @@ type ReadFile = ItemCsvFile & { name: string };
  * saved, then import and read what was created. A page of the Stock stack —
  * src/app/(app)/systems/[id]/stock/import-items.tsx — for whoever may create an Item.
  */
+const header = (save?: ReactNode) => <PageHeader kicker="Stock" title="Import Items" meta="Add many items at once from a CSV file" onBack={() => router.back()} actions={save} />;
+
 export function ImportItems({ merchant }: { merchant: Merchant }) {
   const { lookups, mayCreate, waiting } = useImportRecords(merchant.id);
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Stock" title="Import Items" meta="Add many items at once from a CSV file" onBack={() => router.back()} form />
+      {lookups ? null : header()}
       {lookups ? <Importer merchantId={merchant.id} lookups={lookups} mayCreate={mayCreate} /> : null}
       {!lookups && waiting ? (
         <View style={styles.state}>
@@ -147,12 +150,20 @@ function Importer({ merchantId, lookups, mayCreate }: { merchantId: string; look
   // The log draws from the write's answer; the file it came from is done with.
   const send = sendOnce(run, () => setFile(null));
 
-  if (run.data) return <ImportLog merchantId={merchantId} created={run.data} sent={run.variables ?? []} onAnother={() => run.reset()} />;
+  if (run.data) {
+    return (
+      <>
+        {header()}
+        <ImportLog merchantId={merchantId} created={run.data} sent={run.variables ?? []} onAnother={() => run.reset()} />
+      </>
+    );
+  }
 
   const ready = file !== null && file.errors.length === 0 && file.rows.length > 0;
 
   return (
     <PageForm
+      header={header}
       editable={mayCreate}
       readOnly="Importing needs Item create."
       notice={mutationNotice(run, importFailure(run.error, file?.rows ?? []))}
@@ -168,7 +179,7 @@ function Importer({ merchantId, lookups, mayCreate }: { merchantId: string; look
       {/* The actions before the rules: on a phone the rules fill the screen, and the buttons are the page. */}
       <FileActions
         chosen={file !== null}
-        // Once a file is ready, Import below is the page's one filled button.
+        // Once a file is ready, Import is the page's one filled button.
         filled={!ready}
         locked={run.isPending}
         mayCreate={mayCreate}
@@ -343,7 +354,7 @@ const styles = StyleSheet.create({
   state: { gap: spacing.ms, alignItems: 'flex-start', padding: spacing.md },
   // The log's page, at PageForm's measure: left-aligned, never a row across a tablet
   // (.claude/instruction_mds/frontend.md rule 18).
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
+  body: { gap: spacing.ms, padding: spacing.md },
   // Narrow: full-width buttons, one under another, labels at the left. Wide: content width, in a wrapping row.
   actions: { gap: spacing.sm },
   actionsWide: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

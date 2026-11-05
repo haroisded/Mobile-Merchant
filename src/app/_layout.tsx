@@ -4,8 +4,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 
+import { ShellWideContext, WIDE_MIN } from '../lib/columns';
 import { renderIcon } from '../lib/icons';
 import { makeQueryClient } from '../lib/query';
 import { useIsDarkTheme } from '../Store/StoreTheme';
@@ -36,6 +38,10 @@ export default function RootLayout() {
   // The OS setting unless the Themes row in Profile has overridden it (src/Store/StoreTheme.ts).
   const dark = useIsDarkTheme();
   const theme = dark ? DarkTheme : LightTheme;
+  // The one wide/narrow decision (.claude/instruction_mds/frontend.md §4.1). The window, not a container: synchronous,
+  // so no zero-width first frame, and it follows rotation and split-screen. Read here, at the root, because the
+  // sign-in and legal pages sit outside (app), as (tabs) and sheets/ sit beside the shell.
+  const wide = useWindowDimensions().width >= WIDE_MIN;
 
   // hide() is a native side effect, so it cannot live in the render body: app.json sets
   // experiments.reactCompiler, which assumes render is pure and may re-order or re-run it.
@@ -86,6 +92,7 @@ export default function RootLayout() {
           request goes out, so without this the next account sees the previous one's cards for a
           frame. A queryClient.clear() inside signOut is the version that gets forgotten
           (.claude/instruction_mds/data-layer.md §6). */}
+      <ShellWideContext value={wide}>
       <QueryProvider key={session?.user.id}>
         {/* contentStyle carries the theme background to the navigator's own screen container,
             which otherwise paints react-navigation's default and flashes white in dark mode. */}
@@ -106,6 +113,7 @@ export default function RootLayout() {
           <Stack.Screen name="legal/[doc]" />
         </Stack>
       </QueryProvider>
+      </ShellWideContext>
     </PaperProvider>
   );
 }

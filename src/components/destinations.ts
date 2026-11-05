@@ -23,6 +23,11 @@ export type Destination = Omit<DestinationRule, 'sections'> & {
   label: string;
   icon: IconName;
   stack?: boolean;
+  /**
+   * Its sidebar row opens a dropdown of its sections: `hoist` also takes the row to the top and hides the other
+   * destinations until it is toggled off (Setup), `inline` opens where it is (Stock).
+   */
+  dropdown?: 'hoist' | 'inline';
   /** Always in the menu, with no switch on the Features page: Home, the way in, and Features, the way back to anything hidden. */
   fixed?: true;
   /** One line: what the screen is, under its name on the Features page. */
@@ -49,7 +54,7 @@ export const DESTINATIONS: Destination[] = [
     icon: 'home',
     fixed: true,
     summary: 'The first screen of the store.',
-    purpose: 'The first screen of the store. It stays empty on purpose: the work is on the other screens.',
+    purpose: 'The first screen of the store: a greeting, a way into each screen in your menu, and a short guide to where to start.',
     useCase: 'Open it to land in the store.',
   },
   {
@@ -88,6 +93,7 @@ export const DESTINATIONS: Destination[] = [
     label: 'Stock',
     icon: 'stock',
     stack: true,
+    dropdown: 'inline',
     sections: STOCK_SECTIONS,
     summary: 'What the store sells and what it has on hand.',
     purpose: 'What the store sells and what it has on hand: the items, their prices, stock coming in and going out, and what it is all worth.',
@@ -118,6 +124,7 @@ export const DESTINATIONS: Destination[] = [
     label: 'Setup',
     icon: 'settings',
     stack: true,
+    dropdown: 'hoist',
     sections: SETUP_SECTIONS,
     summary: "The store's settings and the lists everything else picks from.",
     purpose: "The store's settings and the lists everything else picks from: its details, taxes, payment methods, warehouses, units, prices, registers and receipts.",

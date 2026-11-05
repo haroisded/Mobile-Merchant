@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -64,6 +65,7 @@ export function OpenSession({ merchant, onClose }: { merchant: Merchant; onClose
       ready={profile !== undefined}
       onDone={onClose ?? (() => router.back())}
       dialog={onClose ? { kicker: 'Sell', title: 'Open Session', onCancel: onClose } : undefined}
+      header={header}
     >
       {usable.length === 0 ? <NoProfile merchantId={merchant.id} /> : null}
       <SearchSelect
@@ -81,11 +83,19 @@ export function OpenSession({ merchant, onClose }: { merchant: Merchant; onClose
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Sell" title="Open Session" meta="What the drawer starts with" onBack={() => router.back()} form />
-      {profiles.data === undefined ? <View style={styles.state}>{loading}</View> : form}
+      {profiles.data === undefined ? (
+        <>
+          {header()}
+          <View style={styles.state}>{loading}</View>
+        </>
+      ) : (
+        form
+      )}
     </View>
   );
 }
+
+const header = (save?: ReactNode) => <PageHeader kicker="Sell" title="Open Session" meta="What the drawer starts with" onBack={() => router.back()} actions={save} />;
 
 /** No enabled POS Profile to open a session on: who can add one is told where, a cashier whom to ask. */
 function NoProfile({ merchantId }: { merchantId: string }) {

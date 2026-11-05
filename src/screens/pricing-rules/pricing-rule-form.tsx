@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -98,12 +99,13 @@ const deleteFailure = (cause: Error | null) =>
   postgrestError(cause)?.code === '23503' ? 'It has priced a sale, so it stays. Disable it instead.' : failureMessage("Couldn't delete this pricing rule. Try again.");
 
 // Its own component, not inlined in Form: the delete's condition would put Form past fallow's complexity limit.
-function RuleHeader({ merchant, existing }: { merchant: Merchant; existing: PricingRule | undefined }) {
+function RuleHeader({ merchant, existing, save }: { merchant: Merchant; existing: PricingRule | undefined; save: ReactNode }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const remove = useDeletePricingRuleMutation();
 
   return (
     <RecordPageHeader
+      save={save}
       kicker="Pricing Rule"
       title={existing?.title ?? 'New Pricing Rule'}
       remove={
@@ -153,8 +155,8 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
 
   return (
     <View style={styles.fill}>
-      <RuleHeader merchant={merchant} existing={existing} />
       <PageForm
+        header={(button) => <RuleHeader merchant={merchant} existing={existing} save={button} />}
         editable={editable}
         readOnly="Changing it needs Pricing Rule write."
         notice={mutationNotice(save, saveFailure(save.error), formState.isSubmitted ? gap : null)}

@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -14,6 +15,8 @@ import { can, usePermissions } from '../../features/role-permissions/queries';
 import { failureMessage, mutationNotice } from '../../lib/errors';
 import { spacing } from '../../themes';
 
+const header = (save?: ReactNode) => <PageHeader kicker="Setup" title="Print Settings" meta="What every printed receipt carries" onBack={() => router.back()} actions={save} />;
+
 /**
  * Print Settings (docs.frappe.io/erpnext/print-settings §2.1, §2.2, §2.7): whether a printed document starts
  * with the letter head, whether its item table is compact, and whether a tax of zero is printed. Their effect
@@ -24,7 +27,7 @@ export function PrintSettingsScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Print Settings" meta="What every printed receipt carries" onBack={() => router.back()} form />
+      {settings.data ? null : header()}
       {settings.data ? (
         <SettingsForm merchant={merchant} saved={settings.data} />
       ) : (
@@ -52,7 +55,7 @@ function SettingsForm({ merchant, saved }: { merchant: Merchant; saved: PrintSet
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Print Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={header} editable={editable} readOnly="Changing it needs Print Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledSwitch
           control={control}

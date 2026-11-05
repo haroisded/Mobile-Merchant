@@ -55,13 +55,15 @@ type ItemProps = {
   wide: boolean;
   labelled: boolean;
   active?: boolean;
+  /** A row that opens a dropdown (the shell's Setup and Stock): whether it is open. */
+  open?: boolean;
   onPress: () => void;
 };
 
 // One rail or drawer row. Active: the lightened ground and the 4px accent bar. Inactive: no ground, no
 // bar, 68%. The bar is a left border on every item, transparent when inactive, so selecting an item
 // never shifts its content sideways (.claude/instruction_mds/frontend.md §5).
-export function NavItem({ label, icon, wide, labelled, active, onPress }: ItemProps) {
+export function NavItem({ label, icon, wide, labelled, active, open, onPress }: ItemProps) {
   const { colors } = useAppTheme();
 
   return (
@@ -73,7 +75,7 @@ export function NavItem({ label, icon, wide, labelled, active, onPress }: ItemPr
       android_ripple={{ color: colors.primaryHighlight }}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
+      accessibilityState={{ selected: active, expanded: open }}
       style={[
         styles.item,
         active ? { backgroundColor: colors.primaryHighlight, borderLeftColor: colors.accent } : styles.inactive,
@@ -90,8 +92,32 @@ export function NavItem({ label, icon, wide, labelled, active, onPress }: ItemPr
             >
               {label}
             </Text>
+            {open === undefined ? null : <Icon source={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.onPrimary} />}
           </View>
         ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+/** A section under an open dropdown: the name in full, indented under its row, and the same active ground and bar. */
+export function NavSubItem({ label, icon, active, onPress }: { label: string; icon?: IconName; active: boolean; onPress: () => void }) {
+  const { colors } = useAppTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      android_ripple={{ color: colors.primaryHighlight }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      style={[styles.item, active ? { backgroundColor: colors.primaryHighlight, borderLeftColor: colors.accent } : styles.inactive]}
+    >
+      <View style={styles.subItem}>
+        {icon ? <Icon source={icon} size={20} color={colors.onPrimary} /> : null}
+        <Text variant="labelLarge" style={[styles.subLabel, { color: colors.onPrimary }]}>
+          {label}
+        </Text>
       </View>
     </Pressable>
   );
@@ -114,4 +140,7 @@ const styles = StyleSheet.create({
   // made the row zero tall and hid every label.
   labelRow: { flexDirection: 'row', alignItems: 'center', flexGrow: 1, flexShrink: 1, minWidth: 0 },
   drawerItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingLeft: spacing.ms, paddingRight: spacing.md },
+  // minHeight: a row still a touch target when its name is short. Indented one step past the row above.
+  subItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, minHeight: 48, paddingVertical: spacing.sm, paddingLeft: spacing.xl, paddingRight: spacing.md },
+  subLabel: { flexShrink: 1 },
 });

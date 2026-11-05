@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import Drawer from 'expo-router/drawer';
 import type { DrawerContentComponentProps } from 'expo-router/drawer';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -11,14 +11,19 @@ import { BellAction } from '../../../../components/bell-action';
 import { Button } from '../../../../components/button';
 import { DESTINATIONS, menuOf } from '../../../../components/destinations';
 import type { Destination } from '../../../../components/destinations';
-import { NavItem, StoreBadge } from '../../../../components/shell-nav';
+import { listedSections } from '../../../../components/record-index';
+import type { ListedBy } from '../../../../components/record-index';
+import { ShellMenuContext, useShellMenu } from '../../../../components/shell-menu';
+import type { MenuName } from '../../../../components/shell-menu';
+import { NavItem, NavSubItem, StoreBadge } from '../../../../components/shell-nav';
 import { Surface } from '../../../../components/surface';
 import { Text } from '../../../../components/text';
 import { useHiddenFeatures } from '../../../../features/feature-preferences/queries';
 import { useMerchantsQuery } from '../../../../features/merchants/queries';
+import type { Merchant } from '../../../../features/merchants/queries';
 import { usePermissions } from '../../../../features/role-permissions/queries';
 import { useSystemSettingsQuery } from '../../../../features/system-settings/queries';
-import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, useBottomInset, useShellWide } from '../../../../lib/columns';
+import { DRAWER_WIDTH, fontScaled, RAIL_COLLAPSED, RAIL_EXPANDED, RAIL_MENU, useBottomInset, useShellWide } from '../../../../lib/columns';
 import { failureMessage } from '../../../../lib/errors';
 import { useAppTheme } from '../../../../lib/theme';
 import { useSession } from '../../../../Store/StoreUser';
@@ -34,6 +39,9 @@ import { radius, spacing } from '../../../../themes';
 
 // The destinations, who sees each and what the Features page hides: src/components/destinations.ts.
 
+/** A row that opens a dropdown of its sections rather than going straight to its screen. */
+const isMenu = (entry: Destination): entry is Destination & { name: MenuName } => entry.dropdown !== undefined;
+
 // dismissTo pops back to the systems list the anchor in (app)/_layout.tsx keeps under this screen,
 // rather than pushing a second copy of it.
 const exitSystem = () => router.dismissTo('/');
@@ -44,12 +52,23 @@ export default function SystemLayout() {
   // request goes out. A deep link fetches it once.
   const merchants = useMerchantsQuery();
   const merchant = merchants.data?.find((candidate) => candidate.id === id);
+
+  return merchant ? <StoreShell id={id} merchant={merchant} /> : <MissingMerchant merchants={merchants} />;
+}
+
+/** The rail's width: its own, or wider while a dropdown is open so its sections' names stand whole (the human, 2026-11-06). */
+const railWidthOf = (expanded: boolean, menu: MenuName | null) => (menu ? fontScaled(RAIL_MENU) : expanded ? fontScaled(RAIL_EXPANDED) : RAIL_COLLAPSED);
+
+function StoreShell({ id, merchant }: { id: string; merchant: Merchant }) {
   const { colors } = useAppTheme();
-  // The one width decision, made in (app)/_layout.tsx from the window (.claude/instruction_mds/frontend.md
+  // The one width decision, made in src/app/_layout.tsx from the window (.claude/instruction_mds/frontend.md
   // §4.1). Every destination reads the same value, so the rail and the panes beside it flip together.
   const wide = useShellWide();
   // Only the rail collapses. The narrow drawer's open state belongs to the navigator instead.
   const [expanded, setExpanded] = useState(true);
+  // Setup's and Stock's dropdowns, and the section each has picked (src/components/shell-menu.ts).
+  const [menu, setMenu] = useState<MenuName | null>(null);
+  const [picked, setPicked] = useState<Partial<Record<MenuName, string>>>({});
   const userId = useSession()?.user.id;
   // The same query every index reads, so this adds no request of its own.
   const permissions = usePermissions({ merchantId: id });
@@ -59,9 +78,7 @@ export default function SystemLayout() {
   useSystemSettingsQuery({ merchantId: id });
   // What this person hid here (the Features destination), else what the store's level hides. Nothing until it loads:
   // a destination appears, never vanishes.
-  const hidden = useHiddenFeatures({ merchantId: id, level: merchant?.level });
-
-  if (!merchant) return <MissingMerchant merchants={merchants} />;
+  const hidden = useHiddenFeatures({ merchantId: id, level: merchant.level });
 
   // What the rail and the drawer list: a destination the person can read something in. The owner may read
   // everything and needs no my_permissions; a member sees Home until theirs arrive. Hidden is not refused —
@@ -72,9 +89,17 @@ export default function SystemLayout() {
   const { shown, hiddenByChoice } = menuOf(isOwner, permissions.data, hidden);
 
   // The expanded rail grows with the font scale so its labels stay whole (fontScaled).
-  const drawerWidth = wide ? (expanded ? fontScaled(RAIL_EXPANDED) : RAIL_COLLAPSED) : DRAWER_WIDTH;
+  const drawerWidth = wide ? railWidthOf(expanded, menu) : DRAWER_WIDTH;
+  const shellMenu = {
+    menu,
+    picked,
+    openMenu: setMenu,
+    closeMenu: () => setMenu(null),
+    pick: (name: MenuName, section: string) => setPicked((now) => ({ ...now, [name]: section })),
+  };
 
   return (
+    <ShellMenuContext value={shellMenu}>
     <View style={styles.fill}>
       <Drawer
         // `layout` wraps the navigator itself (react-navigation/core/types.d.ts:21), which is what
@@ -85,7 +110,9 @@ export default function SystemLayout() {
           <View style={styles.fill}>
             <MerchantHeader
               onMenu={() => {
-                if (wide) setExpanded((open) => !open);
+                // Wide, an open dropdown closes first: the rail is wide for it, and has nothing else to collapse to.
+                if (wide && menu) setMenu(null);
+                else if (wide) setExpanded((open) => !open);
                 // DrawerActions is not a public export of expo-router; this is the action it builds,
                 // handled at DrawerRouter.js:109.
                 else navigation.dispatch({ type: 'TOGGLE_DRAWER' });
@@ -95,7 +122,16 @@ export default function SystemLayout() {
           </View>
         )}
         drawerContent={(props) => (
-          <SystemNav {...props} id={id} name={merchant.name} wide={wide} expanded={expanded} destinations={shown} hiddenByChoice={hiddenByChoice} />
+          <SystemNav
+            {...props}
+            id={id}
+            name={merchant.name}
+            wide={wide}
+            expanded={expanded}
+            destinations={shown}
+            hiddenByChoice={hiddenByChoice}
+            listing={{ hidden, isOwner, permissions: permissions.data }}
+          />
         )}
         screenOptions={{
           headerShown: false,
@@ -110,6 +146,7 @@ export default function SystemLayout() {
         ))}
       </Drawer>
     </View>
+    </ShellMenuContext>
   );
 }
 
@@ -202,26 +239,44 @@ type NavProps = DrawerContentComponentProps & {
   destinations: Destination[];
   /** The destinations the person may open but hid on the Features page; null until their choices load. */
   hiddenByChoice: string[] | null;
+  /** What decides which of a dropdown's sections are listed (src/components/record-index.tsx). */
+  listing: Omit<ListedBy, 'screen'>;
 };
 
 // Components B and C: the same header, divider and destinations, laid out as a rail when wide and as
 // drawer rows when narrow. No system switcher — the way out of a system is the header's Your systems.
-function SystemNav({ state, navigation, id, name, wide, expanded, destinations, hiddenByChoice }: NavProps) {
+function SystemNav({ state, navigation, id, name, wide, expanded, destinations, hiddenByChoice, listing }: NavProps) {
   const active = state.routes[state.index]?.name;
-  // The screen the person is on, hidden from the Features page just now: back to Home, as its menu row went. Only
-  // on that change — a deep link into a screen hidden earlier still lands, since hidden is not refused.
-  // The choices as they first load are no change, so nothing moves until one is made.
-  const hiddenKey = hiddenByChoice?.join(',') ?? null;
-  const wasHidden = useRef<string[] | null>(null);
-  useEffect(() => {
-    if (hiddenKey === null) return;
-    const now = hiddenKey ? hiddenKey.split(',') : [];
-    const before = wasHidden.current;
-    if (before && active && now.includes(active) && !before.includes(active)) navigation.navigate('index', { id });
-    wasHidden.current = now;
-  }, [hiddenKey, active, navigation, id]);
-  // The drawer always shows labels; the rail shows them only while expanded.
-  const labelled = !wide || expanded;
+  const { menu, openMenu, closeMenu } = useShellMenu();
+  useLeaveWhenHidden(hiddenByChoice, active, () => navigation.navigate('index', { id }));
+  useCloseMenuOnLeaving(active);
+  // The drawer always shows labels; the rail shows them only while expanded, or widened for a dropdown.
+  const labelled = !wide || expanded || menu !== null;
+  // A rail widened for a dropdown draws the drawer's one-line rows.
+  const railRows = wide && menu === null;
+  // Setup's dropdown takes the sidebar: its row at the top, the other destinations gone until it is toggled off.
+  const hoisted = destinations.find((entry) => entry.name === menu && entry.dropdown === 'hoist');
+  const rows = hoisted ? [hoisted] : destinations;
+  // A destination with a stack of its own opens at its first screen: tapping Setup from deep
+  // inside Setup returns to its index, as a rail item should, rather than to wherever the
+  // stack was left. `pop`: without it, React Navigation 7's NAVIGATE pushes a second index
+  // over the pages above the first (StackRouter.js, 'NAVIGATE'). `params`: a screen gets only the
+  // params passed here, so without `id` it reads no system at all — a stack's index, and a
+  // destination that is one screen (the Dashboard drew nothing without it, emulator 2026-10-13).
+  const go = (entry: Destination) =>
+    entry.stack ? navigation.navigate(entry.name, { screen: 'index', params: { id }, pop: true }) : navigation.navigate(entry.name, { id });
+  const press = (entry: Destination) => {
+    if (!isMenu(entry)) {
+      closeMenu();
+      go(entry);
+    } else if (menu === entry.name) {
+      closeMenu();
+    } else {
+      openMenu(entry.name);
+      // Narrow, only the dropdown opens: a route change would close the drawer before a section could be picked.
+      if (wide) go(entry);
+    }
+  };
   // Scrolls, and ends above the navigation bar: eight rows and the badge outgrow a landscape tablet's height (~664dp
   // above three-button navigation), and a large font scale outgrows a phone's — Features, the last row, stays reachable.
   const bottom = useBottomInset();
@@ -229,33 +284,90 @@ function SystemNav({ state, navigation, id, name, wide, expanded, destinations, 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: bottom }}>
       {/* Narrow only: on the rail the name stands alone. */}
-      <StoreBadge name={name} line={wide ? undefined : 'POS store'} wide={wide} labelled={labelled} />
+      <StoreBadge name={name} line={wide ? undefined : 'POS store'} wide={railRows} labelled={labelled} />
 
       <View style={styles.items}>
-        {destinations.map((entry) => (
-          <NavItem
-            key={entry.name}
-            label={entry.label}
-            icon={entry.icon}
-            wide={wide}
-            labelled={labelled}
-            active={entry.name === active}
-            // A destination with a stack of its own opens at its first screen: tapping Setup from deep
-            // inside Setup returns to its index, as a rail item should, rather than to wherever the
-            // stack was left. `pop`: without it, React Navigation 7's NAVIGATE pushes a second index
-            // over the pages above the first (StackRouter.js, 'NAVIGATE'). `params`: a screen gets only the
-            // params passed here, so without `id` it reads no system at all — a stack's index, and a
-            // destination that is one screen (the Dashboard drew nothing without it, emulator 2026-10-13).
-            onPress={() =>
-              entry.stack
-                ? navigation.navigate(entry.name, { screen: 'index', params: { id }, pop: true })
-                : navigation.navigate(entry.name, { id })
-            }
-          />
+        {rows.map((entry) => (
+          <Fragment key={entry.name}>
+            <NavItem
+              label={entry.label}
+              icon={entry.icon}
+              wide={railRows}
+              labelled={labelled}
+              active={entry.name === active}
+              open={isMenu(entry) ? menu === entry.name : undefined}
+              onPress={() => press(entry)}
+            />
+            {isMenu(entry) && menu === entry.name ? (
+              <MenuSections
+                entry={entry}
+                listing={listing}
+                current={entry.name === active}
+                onGo={() => {
+                  go(entry);
+                  // A phone's drawer closes on a route change; already on this screen, there is none.
+                  if (!wide) navigation.dispatch({ type: 'CLOSE_DRAWER' });
+                }}
+              />
+            ) : null}
+          </Fragment>
         ))}
       </View>
     </ScrollView>
   );
+}
+
+type MenuSectionsProps = { entry: Destination & { name: MenuName }; listing: NavProps['listing']; current: boolean; onGo: () => void };
+
+/** An open dropdown's rows: the sections the person may open. With none picked yet, the first is the screen's own. */
+function MenuSections({ entry, listing, current, onGo }: MenuSectionsProps) {
+  const { picked, pick } = useShellMenu();
+  const sections = listedSections(entry.sections ?? [], { ...listing, screen: entry.name });
+  const shown = sections.find((section) => section.title === picked[entry.name]) ?? sections[0];
+
+  return sections.map((section) => (
+    <NavSubItem
+      key={section.title}
+      label={section.title}
+      icon={section.icon}
+      active={current && section === shown}
+      onPress={() => {
+        pick(entry.name, section.title);
+        onGo();
+      }}
+    />
+  ));
+}
+
+/**
+ * The screen the person is on, hidden from the Features page just now: back to Home, as its menu row went. Only
+ * on that change — a deep link into a screen hidden earlier still lands, since hidden is not refused.
+ * The choices as they first load are no change, so nothing moves until one is made.
+ */
+function useLeaveWhenHidden(hiddenByChoice: string[] | null, active: string | undefined, leave: () => void) {
+  const hiddenKey = hiddenByChoice?.join(',') ?? null;
+  const wasHidden = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (hiddenKey === null) return;
+    const now = hiddenKey ? hiddenKey.split(',') : [];
+    const before = wasHidden.current;
+    if (before && active && now.includes(active) && !before.includes(active)) leave();
+    wasHidden.current = now;
+  }, [hiddenKey, active, leave]);
+}
+
+/**
+ * Leaving a dropdown's screen by any other way than its rows — Android's Back, which the drawer takes to Home — closes
+ * the dropdown too: a hoisted Setup would leave Home with no other destination in reach. Only that move: opening one
+ * before its screen has arrived, or on a phone with no move at all, is not closing it.
+ */
+function useCloseMenuOnLeaving(active: string | undefined) {
+  const { menu, closeMenu } = useShellMenu();
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (menu && wasActive.current === menu && active !== menu) closeMenu();
+    wasActive.current = active;
+  }, [active, menu, closeMenu]);
 }
 
 const styles = StyleSheet.create({

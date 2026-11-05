@@ -18,6 +18,7 @@ import { itemColumns, printedTaxes } from '../src/features/print-formats/receipt
 import { calculateTaxes } from '../src/features/sales-tax-templates/calculate.ts';
 import { resolveTaxRule } from '../src/features/tax-rules/resolve.ts';
 import { CONFIRM_FRAMES, SAME_CODE_MS, noSightings, sighted } from '../src/lib/barcode.ts';
+import { markParts, searchEntries } from '../src/lib/section-search.ts';
 import { fullYearEnd, todayIn, yearName } from '../src/lib/dates.ts';
 import { cashRound, formatMoney, formatNumber, inWords, moneyInWords, roundTo } from '../src/lib/money.ts';
 import { childrenOf, pathTo, subtree } from '../src/lib/tree.ts';
@@ -736,6 +737,26 @@ for (const part of ['item_code', 'item_group_id', 'stock_uom', 'description', 'i
   assert.ok(itemPartShown(4, part), part);
 }
 assert.deepEqual([plainWords(1), plainWords(2), plainWords(3)], [true, true, false]);
+
+// src/lib/section-search.ts — what a Setup or Stock search finds: a section's name finds its pages, any case, nothing typed nothing.
+{
+  const SECTIONS = [
+    { title: 'Taxes', entries: [{ label: 'Tax Rules', hint: 'Which template a sale takes' }] },
+    { title: 'Stock', entries: [{ label: 'UOMs', hint: 'Units: Nos, Kg' }, { label: 'Brands', hint: 'Names and defaults' }] },
+  ];
+  const found = (term) => searchEntries(SECTIONS, term).map(({ entry }) => entry.label);
+  assert.deepEqual(found('TAX'), ['Tax Rules']);
+  assert.deepEqual(found('stock'), ['UOMs', 'Brands']);
+  assert.deepEqual(found(' kg '), ['UOMs']);
+  assert.deepEqual([found('nothing here'), found('  ')], [[], []]);
+  assert.deepEqual(markParts('Tax Rules, tax', 'tax'), [
+    { text: 'Tax', hit: true },
+    { text: ' Rules, ', hit: false },
+    { text: 'tax', hit: true },
+  ]);
+  assert.deepEqual(markParts('a.b', '.'), [{ text: 'a', hit: false }, { text: '.', hit: true }, { text: 'b', hit: false }]);
+  assert.deepEqual(markParts('Tax', ''), [{ text: 'Tax', hit: false }]);
+}
 
 // src/screens/guide/ — in a block of its own: its names are its own.
 {

@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -21,6 +22,8 @@ import { useStockSettingsQuery } from '../../features/stock-settings/queries';
 import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
 import { spacing } from '../../themes';
 
+const header = (save?: ReactNode) => <PageHeader kicker="Setup" title="Selling Settings" meta="The price list a sale starts on, and how prices may change" onBack={() => router.back()} actions={save} />;
+
 /**
  * Selling Settings, the Pricing tab (docs.frappe.io/erpnext/selling-settings): the price list a sale starts
  * on, falling back to it, editing a line's Price List Rate, and refusing a sale below the item's cost.
@@ -32,7 +35,7 @@ export function SellingSettingsScreen({ merchantId }: { merchantId: string }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Selling Settings" meta="The price list a sale starts on, and how prices may change" onBack={() => router.back()} form />
+      {settings.data && priceLists.data ? null : header()}
       {settings.data && priceLists.data ? (
         <SettingsForm merchantId={merchantId} saved={settings.data} priceLists={priceLists.data} />
       ) : (
@@ -76,7 +79,7 @@ function SettingsForm({ merchantId, saved, priceLists }: { merchantId: string; s
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Selling Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={header} editable={editable} readOnly="Changing it needs Selling Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       {fallback && autoInsert ? <NoteCallout tone="error">{FALLBACK_WITH_AUTO_INSERT}</NoteCallout> : null}
       <FieldGrid>
         <ControlledSelect

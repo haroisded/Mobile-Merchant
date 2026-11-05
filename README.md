@@ -36,7 +36,9 @@ together and explained inline.
   currency; then its level), remove one from its card or several at once (long-press to select, type DELETE),
   open it onto a header and a rail (tablet) or drawer (phone) with seven
   destinations — Home, Dashboard, Sell, Stock, Accounts, Employees and Setup — each listed only for someone whose
-  permissions reach something in it (Employees for the owner alone)
+  permissions reach something in it (Employees for the owner alone). Home greets the person and links to their own
+  screens, with a short guide. Setup and Stock open as dropdowns in the sidebar (Setup takes it over while open): each
+  section is a grid of its pages, with a search across them all
 - **Access Codes, the only way into someone else's store** — a tab beside Home: the owner makes codes (one to
   twenty at a time; 5 min, 30 min, 1 hour, to the end of a day, or never; one person or many) and sends them from
   the phone's share sheet. Whoever enters one on Home waits under Waiting for approval; the owner approves or

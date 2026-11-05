@@ -10,5 +10,5 @@ export default function StockRoute() {
   const merchant = useMerchantsQuery().data?.find((candidate) => candidate.id === id);
   const userId = useSession()?.user.id;
 
-  return <StockIndex merchantId={id} merchantName={merchant?.name ?? ''} isOwner={merchant !== undefined && merchant.owner_id === userId} />;
+  return <StockIndex merchantId={id} isOwner={merchant !== undefined && merchant.owner_id === userId} />;
 }

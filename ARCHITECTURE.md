@@ -86,8 +86,8 @@ src/screens/<screen>/      UI by screen — home (the systems list, its slot car
                            full-page item with its UOM and Item Tax rows), item-prices (list +
                            search, form), stock-entries and stock-reconciliations (list + a
                            document's page), stock-balance, stock-ledger, accounts (the Accounts
-                           index), general-ledger, system-home (a system's first screen: why someone with
-                           no role sees Home only), employees (the list, an employee's permissions, the
+                           index), general-ledger, system-home (a system's first screen: a greeting, the
+                           person's own screens and a short guide; why someone with no role sees Home only), employees (the list, an employee's permissions, the
                            roles and a role's page, a tablet's two panes; editor/ holds the role and access
                            editors they share), company, fiscal-years, global-defaults, system-settings,
                            currency, chart-of-accounts, accounts-settings,
@@ -117,6 +117,8 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            page-header, query-state, form-fields (+ ControlledChecklist),
                            search-select (+ ControlledSelect), country-currency-fields, record-list
                            (a Setup master's list), form-footer (PageForm, a full-page form),
+                           section-browser (Setup's and Stock's pane), icon-tile, shell-menu (the
+                           sidebar's dropdowns),
                            confirm-dialog (+ useConfirm), folder-nav (the tree masters' folders),
                            repeatable-rows (a child table inside its form; RepeatableList, the
                            whole table), section-heading, sample-box (a worked sample: receipt
@@ -135,7 +137,7 @@ src/components/            one re-export per Paper primitive in use (text.tsx is
                            pick-one row of chips, + PickChip), bell-action (the app bar's bell and its
                            unread count), badge —
                            and the files frontend.md restores on first use: note-callout, header-title
-src/app/_layout.tsx        PaperProvider + QueryProvider + the two-state route guard, and legal/[doc]
+src/app/_layout.tsx        PaperProvider + QueryProvider + the wide/narrow decision + the two-state route guard, and legal/[doc]
                            outside both guards
 src/app/sign-in.tsx        renders the sign-in screen
 src/app/legal/[doc].tsx    the Privacy Policy or the Terms of Service, signed in or not
@@ -1589,7 +1591,7 @@ Dialogs as one held sideways does; a phone stays under it. On a wide window the 
 and, beside them, the Cart's own form (`CartPane`, `src/screens/register/cart.tsx`), so a sale is rung up without
 leaving the page; the Dashboard's period switch moves into its page header, its number cards fill one row and its
 blocks sit two to a row where they fit; the three trees (Chart of Accounts, Warehouses, Item Groups) draw a table;
-Notifications and every full-page form, footer included, are held to `FORM_MEASURE`; and a `FieldGrid` too narrow
+Notifications and every full-page form, footer included, are held to `FORM_MEASURE` (replaced 2026-11-06: Frontend standard page); and a `FieldGrid` too narrow
 for two half fields (the Register's cart upright) stacks them. Checked on the Medium Tablet emulator held both
 ways, at font scale 1.0, 1.3 and 2.0, and at a phone's width, where nothing changed. Rejected: keeping 840 (an
 upright tablet got the phone's drawer and bottom bar); a second, tablet-only Register screen (rule 14: one
@@ -1837,11 +1839,27 @@ Item Price write or Stock Reconciliation create + submit the fields are shown di
 
 **Also in the pass.** Accounts opens the General Ledger itself (`systems/[id]/accounts/index.tsx`; `ACCOUNTS_SECTIONS`
 still decides who sees Accounts and what Features lists), and it shows from Level 1. Full-page forms centre as one
-`FORM_MEASURE` column on a tablet (`PageHeader form`, `PageForm`, frontend.md rule 18). The Android 3-button bar no
+`FORM_MEASURE` column on a tablet (`PageHeader form`, `PageForm`; replaced 2026-11-06, Frontend standard page). The Android 3-button bar no
 longer covers a page's end (`useBottomInset`, `BottomSpacer`; the shell's rail and drawer scroll). Tablet Home floats
 Enter Code · Access Codes · Store Guide in a bottom-centre pill; Account (`forms/profile`) and Create Store open as
 Dialogs there. Profile lost "Your Businesses". Not done: the Store Guide's mock Sell pages keep the old look
 (`src/screens/guide/pages/sell.tsx`).
+
+## Frontend standard page (2026-11-06)
+
+The human's list in `.claude/full-system-context/Updates/updates.txt`. No schema change and no native change.
+
+| What | How |
+| --- | --- |
+| One page shape | `PageForm` takes the page's header (`header: (save) => …`). Wide, Save sits in the header, the write's notice opens the fields and there is no footer; narrow, nothing changed. `PageHeader form` and its centred column are gone (frontend.md rule 18) |
+| Setup and Stock | Sidebar dropdowns, `dropdown` in `src/components/destinations.ts`. State lives in the shell (`src/components/shell-menu.ts`), not a route param: the drawer's content sits outside the routes it opens. The pane is `src/components/section-browser.tsx`. Sell keeps `RecordIndex`; both list by the same `listedSections` |
+| Home | `src/screens/system-home/`. It reads only the person's menu and name, so it adds no permission to check |
+| Sign-in and legal | Rebuilt from the human's HTML. The one `ShellWideContext` provider moved up to `src/app/_layout.tsx`, since both sit outside `(app)`. Still read once |
+| Legal in Account | `ProfileDialog` swaps its body in place: a route would close the Dialog |
+
+Rejected: a footer on a tablet's form (a bar that held one button); the rail staying its own width with a dropdown open (the human: widen, one-line rows); moving the Employees editors, Features' bar and the Register's footer into the header (the human: they keep theirs).
+
+Moving `usePermissions` and System Settings under `StoreShell` starts them once the merchant is known. Arriving from a store card is a cache hit, so nothing changes; a deep link asks one round trip later.
 
 ## Store Guide
 

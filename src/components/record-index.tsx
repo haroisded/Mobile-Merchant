@@ -9,6 +9,7 @@ import type { Permissions } from '../features/permissions/access';
 import { usePermissions } from '../features/role-permissions/queries';
 import type { Ptype } from '../features/role-permissions/queries';
 import { useColumns } from '../lib/columns';
+import type { IconName } from '../lib/icons';
 import { useAppTheme } from '../lib/theme';
 import { radius, spacing } from '../themes';
 import { BottomSpacer } from './bottom-spacer';
@@ -20,6 +21,8 @@ import { Text } from './text';
 
 export type IndexEntry<R extends string> = {
   label: string;
+  /** Setup's and Stock's pages (src/components/section-browser.tsx). */
+  icon?: IconName;
   hint: string;
   /** What the page is for, in plain words: the Features page's About for the page. */
   purpose: string;
@@ -35,7 +38,7 @@ export type IndexEntry<R extends string> = {
   route: R;
 };
 
-export type IndexSection<R extends string> = { title: string; hint: string; entries: IndexEntry<R>[] };
+export type IndexSection<R extends string> = { title: string; hint: string; /** As on an entry. */ icon?: IconName; entries: IndexEntry<R>[] };
 
 type Props<R extends string> = {
   merchantId: string;
@@ -75,7 +78,7 @@ export function RecordIndex<R extends string>({ merchantId, screen, kicker, titl
   // goes. The owner may read everything, and the systems list already says who that is — so the owner's rows
   // need no my_permissions, which a fresh start in airplane mode has not fetched.
   const by = { screen, hidden, isOwner, permissions: permissions.data };
-  const shown = sections.map((section) => ({ ...section, entries: section.entries.filter((entry) => listed(entry, by)) })).filter((section) => section.entries.length > 0);
+  const shown = listedSections(sections, by);
   const loading = !isOwner && !permissions.data;
   const said = nothingListed(by, shown.length) ? empty : null;
 
@@ -111,15 +114,20 @@ function useStoreHidden(merchantId: string) {
   return useHiddenFeatures({ merchantId, level });
 }
 
-type ListedBy = { screen: string; hidden: string[] | undefined; isOwner: boolean; permissions: Permissions | null | undefined };
+export type ListedBy = { screen: string; hidden: string[] | undefined; isOwner: boolean; permissions: Permissions | null | undefined };
 
 /** Whether a row is listed: the person may open it, and has not hidden it on the Features page. */
 function listed(entry: IndexEntry<string>, by: ListedBy) {
   return (by.isOwner || opens(entry, by.permissions)) && !!by.hidden && pageShown(by.hidden, by.screen, entry);
 }
 
+/** A destination's sections less the rows that are not listed; a section with none left goes. */
+export function listedSections<R extends string>(sections: IndexSection<R>[], by: ListedBy) {
+  return sections.map((section) => ({ ...section, entries: section.entries.filter((entry) => listed(entry, by)) })).filter((section) => section.entries.length > 0);
+}
+
 /** Nothing is listed once everything the rows depend on has loaded: the moment to say why. */
-const nothingListed = (by: ListedBy, count: number) => !!by.permissions && !!by.hidden && count === 0;
+export const nothingListed = (by: ListedBy, count: number) => !!by.permissions && !!by.hidden && count === 0;
 
 function SectionCard<R extends string>({ section, onOpen }: { section: IndexSection<R>; onOpen: (route: R) => void }) {
   const { colors } = useAppTheme();

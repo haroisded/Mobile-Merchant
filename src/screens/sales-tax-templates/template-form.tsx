@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useNavigation } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { Control, UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
@@ -82,7 +83,7 @@ type FormProps = {
 };
 
 /** The page's header: kicker, title, and the red Delete with its confirm for whoever may delete. */
-function TemplateHeader({ merchant, existing }: { merchant: Merchant; existing: SalesTaxTemplate | undefined }) {
+function TemplateHeader({ merchant, existing, save }: { merchant: Merchant; existing: SalesTaxTemplate | undefined; save: ReactNode }) {
   const { colors } = useAppTheme();
   const navigation = useNavigation();
   const wide = useShellWide();
@@ -115,14 +116,14 @@ function TemplateHeader({ merchant, existing }: { merchant: Merchant; existing: 
         kicker="Sales Taxes and Charges Template"
         title={existing?.title ?? 'New template'}
         onBack={() => router.back()}
-        form
-        actions={
+        actions={[
           existing && can(permissions, 'Sales Taxes and Charges Template', 'delete') ? (
-            <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
+            <Button key="delete" mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
               Delete
             </Button>
-          ) : null
-        }
+          ) : null,
+          save,
+        ]}
       />
       {confirm.dialog}
     </>
@@ -153,8 +154,8 @@ function Form({ merchant, accounts, categories, existing }: FormProps) {
 
   return (
     <View style={styles.fill}>
-      <TemplateHeader merchant={merchant} existing={existing} />
       <PageForm
+        header={(button) => <TemplateHeader merchant={merchant} existing={existing} save={button} />}
         editable={editable}
         readOnly="Changing it needs Sales Taxes and Charges Template write."
         notice={notice}

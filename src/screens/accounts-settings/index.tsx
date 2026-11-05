@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -19,6 +20,8 @@ import type { Role } from '../../features/roles/queries';
 import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
 import { spacing } from '../../themes';
 
+const header = (save?: ReactNode) => <PageHeader kicker="Setup" title="Accounts Settings" meta="Cancellation, discounts and frozen dates" onBack={() => router.back()} actions={save} />;
+
 /**
  * Accounts Settings (docs.frappe.io/erpnext/accounts-settings, /immutable-ledger-in-erpnext,
  * /discount_accounting, /freeze-accounting-entries): how cancellation, discounts and item taxes are
@@ -31,7 +34,7 @@ export function AccountsSettingsScreen({ merchantId }: { merchantId: string }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Accounts Settings" meta="Cancellation, discounts and frozen dates" onBack={() => router.back()} form />
+      {settings.data && roles.data ? null : header()}
       {settings.data && roles.data ? (
         <SettingsForm merchantId={merchantId} saved={settings.data} roles={roles.data} />
       ) : (
@@ -82,7 +85,7 @@ function SettingsForm({ merchantId, saved, roles }: { merchantId: string; saved:
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Accounts Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={header} editable={editable} readOnly="Changing it needs Accounts Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledSwitch
           control={control}

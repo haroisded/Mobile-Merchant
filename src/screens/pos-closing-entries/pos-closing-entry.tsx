@@ -63,5 +63,6 @@ export function PosClosingEntryPage({ merchant, docId }: { merchant: Merchant; d
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE },
+  // Centred in the pane under its full-width header: a short read-only column held to the left left half the pane empty.
+  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE, alignSelf: 'center' },
 });

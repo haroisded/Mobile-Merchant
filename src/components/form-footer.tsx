@@ -19,28 +19,35 @@ import { useLeaveGuard } from './use-leave-guard';
  * to the bottom draws behind the system navigation bar. The inset is read from context, not measured by a native
  * SafeAreaView, so a bar with another under it — a practice page above the Store Guide's bar — is given 0 there
  * (src/screens/guide/sandbox/index.tsx) instead of a gesture bar's gap above the bar below.
- *
- * `centered`: under a PageForm, whose column is centred on a tablet — the bar's content lines up with the fields.
  */
-export function FormFooter({ notice, centered = false, children }: { notice: Notice | null; centered?: boolean; children: ReactNode }) {
+export function FormFooter({ notice, children }: { notice: Notice | null; children: ReactNode }) {
   const { colors } = useAppTheme();
   const { bottom } = useSafeAreaInsets();
   return (
     <View style={[styles.footer, { paddingBottom: spacing.ms + bottom, borderTopColor: colors.outlineVariant, backgroundColor: colors.surface }]}>
       {/* Held to the form's measure, as the fields above it are: a notice across a tablet is a line no one reads. */}
-      <View style={centered ? styles.centred : styles.measure}>
-        {notice ? (
-          <HelperText type={notice.type} padding="none">
-            {notice.text}
-          </HelperText>
-        ) : null}
+      <View style={styles.measure}>
+        <FormNotice notice={notice} />
         {children}
       </View>
     </View>
   );
 }
 
+function FormNotice({ notice }: { notice: Notice | null }) {
+  return notice ? (
+    <HelperText type={notice.type} padding="none">
+      {notice.text}
+    </HelperText>
+  ) : null;
+}
+
 type PageFormProps = {
+  /**
+   * The page's header, handed the form's Save for its actions: wide it sits there, at the end of the title's row;
+   * narrow `save` is null and the Save is in the footer.
+   */
+  header: (save: ReactNode) => ReactNode;
   /** False: the caller's roles may read this page but not write it — the fields are disabled, no Save. */
   editable: boolean;
   /** What the read-only note says ("Changing it needs System Settings write."). */
@@ -59,43 +66,49 @@ type PageFormProps = {
 };
 
 /**
- * A full-page form — the Company and the Settings singles: its fields scroll above FormFooter's Save. Held
- * to the single-column measure, the column centred in a pane wider than it — a tablet's — with its page header
- * (PageHeader `form`) and its Save (the human, 2026-10-23; .claude/instruction_mds/frontend.md rule 18). With no
- * Save (read-only), the end of the fields keeps clear of the system navigation bar.
+ * A full-page form — the Store, the Settings singles, a record or a document: the standard page (the human, 2026-11-06;
+ * .claude/instruction_mds/frontend.md §5) — the header across the pane, the fields from its left edge under it. Wide,
+ * Save is in the header and the write's notice opens the fields, with no footer: a bar under a tablet's form held one
+ * button. Narrow, FormFooter's Save stays under the fields, within a thumb's reach. With no Save (read-only), the end of
+ * the fields keeps clear of the system navigation bar.
  *
  * KeyboardAvoidingView: the Android build is edge-to-edge, so the window does not resize for the keyboard
  * (adaptive-dialog.tsx), and React Native only reports the keyboard (ReactRootView.java) — nothing makes
  * room for it. Without it the keyboard lies over the end of the fields and over Save.
  */
-export function PageForm({ editable, readOnly, notice, mutation, dirty, unsaved = false, onSave, saveLabel = 'Save', children }: PageFormProps) {
+export function PageForm({ header, editable, readOnly, notice, mutation, dirty, unsaved = false, onSave, saveLabel = 'Save', children }: PageFormProps) {
   const wide = useShellWide();
   const bottom = useBottomInset();
   const leaveGuard = useLeaveGuard(unsaved, mutation.isPending);
+  const save = <SaveButton key="save" mutation={mutation} dirty={dirty} onSave={onSave} label={saveLabel} />;
+  const inHeader = wide && editable;
+  const inFooter = !wide && editable;
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.fill}>
       {leaveGuard}
-      <ScrollView contentContainerStyle={[styles.body, editable ? null : { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
-        {editable ? null : <NoteCallout>{`You can see this page. ${readOnly}`}</NoteCallout>}
+      {header(inHeader ? save : null)}
+      <ScrollView contentContainerStyle={[styles.body, inFooter ? null : { paddingBottom: spacing.md + bottom }]} keyboardShouldPersistTaps="handled">
+        <ReadOnlyNote editable={editable} readOnly={readOnly} />
+        {inHeader ? <FormNotice notice={notice} /> : null}
         {children}
       </ScrollView>
-      {editable ? (
-        <FormFooter notice={notice} centered>
-          <Button
-            mode="contained"
-            onPress={onSave}
-            loading={mutation.isPending && !mutation.isPaused}
-            disabled={mutation.isPending || !dirty}
-            // Wide, the button hugs its label: a full-width primary button across a tablet reads as a banner.
-            style={wide ? styles.hug : undefined}
-            contentStyle={styles.leading}
-          >
-            {saveLabel}
-          </Button>
-        </FormFooter>
-      ) : null}
+      {inFooter ? <FormFooter notice={notice}>{save}</FormFooter> : null}
     </KeyboardAvoidingView>
+  );
+}
+
+function ReadOnlyNote({ editable, readOnly }: Pick<PageFormProps, 'editable' | 'readOnly'>) {
+  return editable ? null : <NoteCallout>{`You can see this page. ${readOnly}`}</NoteCallout>;
+}
+
+type SaveButtonProps = Pick<PageFormProps, 'mutation' | 'dirty' | 'onSave'> & { label: string };
+
+function SaveButton({ mutation, dirty, onSave, label }: SaveButtonProps) {
+  return (
+    <Button mode="contained" onPress={onSave} loading={mutation.isPending && !mutation.isPaused} disabled={mutation.isPending || !dirty} contentStyle={styles.leading}>
+      {label}
+    </Button>
   );
 }
 
@@ -104,10 +117,7 @@ const styles = StyleSheet.create({
   // Its sides pad as a form's body does, so the bar's content starts where the fields do.
   footer: { paddingTop: spacing.ms, paddingHorizontal: spacing.md, borderTopWidth: 1 },
   measure: { gap: spacing.sm, width: '100%', maxWidth: FORM_MEASURE },
-  // The body's content width (FORM_MEASURE less its padding), centred as the body is.
-  centred: { gap: spacing.sm, width: '100%', maxWidth: FORM_MEASURE - 2 * spacing.md, alignSelf: 'center' },
-  body: { gap: spacing.ms, padding: spacing.md, width: '100%', maxWidth: FORM_MEASURE, alignSelf: 'center' },
+  body: { gap: spacing.ms, padding: spacing.md },
   // Full-width buttons put their label at the left edge (.claude/instruction_mds/frontend.md §5).
   leading: { justifyContent: 'flex-start' },
-  hug: { alignSelf: 'flex-start' },
 });

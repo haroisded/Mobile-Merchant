@@ -1,4 +1,5 @@
 import { router, useNavigation } from 'expo-router';
+import type { ReactNode } from 'react';
 
 import { useShellWide } from '../lib/columns';
 import { useAppTheme } from '../lib/theme';
@@ -11,13 +12,15 @@ type Props = {
   title: string;
   /** The confirmed delete of the saved record; absent for a new one, or when the reader's roles may not delete. */
   remove?: { title: string; body: string; run: () => Promise<void>; failure: (cause: Error | null) => string };
+  /** The form's Save, wide (PageForm). The Employees pages keep theirs in their editors' footers. */
+  save?: ReactNode;
 };
 
 /**
  * The header of a record's own page in a destination's stack (an Item, a POS Profile): kicker, title, Back,
  * and the red Delete with its confirm (.claude/instruction_mds/frontend.md §5, "Record form with child rows").
  */
-export function RecordPageHeader({ kicker, title, remove }: Props) {
+export function RecordPageHeader({ kicker, title, remove, save }: Props) {
   const { colors } = useAppTheme();
   const navigation = useNavigation();
   const wide = useShellWide();
@@ -41,14 +44,14 @@ export function RecordPageHeader({ kicker, title, remove }: Props) {
         kicker={kicker}
         title={title}
         onBack={() => router.back()}
-        form
-        actions={
+        actions={[
           remove ? (
-            <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(remove)}>
+            <Button key="delete" mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(remove)}>
               Delete
             </Button>
-          ) : null
-        }
+          ) : null,
+          save,
+        ]}
       />
       {confirm.dialog}
     </>

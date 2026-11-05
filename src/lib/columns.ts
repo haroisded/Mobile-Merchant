@@ -13,7 +13,7 @@ const MIN_CARD = 260;
 // ponytail: M3's "medium" window class. Tune it on a real tablet.
 //
 // The one width threshold (.claude/instruction_mds/frontend.md §4.1). Compared against the window's width,
-// once, in src/app/(app)/_layout.tsx; every wide/narrow pair (§4.4) flips on it together. 600, not M3's
+// once, in src/app/_layout.tsx; every wide/narrow pair (§4.4) flips on it together. 600, not M3's
 // "expanded" 840 (the value until 2026-10-19): a tablet held upright (800dp on the Medium Tablet) is wide too,
 // and a phone — portrait-locked, under 600 — never is.
 export const WIDE_MIN = 600;
@@ -26,6 +26,7 @@ export const DIALOG_MAX = 560; // a Dialog over the screen, and a small form's p
 // Chrome widths, not card widths: panes are named so no screen writes its own (.claude/instruction_mds/frontend.md §1).
 export const RAIL_EXPANDED = 128; // icons + labels; fits a nine-letter label in labelLarge
 export const RAIL_COLLAPSED = 72; // icons only, after the menu action
+export const RAIL_MENU = 240; // while Setup's or Stock's dropdown is open: one-line rows, its sections' names whole
 // The narrow shell's off-canvas drawer. A multiple of 8 so it is whole pixels at the 1.75-3.5 densities: at 300 a
 // 2.625 phone lays it 787.5px wide, and the closed drawer, translated by that, leaves a 1px sliver at the left edge.
 export const DRAWER_WIDTH = 304;
@@ -45,7 +46,7 @@ export const RECEIPT_80MM = 336;
 /**
  * The one wide/narrow decision (.claude/instruction_mds/frontend.md §4.1).
  *
- * Provided by src/app/(app)/_layout.tsx from the window's width. A screen reads this instead of
+ * Provided by src/app/_layout.tsx from the window's width. A screen reads this instead of
  * measuring its own pane: the pane is narrower than the window by the rail, so a second measurement
  * would flip the anatomy at a different width from the rail beside it.
  */

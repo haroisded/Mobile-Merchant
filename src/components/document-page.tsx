@@ -179,13 +179,14 @@ export function useDocumentActions(props: SavedHeaderProps) {
  * A saved document's header: Submit and Delete on a draft, Cancel on a submitted one, Delete again on a
  * cancelled one where Accounts Settings let its entries go, then the entries it posted.
  */
-function DocumentHeader(props: SavedHeaderProps) {
+function DocumentHeader({ save, ...props }: SavedHeaderProps & { save: ReactNode }) {
   const { doctype, document, dirty = false } = props;
   const { colors } = useAppTheme();
   const { allow, ask, reports } = useDocumentActions(props);
   const status = allow.submit && dirty ? 'Draft · save your changes before submitting' : DOCSTATUS[document.docstatus];
 
   const actions = [
+    save,
     allow.submit ? (
       <Button key="submit" mode="contained" icon="check" onPress={ask.submit} disabled={dirty}>
         Submit
@@ -202,11 +203,11 @@ function DocumentHeader(props: SavedHeaderProps) {
       </Button>
     ) : null,
     ...reports,
-  ].filter((action) => action !== null);
+  ];
 
   return (
     <>
-      <PageHeader kicker={doctype} title={document.name} meta={status} onBack={() => router.back()} actions={actions.length > 0 ? actions : null} form />
+      <PageHeader kicker={doctype} title={document.name} meta={status} onBack={() => router.back()} actions={actions} />
       {ask.dialog}
     </>
   );
@@ -230,8 +231,10 @@ export function DocumentPage({ draft, editable, save, onSave, children, ...heade
 
   return (
     <View style={styles.fill}>
-      {document ? <DocumentHeader {...header} document={document} /> : <PageHeader kicker={doctype} title={`New ${noun}`} meta="Not saved yet" onBack={() => router.back()} form />}
       <PageForm
+        header={(button) =>
+          document ? <DocumentHeader {...header} document={document} save={button} /> : <PageHeader kicker={doctype} title={`New ${noun}`} meta="Not saved yet" onBack={() => router.back()} actions={button} />
+        }
         editable={editable}
         readOnly={draft ? `Changing it needs ${doctype} write.` : 'It is no longer a draft, so it stays as it was posted.'}
         notice={mutationNotice(save, postingRefusal(save.error) ?? failureMessage(`Couldn't save this ${noun}. Try again.`))}

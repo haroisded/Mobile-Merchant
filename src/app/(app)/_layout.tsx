@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router';
-import { useWindowDimensions } from 'react-native';
 
-import { ShellWideContext, WIDE_MIN } from '../../lib/columns';
+import { useShellWide } from '../../lib/columns';
 import { useAppTheme } from '../../lib/theme';
 import { radius } from '../../themes';
 
@@ -67,15 +66,11 @@ const DIALOG_ROUTES = [
 // - `forms/*` are the small Setup forms above; `sheets/*` are the native sheets above.
 export default function AppLayout() {
   const { colors } = useAppTheme();
-  // The one wide/narrow decision (.claude/instruction_mds/frontend.md §4.1). The window, not a container:
-  // synchronous, so no zero-width first frame, and it follows rotation and split-screen. Read here
-  // rather than in the shell because (tabs) and sheets/ sit beside the shell, not under it.
-  const wide = useWindowDimensions().width >= WIDE_MIN;
+  const wide = useShellWide();
   // Wide, a small form is a transparentModal whose whole content is its Dialog, the screen it came from left under it.
   const asDialog = wide ? ({ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } } as const) : undefined;
 
   return (
-    <ShellWideContext value={wide}>
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="systems/[id]" />
@@ -108,6 +103,5 @@ export default function AppLayout() {
         />
       ))}
     </Stack>
-    </ShellWideContext>
   );
 }

@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useNavigation } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -58,7 +59,7 @@ const saveFailure = (error: Error | null) =>
   postgrestError(error)?.code === '23505' ? 'There is already a print format with this name.' : failureMessage("Couldn't save this print format. Try again.");
 
 /** The page's header: kicker, title, and the red Delete with its confirm for whoever may delete. */
-function FormatHeader({ merchant, existing }: { merchant: Merchant; existing: PrintFormat | undefined }) {
+function FormatHeader({ merchant, existing, save }: { merchant: Merchant; existing: PrintFormat | undefined; save: ReactNode }) {
   const { colors } = useAppTheme();
   const navigation = useNavigation();
   const wide = useShellWide();
@@ -87,14 +88,14 @@ function FormatHeader({ merchant, existing }: { merchant: Merchant; existing: Pr
         kicker="Print Format"
         title={existing?.print_format_name ?? 'New print format'}
         onBack={() => router.back()}
-        form
-        actions={
+        actions={[
           existing && can(permissions, 'Print Format', 'delete') ? (
-            <Button mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
+            <Button key="delete" mode="outlined" textColor={colors.error} icon="delete" onPress={() => askDelete(existing)}>
               Delete
             </Button>
-          ) : null
-        }
+          ) : null,
+          save,
+        ]}
       />
       {confirm.dialog}
     </>
@@ -117,8 +118,8 @@ function Form({ merchant, existing }: { merchant: Merchant; existing: PrintForma
 
   return (
     <View style={styles.fill}>
-      <FormatHeader merchant={merchant} existing={existing} />
       <PageForm
+        header={(button) => <FormatHeader merchant={merchant} existing={existing} save={button} />}
         editable={editable}
         readOnly="Changing it needs Print Format write."
         notice={notice}

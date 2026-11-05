@@ -118,7 +118,7 @@ src/
                           the Features page: hide screens and pages, with what each is for (the shell destination systems/[id]/features/)
     profile/
     sign-in/
-  components/             text.tsx  button.tsx  bottom-spacer.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  level-picker.tsx (Create Store and Features)  step-header.tsx  progress-bar.tsx  radio-button.tsx  …
+  components/             text.tsx  button.tsx  bottom-spacer.tsx  adaptive-dialog.tsx  page-header.tsx  form-fields.tsx  search-select.tsx  record-list.tsx  folder-nav.tsx  destinations.ts (the side menu's destinations: the shell and Features)  repeatable-rows.tsx  section-heading.tsx  sample-box.tsx  record-index.tsx  sales-defaults-fields.tsx  item-tax-fields.tsx  document-page.tsx  stock-document.tsx  ledger-filters.tsx  chip.tsx  record-page-header.tsx  receipt.tsx  pos-session.tsx  session-amounts-form.tsx  segmented-buttons.tsx  row-box.tsx  filter-chips.tsx  bell-action.tsx  badge.tsx  level-picker.tsx (Create Store and Features)  icon-tile.tsx  section-browser.tsx (Setup and Stock)  shell-menu.ts (the sidebar's dropdowns)  step-header.tsx  progress-bar.tsx  radio-button.tsx  …
 ```
 
 That is the whole tree as of Steps 1, 11, 2, 3, 4, 5, 6, 8, 9, 7, 10 and 12 of the POS foundation (2026-10-10). A new resource of
@@ -152,6 +152,8 @@ Never create a feature folder named after a page.
 | Profile read | `src/features/profiles/`; screen in `src/screens/profile/` |
 | A dialog that also opens as a sheet route (RemoveSystemDialog, DeleteAccountDialog) | `src/components/` — the route is its second host |
 | Column-count hook | `src/lib/columns.ts` |
+| What a Setup or Stock search finds | `src/lib/section-search.ts` — import-free, so `tools/check-logic.mjs` runs it |
+| A legal document's text, on its page and in Account's Dialog | `src/screens/legal/legal-body.tsx` |
 | Reading a CSV file of items; picking the file | `src/features/items/csv.ts` — data, and import-free so `tools/check-logic.mjs` runs it; `src/lib/files.ts` — the device wrapper (rule 6). Rejected: a `features/import/` folder — a page, not a resource (rule 2) |
 | The product scan: the camera page, what a label says, the request between them | `src/screens/scan/` — one page, opened by the Item form and the Register (rule 4: a second screen uses it, so it is a screen of its own, not a component of either); `src/features/items/label.ts` — what a label's lines mean for an item, and `src/lib/barcode.ts` — which camera reports count, both import-free so `tools/check-logic.mjs` runs them; `src/Store/scan.ts` — the request, as `picker.ts` carries the picker's. Rejected: a `features/scan/` folder — a device feature, not a resource (rule 2) |
 | The Dashboard's reports — four functions that each add up several resources | `src/features/dashboard/` — the one folder named as its page is, because the reports are: `public.dashboard_cards` belongs to no single table. Rejected: a hook in each of `pos-invoices/`, `bins/` and `pos-opening-entries/` — one card reads all three |

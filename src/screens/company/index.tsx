@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -28,6 +29,8 @@ import { spacing } from '../../themes';
 
 type Props = { merchant: Merchant };
 
+const headerOf = (meta: string) => (save?: ReactNode) => <PageHeader kicker="Setup" title="Store" meta={meta} onBack={() => router.back()} actions={save} />;
+
 /**
  * Store (ERPNext's Company, docs.frappe.io/erpnext/company-setup): the one store whose books these are — no
  * branches, so no abbreviation and no cost centers (supabase/migrations/20261018162135_single_store.sql) — with
@@ -42,7 +45,7 @@ export function CompanyScreen({ merchant }: Props) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Store" meta={merchant.name} onBack={() => router.back()} form />
+      {countries.data && currencies.data && accounts.data ? null : headerOf(merchant.name)()}
       {countries.data && currencies.data && accounts.data ? (
         <CompanyForm merchant={merchant} countries={countries.data} currencies={currencies.data} accounts={accounts.data} />
       ) : (
@@ -170,7 +173,7 @@ function CompanyForm({ merchant, countries, currencies, accounts }: FormProps) {
   );
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Store & Calendar." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={headerOf(merchant.name)} editable={editable} readOnly="Changing it needs Store & Calendar." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledText control={control} name="name" label="Store Name" required placeholder="e.g. Corner Cafe" maxLength={80} disabled={!editable} />
         <CountryCurrencyFields control={control} countries={countries} currencies={currencies} disabled={!editable} />

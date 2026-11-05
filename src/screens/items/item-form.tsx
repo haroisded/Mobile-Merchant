@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useFieldArray, useForm, useFormState, useWatch } from 'react-hook-form';
 import type { Control, UseFormReturn } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
@@ -263,12 +264,13 @@ const deleteFailure = (cause: Error | null) =>
   (postgrestError(cause)?.code === '23503' ? "It's in use. Disable it instead." : failureMessage("Couldn't delete this item. Try again."));
 
 /** The page's header: kicker, title, and the red Delete with its confirm for whoever may delete. */
-function ItemHeader({ merchant, existing }: { merchant: Merchant; existing: Item | undefined }) {
+function ItemHeader({ merchant, existing, save }: { merchant: Merchant; existing: Item | undefined; save: ReactNode }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const remove = useDeleteItemMutation();
 
   return (
     <RecordPageHeader
+      save={save}
       kicker="Item"
       title={existing ? itemLabel(existing) : 'New item'}
       remove={
@@ -335,8 +337,8 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
 
   return (
     <View style={styles.fill}>
-      <ItemHeader merchant={merchant} existing={existing} />
       <PageForm
+        header={(button) => <ItemHeader merchant={merchant} existing={existing} save={button} />}
         editable={editable}
         readOnly="Changing it needs Item write."
         notice={mutationNotice(save, saveFailure(save.error))}

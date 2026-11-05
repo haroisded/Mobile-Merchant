@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { NoteCallout } from '../../components/note-callout';
@@ -49,18 +50,14 @@ export function CloseSession({ merchant, docId, onClose }: { merchant: Merchant;
         router.push(closing(closingId));
       }}
       dialog={onClose ? { kicker: profile.pos_profile_name, title: 'Close Session', onCancel: onClose } : undefined}
+      header={(save: ReactNode) => <PageHeader kicker={profile.pos_profile_name} title="Close Session" meta={`Session ${session.name}`} onBack={() => router.back()} actions={save} />}
     >
       <NoteCallout>Count what each payment method holds now. Closing works out what it should hold, and no more sales can be rung up in this session.</NoteCallout>
     </SessionAmountsForm>
   );
   if (onClose) return form;
 
-  return (
-    <View style={styles.fill}>
-      <PageHeader kicker={profile.pos_profile_name} title="Close Session" meta={`Session ${session.name}`} onBack={() => router.back()} form />
-      {form}
-    </View>
-  );
+  return <View style={styles.fill}>{form}</View>;
 }
 
 const styles = StyleSheet.create({

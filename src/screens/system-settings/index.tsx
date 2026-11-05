@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -33,6 +34,8 @@ const ROUNDING_OPTIONS = [
 const timeZoneOptions = (countries: Country[]) =>
   [...new Set(countries.flatMap((country) => country.time_zones))].sort().map((zone) => ({ value: zone, label: zone }));
 
+const header = (save?: ReactNode) => <PageHeader kicker="Setup" title="System Settings" meta="Time zone, number format and precision" onBack={() => router.back()} actions={save} />;
+
 /**
  * System Settings (docs.frappe.io/erpnext/system-settings, /set-precision): the time zone, how numbers look,
  * how many decimals quantities and amounts keep, and how a half is rounded.
@@ -43,7 +46,7 @@ export function SystemSettingsScreen({ merchantId }: { merchantId: string }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="System Settings" meta="Time zone, number format and precision" onBack={() => router.back()} form />
+      {settings.data && countries.data ? null : header()}
       {settings.data && countries.data ? (
         <SettingsForm merchantId={merchantId} saved={settings.data} countries={countries.data} />
       ) : (
@@ -83,7 +86,7 @@ function SettingsForm({ merchantId, saved, countries }: { merchantId: string; sa
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs System Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={header} editable={editable} readOnly="Changing it needs System Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       {/* ERPNext: set the time zone before transactions begin; changing it later moves every timestamp. */}
       {timeZone === saved.time_zone ? null : (
         <NoteCallout tone="error">Change the time zone only before the first sale: every date and time already recorded would read differently.</NoteCallout>

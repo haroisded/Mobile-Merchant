@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
@@ -29,6 +30,8 @@ import { spacing } from '../../themes';
 // A sample total with a half in its last place, so the rounding method shows.
 const SAMPLE = 1234.565;
 
+const headerOf = (meta: string) => (save?: ReactNode) => <PageHeader kicker="Setup" title="Currency" meta={meta} onBack={() => router.back()} actions={save} />;
+
 /**
  * Currency (docs.frappe.io/erpnext/currency): how the base currency looks — symbol and its side, the fraction
  * named in words, the smallest coin for cash rounding, the number format — with a sample receipt total
@@ -39,7 +42,7 @@ export function CurrencyScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Currency" meta={merchant.default_currency} onBack={() => router.back()} form />
+      {currency.data ? null : headerOf(merchant.default_currency)()}
       {currency.data ? (
         <CurrencyForm merchantId={merchant.id} saved={currency.data} />
       ) : (
@@ -77,7 +80,7 @@ function CurrencyForm({ merchantId, saved }: { merchantId: string; saved: Curren
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Currency write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={headerOf(saved.code)} editable={editable} readOnly="Changing it needs Currency write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       <FieldGrid>
         <ControlledText control={control} name="symbol" label="Symbol" placeholder="e.g. ₱" maxLength={10} disabled={!editable} />
         <ControlledSwitch

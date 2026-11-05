@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 
-import { RecordIndex } from '../../components/record-index';
 import type { IndexSection } from '../../components/record-index';
+import { SectionBrowser } from '../../components/section-browser';
 
 /** The pages under src/app/(app)/systems/[id]/setup/. */
 type SetupRoute =
@@ -39,10 +39,12 @@ type SetupRoute =
 export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   {
     title: 'Store & Calendar',
+    icon: 'storefront',
     hint: 'Whose books these are, and the years they are kept in',
     entries: [
       {
         label: 'Store',
+        icon: 'store',
         hint: 'Name, currency, default accounts, stock',
         purpose: "The store's name, country and currency, and the accounts its sales and stock fall back on.",
         useCase: "Use it when the store's details change, or when your accountant asks for different default accounts.",
@@ -51,6 +53,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Fiscal Years',
+        icon: 'calendar-month',
         hint: 'The accounting years every sale is dated in',
         purpose: "The store's accounting years. Every sale and stock change must be dated inside one that is turned on.",
         useCase: "Add next year's before it starts.",
@@ -61,10 +64,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Defaults & Money',
+    icon: 'tune',
     hint: 'How numbers, amounts and times read on every screen and receipt',
     entries: [
       {
         label: 'Global Defaults',
+        icon: 'settings-suggest',
         hint: 'Rounded total and amount in words on receipts',
         purpose: 'Two switches for the bottom of a receipt: the rounded total and the amount written in words.',
         useCase: "Use it if you don't want either one printed.",
@@ -73,6 +78,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'System Settings',
+        icon: 'settings',
         hint: 'Time zone, number format, precision, rounding',
         purpose: 'How the store counts "today", writes numbers and rounds amounts.',
         useCase: 'Set the time zone before the first sale; change the rest only if your country writes numbers differently.',
@@ -81,6 +87,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Currency',
+        icon: 'currency-exchange',
         hint: 'Symbol, smallest coin, amount in words',
         purpose: 'How an amount looks: its symbol, its decimals and the smallest coin you give change in.',
         useCase: 'Use it so totals match the money your customers actually pay with.',
@@ -91,10 +98,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Accounting',
+    icon: 'accounts',
     hint: 'Where every sale, purchase and payment is recorded',
     entries: [
       {
         label: 'Chart of Accounts',
+        icon: 'account-tree',
         hint: 'Cash, stock, sales and the groups they sit in',
         purpose: 'Every place the books record money, kept in folders. Sales, payments and stock all post to these accounts.',
         useCase: 'Use it with your accountant to add or rename an account.',
@@ -103,6 +112,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Accounts Settings',
+        icon: 'rule',
         hint: 'Cancellation, discounts, frozen dates',
         purpose: 'What happens to the books when a document is cancelled or deleted, whether discounts get their own account, and the date before which the books are closed.',
         useCase: 'Use it when your accountant closes a period.',
@@ -113,10 +123,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Payments',
+    icon: 'payments',
     hint: 'The ways a sale can be paid',
     entries: [
       {
         label: 'Modes of Payment',
+        icon: 'credit-card',
         hint: 'Cash, card, wallets and their accounts',
         purpose: "The ways customers pay, such as cash, card or an e-wallet, and the account each one's money goes to.",
         useCase: 'Add one when you start accepting a new way to pay.',
@@ -127,10 +139,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Taxes',
+    icon: 'percent',
     hint: 'What tax a sale carries, and how it is worked out',
     entries: [
       {
         label: 'Sales Taxes and Charges Templates',
+        icon: 'request-quote',
         hint: 'The tax rows a sale gets, in or on top of the price',
         purpose: 'The tax lines a sale gets, such as VAT, and the account each tax goes to.',
         useCase: 'Use it to set up your tax, and test it on a sample sale before you sell.',
@@ -139,6 +153,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Item Tax Templates',
+        icon: 'label',
         hint: 'A different rate for particular items',
         purpose: 'A different tax rate for some items, such as zero-rated goods.',
         useCase: 'Use it when not everything you sell is taxed the same way.',
@@ -147,6 +162,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Tax Categories',
+        icon: 'category',
         hint: 'Names for tax treatments: standard, exempt',
         purpose: 'Names for the ways a sale is taxed, such as Exempt or Zero Rated, that a tax rule can choose by.',
         useCase: 'You need it only if different sales are taxed differently.',
@@ -155,6 +171,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Tax Rules',
+        icon: 'gavel',
         hint: 'Which template a sale takes, by category, group and date',
         purpose: 'Picks the tax a sale gets from its category, its item group and its date.',
         useCase: "Use it when a single tax setup doesn't fit every sale.",
@@ -165,10 +182,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Stock',
+    icon: 'stock',
     hint: 'Where stock is kept, what it is counted in, and what it sells for',
     entries: [
       {
         label: 'Warehouses',
+        icon: 'warehouse',
         hint: 'Stores, rooms and shelves, and their stock account',
         purpose: 'The places stock is kept, such as a stockroom or a shelf, in folders. A sale takes its stock from one.',
         useCase: 'Add one when you start keeping stock somewhere new.',
@@ -177,6 +196,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'UOMs',
+        icon: 'straighten',
         hint: 'Units items are counted in: Nos, Kg, Box',
         purpose: 'The units items are counted and sold in: pieces, boxes, kilos.',
         useCase: "Add one when you sell in a unit that isn't on the list yet.",
@@ -185,6 +205,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'UOM Conversion Factors',
+        icon: 'swap-horiz',
         hint: 'How many of one unit make another',
         purpose: 'How two units relate, such as 1 Kg = 1000 Gram, so an item kept in one unit can be sold in another.',
         useCase: 'Add one when you sell an item in a different unit than you stock it in.',
@@ -193,6 +214,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Price Lists',
+        icon: 'list-alt',
         hint: 'The books selling prices are kept in',
         purpose: 'Named sets of selling prices. Most stores need only Standard Selling.',
         useCase: 'Add another for a second set of prices, such as wholesale.',
@@ -201,6 +223,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Brands',
+        icon: 'verified',
         hint: 'Brand names, and the sales defaults their items take',
         purpose: 'Optional trade names for your items, each with defaults its items start from.',
         useCase: 'Use it if you sort your products by brand.',
@@ -209,6 +232,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Item Groups',
+        icon: 'workspaces',
         hint: 'How items are classified, and the defaults they take',
         purpose: 'Folders that sort your items, such as Products and Services, with the defaults and taxes their items take.',
         useCase: 'Use it to organise what you sell.',
@@ -217,6 +241,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Stock Settings',
+        icon: 'inventory',
         hint: 'What new items start with; FIFO or Moving Average',
         purpose: 'What a new item starts with, how stock is valued (FIFO or Moving Average), and whether stock may go below zero.',
         useCase: 'Set it before you add your first items.',
@@ -227,10 +252,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Selling',
+    icon: 'selling',
     hint: 'Where a sale takes its prices from',
     entries: [
       {
         label: 'Selling Settings',
+        icon: 'price-change',
         hint: 'Default price list, fallback, editing prices',
         purpose: 'Where a sale gets its prices from, and how far a cashier may change them.',
         useCase: 'Use it to choose the price list sales start with.',
@@ -239,6 +266,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Pricing Rules',
+        icon: 'local-offer',
         hint: 'Automatic discounts by item, item group or brand',
         purpose: 'Automatic discounts or prices for an item, an item group or a brand, within the quantities and dates you set.',
         useCase: 'Use it for promotions and bulk prices.',
@@ -249,10 +277,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Point of Sale',
+    icon: 'sell',
     hint: 'The registers a cashier sells from',
     entries: [
       {
         label: 'POS Profiles',
+        icon: 'devices',
         hint: 'A register: warehouse, payment methods, users, accounts',
         purpose: "A register's setup: its warehouse, prices, taxes, payment methods, who may use it and which items it sells.",
         useCase: 'You need one before anyone can open a session.',
@@ -263,10 +293,12 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
   {
     title: 'Naming & Printing',
+    icon: 'terms',
     hint: 'How documents are numbered, and what a receipt looks like',
     entries: [
       {
         label: 'Document Naming Settings',
+        icon: 'number',
         hint: 'The series invoices and items are numbered by',
         purpose: 'How sales, items and stock documents are numbered, with the year in the number.',
         useCase: 'Change it only if you want your own numbering.',
@@ -275,6 +307,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Print Formats',
+        icon: 'receipt-long',
         hint: 'The receipt: paper, heading, a sample',
         purpose: 'The layout of a receipt: its paper size, heading and footer note, with a sample to check it by.',
         useCase: 'Use it to fit your receipt printer.',
@@ -283,6 +316,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Letter Heads',
+        icon: 'article',
         hint: 'The name and address at the top of a receipt',
         purpose: "The block at the top and bottom of a receipt: your store's name, address and a closing line.",
         useCase: 'Use it to put your own words on every receipt.',
@@ -291,6 +325,7 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
       },
       {
         label: 'Print Settings',
+        icon: 'print',
         hint: 'Letter head, compact items, zero taxes',
         purpose: 'What every receipt includes: the letter head, a compact list of items, and taxes that come to zero.',
         useCase: 'Use it to make receipts shorter or fuller.',
@@ -301,21 +336,21 @@ export const SETUP_SECTIONS: IndexSection<SetupRoute>[] = [
   },
 ];
 
-/** Setup: the index of a store's foundation records, the rail's last destination. */
-export function SetupIndex({ merchantId, merchantName, isOwner }: { merchantId: string; merchantName: string; isOwner: boolean }) {
+/** Setup: a store's foundation records, by the section its sidebar dropdown picks. */
+export function SetupIndex({ merchantId, isOwner }: { merchantId: string; isOwner: boolean }) {
   return (
-    <RecordIndex
+    <SectionBrowser
       merchantId={merchantId}
       screen="setup"
-      kicker={merchantName}
-      title="Setup"
-      meta="Set these up before the first item is sold"
       isOwner={isOwner}
       sections={SETUP_SECTIONS}
       onOpen={(route) => router.push(`/systems/${merchantId}/setup/${route}`)}
       offline="You're offline. Setup will load when you reconnect."
       failure="Couldn't load Setup. Try again."
       empty="Your permissions give you nothing to set up here. Ask the owner if you need more."
+      placeholder="Search settings"
+      noun="settings"
+      tryWords="Try a word like tax, stock or print."
     />
   );
 }

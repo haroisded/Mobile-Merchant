@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -29,6 +30,8 @@ import type { Warehouse } from '../../features/warehouses/queries';
 import { failureMessage, mutationNotice, postgrestError } from '../../lib/errors';
 import { spacing } from '../../themes';
 
+const header = (save?: ReactNode) => <PageHeader kicker="Setup" title="Stock Settings" meta="What new items start with, and how stock is valued" onBack={() => router.back()} actions={save} />;
+
 /**
  * Stock Settings (docs.frappe.io/erpnext/stock-settings, /fifo-and-moving-average): how new items are named,
  * the group, unit and warehouse they start with, the valuation method that costs each sale, negative stock,
@@ -45,7 +48,7 @@ export function StockSettingsScreen({ merchant }: { merchant: Merchant }) {
 
   return (
     <View style={styles.fill}>
-      <PageHeader kicker="Setup" title="Stock Settings" meta="What new items start with, and how stock is valued" onBack={() => router.back()} form />
+      {settings.data && groups.data && uoms.data && warehouses.data ? null : header()}
       {settings.data && groups.data && uoms.data && warehouses.data ? (
         <SettingsForm merchant={merchant} saved={settings.data} records={{ groups: groups.data, uoms: uoms.data, warehouses: warehouses.data }} />
       ) : (
@@ -103,7 +106,7 @@ function SettingsForm({ merchant, saved, records }: { merchant: Merchant; saved:
   const save = handleSubmit(saveOnce(update, reset));
 
   return (
-    <PageForm editable={editable} readOnly="Changing it needs Stock Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
+    <PageForm header={header} editable={editable} readOnly="Changing it needs Stock Settings write." notice={notice} mutation={update} dirty={formState.isDirty} unsaved={formState.isDirty} onSave={save}>
       {fallback && autoInsert ? <NoteCallout tone="error">{FALLBACK_WITH_AUTO_INSERT}</NoteCallout> : null}
       <FieldGrid>
         <ControlledSelect control={control} name="item_naming_by" label="Item Naming By" title="Item Naming By" options={NAMING_OPTIONS} disabled={!editable} />

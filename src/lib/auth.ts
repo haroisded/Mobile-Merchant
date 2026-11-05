@@ -7,7 +7,7 @@ import { supabase } from './supabase';
  * mobilemerchant:// — allow-list this in Supabase as `mobilemerchant://**`.
  * Log it rather than assume it: createURL returns a different string per environment.
  */
-export const redirectTo = Linking.createURL('/');
+const redirectTo = Linking.createURL('/');
 
 
 // configure() must run before any other GoogleSignin call.

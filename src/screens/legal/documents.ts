@@ -5,9 +5,10 @@
  */
 export type LegalDoc = 'privacy' | 'terms';
 
-type Section = { heading: string; paragraphs: string[] };
+/** A section's paragraphs, or paragraphs each with its own short heading above it ("Account information"). */
+type Section = { heading: string; paragraphs?: string[]; labelled?: { label: string; text: string }[] };
 
-type Document = { title: string; updated: string; intro: string; sections: Section[] };
+export type Document = { title: string; updated: string; intro: string; sections: Section[] };
 
 const UPDATED = '22 October 2026';
 const CONTACT = 'Questions about this document go to [Developer name] at [contact email].';
@@ -21,12 +22,12 @@ export const LEGAL_DOCS = {
     sections: [
       {
         heading: 'Information we collect',
-        paragraphs: [
-          'Account information. When you sign in with Google or Facebook, we receive your name, email address and profile photo from that provider. We do not receive or store your Google or Facebook password.',
-          'Store records. The stores you create and everything you enter in them — items, prices, stock, sales, payments, employees, roles and settings — are stored so the app can show them to you and to the people you let into your store.',
-          'Access requests. When you use an access code, the store owner receives your name, email address and photo so they can decide whether to let you in.',
-          'Camera and photos. Scan Product and Scan to Sell use the camera, and Choose Photo reads a picture you pick. Barcodes and label text are read on your phone; the pictures are not uploaded.',
-          'Files. Import Items reads the file you choose on your phone, and Download Template saves a file to the folder you pick.',
+        labelled: [
+          { label: 'Account information', text: 'When you sign in with Google or Facebook, we receive your name, email address and profile photo from that provider. We do not receive or store your Google or Facebook password.' },
+          { label: 'Store records', text: 'The stores you create and everything you enter in them — items, prices, stock, sales, payments, employees, roles and settings — are stored so the app can show them to you and to the people you let into your store.' },
+          { label: 'Access requests', text: 'When you use an access code, the store owner receives your name, email address and photo so they can decide whether to let you in.' },
+          { label: 'Camera and photos', text: 'Scan Product and Scan to Sell use the camera, and Choose Photo reads a picture you pick. Barcodes and label text are read on your phone; the pictures are not uploaded.' },
+          { label: 'Files', text: 'Import Items reads the file you choose on your phone, and Download Template saves a file to the folder you pick.' },
         ],
       },
       {

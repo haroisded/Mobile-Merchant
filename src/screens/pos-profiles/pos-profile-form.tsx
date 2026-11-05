@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
@@ -172,12 +173,13 @@ const deleteFailure = (cause: Error | null) =>
   (postgrestError(cause)?.code === '23503' ? "It's in use. Disable it instead." : failureMessage("Couldn't delete this POS Profile. Try again."));
 
 // Its own component, not inlined in Form: the delete's condition would put Form past fallow's complexity limit.
-function ProfileHeader({ merchant, existing }: { merchant: Merchant; existing: PosProfile | undefined }) {
+function ProfileHeader({ merchant, existing, save }: { merchant: Merchant; existing: PosProfile | undefined; save: ReactNode }) {
   const permissions = usePermissions({ merchantId: merchant.id }).data;
   const remove = useDeletePosProfileMutation();
 
   return (
     <RecordPageHeader
+      save={save}
       kicker="POS Profile"
       title={existing?.pos_profile_name ?? 'New POS Profile'}
       remove={
@@ -228,8 +230,8 @@ function Form({ merchant, records, existing }: { merchant: Merchant; records: Re
 
   return (
     <View style={styles.fill}>
-      <ProfileHeader merchant={merchant} existing={existing} />
       <PageForm
+        header={(button) => <ProfileHeader merchant={merchant} existing={existing} save={button} />}
         editable={editable}
         readOnly="Changing it needs POS Profile write."
         notice={notice}
