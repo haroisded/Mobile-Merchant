@@ -36,11 +36,8 @@ export function HomeScreen() {
   // cell is recycled, and this state must outlive neither the row nor the scroll position.
   const [removing, setRemoving] = useState<Merchant[] | null>(null);
 
-  // The one threshold (.claude/instruction_mds/frontend.md §4.1) picks the anatomy: row cards narrow, grid
-  // wide. The measured column count only sizes the grid.
   const narrow = !useShellWide();
-  const numColumns = narrow ? 1 : columns;
-  // Wide, the floating toolbar lies over the list's end: the last row scrolls clear of it and of the navigation bar.
+  // The floating toolbar lies over the list's end: the last row scrolls clear of it and of the navigation bar.
   const bottom = useBottomInset(true);
   const [toolbar, setToolbar] = useState(0);
 
@@ -87,14 +84,14 @@ export function HomeScreen() {
           getItemType={(item) => (item === CREATE ? 'create' : 'system')}
           // The cards read the selection: a change of it redraws them.
           extraData={picked}
-          numColumns={numColumns}
+          numColumns={columns}
           // FlashList recomputes its layout when numColumns changes, so the remount FlatList
           // required (.claude/instruction_mds/frontend.md §4.2) is no longer load-bearing. It is kept because the
           // key only changes when the container crosses a column boundary — a rotation or a
           // resize, which is already a full relayout — and it costs nothing the rest of the time.
-          key={numColumns}
-          contentContainerStyle={[styles.list, narrow ? null : { paddingBottom: GUTTER + toolbar + bottom }]}
-          ListHeaderComponent={<HomeHeader narrow={narrow} />}
+          key={columns}
+          contentContainerStyle={[styles.list, { paddingBottom: GUTTER + toolbar + bottom }]}
+          ListHeaderComponent={<HomeHeader />}
           // The create card is always first, so the list is never empty: the load state goes under it.
           ListFooterComponent={
             <View style={styles.empty}>
@@ -104,11 +101,10 @@ export function HomeScreen() {
           renderItem={({ item }) => (
             <View style={styles.cell}>
               {item === CREATE ? (
-                <CreateCard row={narrow} onPress={create} />
+                <CreateCard onPress={create} />
               ) : (
                 <SystemCard
                   merchant={item}
-                  row={narrow}
                   onPress={() => press(item)}
                   onRemove={() => remove([item])}
                   canRemove={item.owner_id === userId}
@@ -125,7 +121,7 @@ export function HomeScreen() {
       {/* Mounted only while rows are awaiting confirmation, which is what makes the typed-
           confirmation field empty again on every open with no reset logic. */}
       {removing ? <RemoveSystemDialog merchants={removing} onDismiss={() => setRemoving(null)} /> : null}
-      {narrow || selecting ? null : <HomeToolbar bottom={bottom} onHeight={setToolbar} />}
+      {selecting ? null : <HomeToolbar bottom={bottom} onHeight={setToolbar} />}
     </Surface>
   );
 }
@@ -168,7 +164,7 @@ function SelectionBar({ count, onClose, onSelectAll, onDelete }: SelectionBarPro
   );
 }
 
-/** The header: the logo and name, then — narrow — Enter Access Code and Store Guide, the bell; wide, the bell and Account. */
+/** The header: the logo and name, the bell and — wide, where the tab bar is hidden — Account. */
 function HomeBar({ narrow }: { narrow: boolean }) {
   return (
     <Appbar.Header>
@@ -184,9 +180,6 @@ function HomeBar({ narrow }: { narrow: boolean }) {
         <Avatar.Text label="" size={40} />
       </View>
       <Appbar.Content title="Merchant" />
-      {/* A code someone sent — the one way into their store — and the Store Guide. Wide, they float in HomeToolbar. */}
-      {narrow ? <Appbar.Action icon="enter-code" onPress={() => router.push('/forms/enter-access-code')} accessibilityLabel="Enter Access Code" /> : null}
-      {narrow ? <Appbar.Action icon="help" onPress={() => router.push('/guide')} accessibilityLabel="Store Guide" /> : null}
       <BellAction onPress={() => router.push('/notifications')} />
       {/* Wide, the tab bar is hidden: Account opens as a Dialog over the stores (the forms/ profile route). */}
       {narrow ? null : <Appbar.Action icon="account-circle" onPress={() => router.push('/forms/profile')} accessibilityLabel="Account" />}
@@ -197,16 +190,19 @@ function HomeBar({ narrow }: { narrow: boolean }) {
 const TOOLS = [
   { icon: 'enter-code', label: 'Enter Code', accessibilityLabel: 'Enter Access Code', open: () => router.push('/forms/enter-access-code') },
   // navigate, not push: Access Codes is a sibling tab, hidden with the tab bar on a tablet.
-  { icon: 'key', label: 'Access Codes', accessibilityLabel: 'Access Codes', open: () => router.navigate('/access-codes') },
+  { icon: 'key', label: 'Access Codes', accessibilityLabel: 'Access Codes', wideOnly: true, open: () => router.navigate('/access-codes') },
   { icon: 'help', label: 'Store Guide', accessibilityLabel: 'Store Guide', open: () => router.push('/guide') },
 ] as const;
 
 /**
- * Wide only: Enter Access Code, Access Codes and the Store Guide, floating in a pill at the bottom centre over the
- * stores (the human, 2026-10-23), above the navigation bar. Its height is reported so the list's end scrolls clear.
+ * Enter Access Code, Access Codes and the Store Guide, floating in a pill at the bottom centre over the stores (the
+ * human, 2026-10-23), above the navigation bar. Narrow, Access Codes stays out: it is a tab of the bar under the pill
+ * (the human, 2026-11-07). Its height is reported so the list's end scrolls clear.
  */
 function HomeToolbar({ bottom, onHeight }: { bottom: number; onHeight: (height: number) => void }) {
   const { colors } = useAppTheme();
+  const wide = useShellWide();
+  const tools = TOOLS.filter((tool) => wide || !('wideOnly' in tool));
 
   return (
     <View pointerEvents="box-none" style={[styles.toolbarWrap, { bottom: spacing.md + bottom }]}>
@@ -215,7 +211,7 @@ function HomeToolbar({ bottom, onHeight }: { bottom: number; onHeight: (height: 
         style={[styles.toolbar, { borderColor: colors.outlineVariant }]}
         onLayout={(event) => onHeight(event.nativeEvent.layout.height + spacing.md)}
       >
-        {TOOLS.map((tool) => (
+        {tools.map((tool) => (
           <Pressable
             key={tool.label}
             onPress={tool.open}
@@ -235,18 +231,12 @@ function HomeToolbar({ bottom, onHeight }: { bottom: number; onHeight: (height: 
 }
 
 /**
- * Narrow: the requests still waiting, then the stores' heading. Wide: the screen's title and its line, then the
- * requests waiting. The type does not grow with the window (.claude/instruction_mds/frontend.md rule 10); a wider window
- * gets more cards per row instead.
+ * The screen's title and its line, then the requests waiting. The type does not grow with the window
+ * (.claude/instruction_mds/frontend.md rule 10); a wider window gets more cards per row instead.
  */
-function HomeHeader({ narrow }: { narrow: boolean }) {
-  return narrow ? (
+function HomeHeader() {
+  return (
     <View style={styles.header}>
-      <PendingRequests />
-      <Text variant="titleMedium">Active Stores</Text>
-    </View>
-  ) : (
-    <View style={styles.headerWide}>
       <Text variant="headlineMedium">Your Stores</Text>
       <Text variant="bodyLarge">Manage and monitor each store&apos;s point of sale. Long-press a store to select several.</Text>
       <PendingRequests />
@@ -302,9 +292,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { flex: 1 },
   list: { padding: GUTTER },
-  header: { gap: spacing.ms, padding: GUTTER },
   // Title and its line close together, and clear of the bar above and the cards below.
-  headerWide: { gap: spacing.xs, paddingHorizontal: GUTTER, paddingTop: spacing.md, paddingBottom: spacing.md },
+  header: { gap: spacing.xs, paddingHorizontal: GUTTER, paddingTop: spacing.md, paddingBottom: spacing.md },
   // No width and no height on the cell — FlashList sets the width from the column count, and
   // flex:1 lets the card fill the cell so neighbours in a row end up the same height.
   cell: { flex: 1, padding: GUTTER },

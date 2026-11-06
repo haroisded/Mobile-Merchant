@@ -64,7 +64,11 @@ export default function RootLayout() {
   // This is UX, not security. expo-router evaluates guards on the client only; Supabase RLS is the
   // real boundary, which is also why shipping the publishable key is safe.
   return (
-    // Every screen is built from React Native Paper, so the whole tree needs its theme in context.
+    // Above PaperProvider, not inside it: Paper's root Portal.Host draws a Dialog's content beside everything under the
+    // provider, so from inside the provider this context never reached a Dialog — useShellWide() read false there, and
+    // a tablet's Open Session pushed the phone's picker under its own Dialog (2026-11-07).
+    <ShellWideContext value={wide}>
+    {/* Every screen is built from React Native Paper, so the whole tree needs its theme in context. */}
     <PaperProvider
       theme={theme}
       // Paper's built-in icon renders through react-native-vector-icons, whose font files nothing
@@ -92,7 +96,6 @@ export default function RootLayout() {
           request goes out, so without this the next account sees the previous one's cards for a
           frame. A queryClient.clear() inside signOut is the version that gets forgotten
           (.claude/instruction_mds/data-layer.md §6). */}
-      <ShellWideContext value={wide}>
       <QueryProvider key={session?.user.id}>
         {/* contentStyle carries the theme background to the navigator's own screen container,
             which otherwise paints react-navigation's default and flashes white in dark mode. */}
@@ -113,7 +116,7 @@ export default function RootLayout() {
           <Stack.Screen name="legal/[doc]" />
         </Stack>
       </QueryProvider>
-      </ShellWideContext>
     </PaperProvider>
+    </ShellWideContext>
   );
 }

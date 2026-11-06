@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { useForm } from 'react-hook-form';
+import { useForm, useFormState } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
 import { Text } from '../../components/text';
+import { useLeaveGuard } from '../../components/use-leave-guard';
 import { memberName } from '../../features/members/queries';
 import type { Member } from '../../features/members/queries';
 import type { Merchant } from '../../features/merchants/queries';
@@ -41,7 +42,16 @@ export function EmployeePage({ merchant, isOwner, memberId }: { merchant: Mercha
 
 function Editor({ member, data }: { member: Member; data: EmployeesData }) {
   const form = useForm<AccessValues>({ defaultValues: accessValues(member, data.roles, data.catalog) });
-  return <AccessEditor member={member} roles={data.roles} catalog={data.catalog} form={form} />;
+  // Subscribed, as the editor's is: the form object never changes identity under the React Compiler.
+  const { isDirty } = useFormState({ control: form.control });
+  const leaveGuard = useLeaveGuard(isDirty, false);
+
+  return (
+    <>
+      {leaveGuard}
+      <AccessEditor member={member} roles={data.roles} catalog={data.catalog} form={form} onDiscard={() => form.reset()} />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

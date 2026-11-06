@@ -237,6 +237,9 @@ export function ControlledText<T extends FieldValues>({
   return (
     <Field {...field} error={fieldState.error?.message}>
       <TextInput
+        // handleSubmit focuses the first field it refuses, through this ref: the field scrolls into view with its message.
+        // Without it a phone's Save looked dead when the field was below the fold (Stock Reconciliation, 2026-11-07).
+        ref={input.ref}
         mode="outlined"
         dense
         // SAFETY: `name` is a FieldPathByValue<T, string>, so the value at it is a string; TypeScript

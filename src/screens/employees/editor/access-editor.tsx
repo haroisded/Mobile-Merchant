@@ -44,8 +44,8 @@ type Props = {
   catalog: Permission[];
   /** Held by the page or pane around it, which asks before dropping unsaved changes. */
   form: UseFormReturn<AccessValues>;
-  /** Wide, Discard Changes sits beside Save; narrow, Back discards. */
-  onDiscard?: () => void;
+  /** Discard Changes, with Save in the footer. */
+  onDiscard: () => void;
 };
 
 /**

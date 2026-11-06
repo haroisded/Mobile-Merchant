@@ -37,7 +37,7 @@ export function OwnerOnly({ title }: { title: string }) {
 
 /**
  * Employees: the people let into this store and the role each holds. The owner's alone — the rail lists it for
- * them only. Roles and, wide, Permissions open from the header; a row opens that employee's permissions.
+ * them only. Roles and Permissions open from the header; a row opens that employee's permissions.
  */
 export function EmployeesScreen({ merchant, isOwner }: { merchant: Merchant; isOwner: boolean }) {
   const { colors } = useAppTheme();
@@ -71,11 +71,9 @@ export function EmployeesScreen({ merchant, isOwner }: { merchant: Merchant; isO
             <Button mode="outlined" icon="group" onPress={() => router.push({ pathname: '/systems/[id]/employees/roles', params: { id: merchant.id } })}>
               Roles
             </Button>
-            {wide ? (
-              <Button mode="outlined" icon="shield" onPress={() => router.push({ pathname: '/systems/[id]/employees/permissions', params: { id: merchant.id } })}>
-                Permissions
-              </Button>
-            ) : null}
+            <Button mode="outlined" icon="shield" onPress={() => router.push({ pathname: '/systems/[id]/employees/permissions', params: { id: merchant.id } })}>
+              Permissions
+            </Button>
           </>
         }
       />

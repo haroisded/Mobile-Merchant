@@ -5,20 +5,17 @@ import { useForm, useFormState } from 'react-hook-form';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '../../components/button';
-import { useConfirm } from '../../components/confirm-dialog';
 import { PageHeader } from '../../components/page-header';
 import { QueryState } from '../../components/query-state';
 import { Text } from '../../components/text';
 import type { Merchant } from '../../features/merchants/queries';
-import { useDeleteRoleMutation } from '../../features/roles/queries';
 import { roleSchema } from '../../features/roles/schema';
 import type { RoleValues } from '../../features/roles/schema';
 import { useBottomInset, useShellWide } from '../../lib/columns';
-import { failureMessage } from '../../lib/errors';
 import { useAppTheme } from '../../lib/theme';
 import { spacing } from '../../themes';
 import { OwnerOnly } from './index';
-import { deleteRoleBody } from './role';
+import { useDeleteRole } from './role';
 import { RoleDot } from './role-chip';
 import { RoleEditor, roleValues } from './editor/role-editor';
 import { useEmployees } from './use-employees';
@@ -119,26 +116,13 @@ function RolePanes({ merchantId, data }: { merchantId: string; data: EmployeesDa
   // would slip past the ask.
   const { isDirty } = useFormState({ control: form.control });
   const discard = useDiscard();
-  const remove = useDeleteRoleMutation();
-  const confirm = useConfirm();
 
   const go = (roleId: string | undefined) => {
     setSelected(roleId);
     form.reset(roleValues(data.roles.find((candidate) => candidate.id === roleId), data.members));
   };
   const choose = (roleId: string | undefined) => discard.ask(isDirty, () => go(roleId));
-
-  const askDelete = role
-    ? () =>
-        confirm.ask({
-          title: `Delete ${role.role_name}?`,
-          body: deleteRoleBody(role, data),
-          confirmLabel: 'Delete',
-          run: () => remove.mutateAsync(role.id),
-          failure: () => failureMessage("Couldn't delete the role. Try again."),
-          onDone: () => go(data.roles.find((candidate) => candidate.id !== role.id)?.id),
-        })
-    : undefined;
+  const remove = useDeleteRole(role, data, () => go(data.roles.find((candidate) => candidate.id !== role?.id)?.id));
 
   return (
     <View style={styles.panes}>
@@ -159,11 +143,11 @@ function RolePanes({ merchantId, data }: { merchantId: string; data: EmployeesDa
           members={data.members}
           roles={data.roles}
           onSaved={setSelected}
-          wideActions={{ onDelete: askDelete, onDiscard: () => form.reset() }}
+          actions={{ onDelete: remove.ask, onDiscard: () => form.reset() }}
         />
       </View>
       {discard.dialog}
-      {confirm.dialog}
+      {remove.dialog}
     </View>
   );
 }

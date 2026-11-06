@@ -33,5 +33,6 @@ export function PendingRequests() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.ms },
+  // Clear of the page's line above it, in the header's tight stack.
+  wrap: { gap: spacing.ms, marginTop: spacing.ms },
 });

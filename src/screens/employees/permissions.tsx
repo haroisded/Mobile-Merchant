@@ -15,29 +15,34 @@ import { spacing } from '../../themes';
 import { AccessEditor, accessValues } from './editor/access-editor';
 import type { AccessValues } from './editor/access-editor';
 import { EmployeePage } from './employee';
-import { EmployeesScreen, OwnerOnly } from './index';
+import { OwnerOnly } from './index';
 import { RoleChip } from './role-chip';
 import { useEmployees } from './use-employees';
 import type { EmployeesData } from './use-employees';
 import { useDiscard } from '../../components/use-discard';
 
 /**
- * Permissions, a tablet's: the employees, and the open one's permissions beside them, as the Permissions mock
- * draws it. Narrow — a phone, or a tablet turned upright below the one threshold — an employee's permissions are
- * their own page, so this is that page, or the list.
+ * Permissions: the employees, and the open one's permissions — beside them wide, as the Permissions mock draws it;
+ * narrow, a phone's, on a page of their own the list opens.
  */
 export function PermissionsScreen({ merchant, isOwner, memberId }: { merchant: Merchant; isOwner: boolean; memberId?: string }) {
   const wide = useShellWide();
   const employees = useEmployees(merchant.id);
 
-  if (!wide) return memberId ? <EmployeePage merchant={merchant} isOwner={isOwner} memberId={memberId} /> : <EmployeesScreen merchant={merchant} isOwner={isOwner} />;
+  if (!wide && memberId) return <EmployeePage merchant={merchant} isOwner={isOwner} memberId={memberId} />;
   if (!isOwner) return <OwnerOnly title="Permissions" />;
+
+  const openPage = (id: string) => router.push({ pathname: '/systems/[id]/employees/employee', params: { id: merchant.id, memberId: id } });
 
   return (
     <View style={styles.fill}>
       <PageHeader kicker={merchant.name} title="Permissions" meta="Each employee's role, and their own exceptions to it" onBack={() => router.back()} />
       {employees.data ? (
-        <AccessPanes data={employees.data} initial={memberId} />
+        wide ? (
+          <AccessPanes data={employees.data} initial={memberId} />
+        ) : (
+          <MemberList data={employees.data} onOpen={openPage} />
+        )
       ) : (
         <View style={styles.state}>
           <QueryState query={employees} offline="You're offline. Permissions will load when you reconnect." failure="Couldn't load permissions. Try again." />
@@ -50,14 +55,11 @@ export function PermissionsScreen({ merchant, isOwner, memberId }: { merchant: M
 function AccessPanes({ data, initial }: { data: EmployeesData; initial?: string }) {
   const { colors } = useAppTheme();
   const [selected, setSelected] = useState(initial ?? data.members[0]?.id);
-  const [search, setSearch] = useState('');
   const member = data.members.find((candidate) => candidate.id === selected);
   const form = useForm<AccessValues>({ defaultValues: member ? accessValues(member, data.roles, data.catalog) : { role_id: '', permissions: [] } });
   // Subscribed during render, as RolePanes' is: read only inside `choose`, `form.formState` is the last render's.
   const { isDirty } = useFormState({ control: form.control });
   const discard = useDiscard();
-  const roleOf = (roleId: string | null) => data.roles.find((role) => role.id === roleId);
-  const bottom = useBottomInset();
 
   const choose = (memberId: string) =>
     discard.ask(isDirty, () => {
@@ -66,47 +68,10 @@ function AccessPanes({ data, initial }: { data: EmployeesData; initial?: string 
       if (next) form.reset(accessValues(next, data.roles, data.catalog));
     });
 
-  const needle = search.trim().toLowerCase();
-  const found = data.members.filter((candidate) => `${candidate.full_name ?? ''} ${candidate.email ?? ''}`.toLowerCase().includes(needle));
-
   return (
     <View style={styles.panes}>
       <View style={[styles.listPane, { borderRightColor: colors.outlineVariant }]}>
-        <View style={styles.paneTop}>
-          <TextInput
-            mode="outlined"
-            dense
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search employees"
-            accessibilityLabel="Search employees"
-            left={<TextInput.Icon icon="search" />}
-          />
-        </View>
-        <FlatList
-          data={found}
-          keyExtractor={(candidate) => candidate.id}
-          contentContainerStyle={{ paddingBottom: bottom }}
-          ListEmptyComponent={
-            <Text variant="bodyMedium" style={styles.state}>
-              {needle ? 'Nobody matches.' : 'Nobody has joined yet.'}
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => choose(item.id)}
-              // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
-              android_ripple={{ color: colors.ripple }}
-              accessibilityRole="button"
-              accessibilityLabel={`${memberName(item)}, ${roleOf(item.role_id)?.role_name ?? 'no role'}`}
-              accessibilityState={{ selected: item.id === selected }}
-              style={[styles.row, { borderBottomColor: colors.surfaceVariant }, item.id === selected ? { backgroundColor: colors.surfaceMuted } : null]}
-            >
-              <Text variant="titleMedium">{memberName(item)}</Text>
-              <RoleChip role={roleOf(item.role_id)} />
-            </Pressable>
-          )}
-        />
+        <MemberList data={data} selected={selected} onOpen={choose} />
       </View>
       <View style={styles.editorPane}>
         {member ? (
@@ -119,6 +84,56 @@ function AccessPanes({ data, initial }: { data: EmployeesData; initial?: string 
       </View>
       {discard.dialog}
     </View>
+  );
+}
+
+/** The employees, searched, each with their role: the left pane wide, the whole page narrow. */
+function MemberList({ data, selected, onOpen }: { data: EmployeesData; selected?: string; onOpen: (memberId: string) => void }) {
+  const { colors } = useAppTheme();
+  const [search, setSearch] = useState('');
+  const roleOf = (roleId: string | null) => data.roles.find((role) => role.id === roleId);
+  const bottom = useBottomInset();
+  const needle = search.trim().toLowerCase();
+  const found = data.members.filter((candidate) => `${candidate.full_name ?? ''} ${candidate.email ?? ''}`.toLowerCase().includes(needle));
+
+  return (
+    <>
+      <View style={styles.paneTop}>
+        <TextInput
+          mode="outlined"
+          dense
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search employees"
+          accessibilityLabel="Search employees"
+          left={<TextInput.Icon icon="search" />}
+        />
+      </View>
+      <FlatList
+        data={found}
+        keyExtractor={(candidate) => candidate.id}
+        contentContainerStyle={{ paddingBottom: bottom }}
+        ListEmptyComponent={
+          <Text variant="bodyMedium" style={styles.state}>
+            {needle ? 'Nobody matches.' : 'Nobody has joined yet.'}
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => onOpen(item.id)}
+            // Pressable reads no theme, so the press colour is passed every time (.claude/instruction_mds/frontend.md §5).
+            android_ripple={{ color: colors.ripple }}
+            accessibilityRole="button"
+            accessibilityLabel={`${memberName(item)}, ${roleOf(item.role_id)?.role_name ?? 'no role'}`}
+            accessibilityState={{ selected: item.id === selected }}
+            style={[styles.row, { borderBottomColor: colors.surfaceVariant }, item.id === selected ? { backgroundColor: colors.surfaceMuted } : null]}
+          >
+            <Text variant="titleMedium">{memberName(item)}</Text>
+            <RoleChip role={roleOf(item.role_id)} />
+          </Pressable>
+        )}
+      />
+    </>
   );
 }
 

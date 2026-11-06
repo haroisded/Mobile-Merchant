@@ -66,7 +66,7 @@ export function SalesTaxTemplates({ merchant }: { merchant: Merchant }) {
           { label: 'Status', flex: 1, cell: () => '', node: (template) => <StatusText words={status(template)} faint={template.disabled} /> },
         ]}
         title={(template) => template.title}
-        subtitle={taxes}
+        subtitle={(template) => [taxes(template), category(template)].filter(Boolean).join(' · ')}
         status={(template) => <StatusText words={status(template)} faint={template.disabled} />}
         accessibilityLabel={(template) => `Sales taxes and charges template ${template.title}`}
         onPress={can(permissions, 'Sales Taxes and Charges Template', 'read') ? (template) => openTemplate(merchant.id, template.id) : undefined}

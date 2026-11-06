@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Avatar } from '../../components/avatar';
 import { Card } from '../../components/card';
 import { Checkbox } from '../../components/checkbox';
 import { Icon } from '../../components/icon';
@@ -12,13 +11,6 @@ import { radius, spacing } from '../../themes';
 
 type Props = {
   merchant: Merchant;
-  /**
-   * True on a one-column container. Row and grid are genuinely different anatomies rather than the
-   * same card at two widths — a row card stretched across a tablet is unreadable for the same
-   * measure reason a 110-character line is (.claude/instruction_mds/frontend.md §4.3) — so the branch lives inside this
-   * component instead of duplicating it into two files.
-   */
-  row: boolean;
   onPress: () => void;
   /**
    * Asks the screen above to open the confirmation. The card does not own that dialog: FlashList
@@ -34,7 +26,7 @@ type Props = {
   onLongPress: () => void;
 };
 
-export function SystemCard({ merchant, row, onPress, onRemove, canRemove, selecting, selected, onLongPress }: Props) {
+export function SystemCard({ merchant, onPress, onRemove, canRemove, selecting, selected, onLongPress }: Props) {
   const { colors } = useAppTheme();
 
   // The end of the title row: the delete icon in `error` (a destructive action, .claude/instruction_mds/frontend.md
@@ -54,8 +46,8 @@ export function SystemCard({ merchant, row, onPress, onRemove, canRemove, select
       onLongPress={canRemove ? onLongPress : undefined}
       accessibilityState={selecting ? { selected } : undefined}
     >
-      {row ? null : <StoreTile />}
-      <CardTitle title={merchant.name} row={row} end={end} />
+      <StoreTile />
+      <CardTitle title={merchant.name} end={end} />
       {/* A picked card is ringed in `primary`, laid over the card so it adds no size and the cards stay level. */}
       {selected ? <View pointerEvents="none" style={[styles.ring, { borderColor: colors.primary }]} /> : null}
     </Card>
@@ -63,17 +55,16 @@ export function SystemCard({ merchant, row, onPress, onRemove, canRemove, select
 }
 
 /**
- * The name row both the store cards and the Create card share, so the two are the same height: 72dp, the storefront
- * avatar on a phone's row card. The height is pinned because Card.Title drops to 50 when it has no `left` or `right`
- * (CardTitle.tsx:158), and on a tablet only an owner's card has the delete icon.
+ * The name row both the store cards and the Create card share, so the two are the same height: 72dp. The height is
+ * pinned because Card.Title drops to 50 when it has no `left` or `right` (CardTitle.tsx:158), and only an owner's card
+ * has the delete icon.
  */
-export function CardTitle({ title, row, end, avatar }: { title: string; row: boolean; end?: ReactNode; avatar?: ReactNode }) {
+export function CardTitle({ title, end }: { title: string; end?: ReactNode }) {
   return (
     <Card.Title
       title={title}
       titleVariant="titleMedium"
       style={styles.title}
-      left={row ? (props) => avatar ?? <Avatar.Icon {...props} icon="storefront" /> : undefined}
       right={end ? () => end : undefined}
     />
   );

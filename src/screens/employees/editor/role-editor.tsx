@@ -49,15 +49,15 @@ type Props = {
   members: Member[];
   roles: RoleWithGrants[];
   onSaved: (id: string) => void;
-  /** Wide, Delete Role and Discard Changes sit beside Save; narrow, the page's header carries Delete and Back discards. */
-  wideActions?: { onDelete?: () => void; onDiscard: () => void };
+  /** Delete Role, absent for a new role, and Discard Changes, with Save in the footer. */
+  actions: { onDelete?: () => void; onDiscard: () => void };
 };
 
 /**
  * One role: General (name, description, colour), Permissions (the switches) and Members (who holds it), saved
  * together (public.save_role). The Roles mock's editor; a page on a phone, the right pane on a tablet.
  */
-export function RoleEditor({ merchantId, roleId, form, catalog, members, roles, onSaved, wideActions }: Props) {
+export function RoleEditor({ merchantId, roleId, form, catalog, members, roles, onSaved, actions }: Props) {
   const save = useSaveRoleMutation({ merchantId, roleId });
   const [tab, setTab] = useState<Tab>('general');
   const { control, handleSubmit, reset, getValues } = form;
@@ -85,8 +85,8 @@ export function RoleEditor({ merchantId, roleId, form, catalog, members, roles, 
         dirty={isDirty}
         saveable={roleId === undefined || isDirty}
         onSave={submit}
-        onDiscard={wideActions?.onDiscard}
-        onDeleteRole={wideActions?.onDelete}
+        onDiscard={actions.onDiscard}
+        onDeleteRole={actions.onDelete}
       />
     </KeyboardAvoidingView>
   );

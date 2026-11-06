@@ -1582,7 +1582,7 @@ on `src/screens/home/system-card.tsx` — plus the merchant shell, whose header 
 `primary` and mark the active item with `accent`, and the native views (`NativeTabs`, sheets,
 `Pressable` ripples), which take every colour as a prop because `PaperProvider` does not reach them.
 
-`src/app/(app)/_layout.tsx` provides `ShellWideContext` (`src/lib/columns.ts`) — the one wide/narrow
+`src/app/_layout.tsx` provides `ShellWideContext` (`src/lib/columns.ts`), above `PaperProvider` — the one wide/narrow
 decision, `useWindowDimensions().width >= WIDE_MIN`, read once for the shell, the `(tabs)` bar, and the
 `sheets/` routes alike (frontend.md §4.1).
 
@@ -1860,6 +1860,24 @@ The human's list in `.claude/full-system-context/Updates/updates.txt`. No schema
 Rejected: a footer on a tablet's form (a bar that held one button); the rail staying its own width with a dropdown open (the human: widen, one-line rows); moving the Employees editors, Features' bar and the Register's footer into the header (the human: they keep theirs).
 
 Moving `usePermissions` and System Settings under `StoreShell` starts them once the merchant is known. Arriving from a store card is a cache hit, so nothing changes; a deep link asks one round trip later.
+
+## The phone as the tablet's mobile version (2026-11-07)
+
+The human's list in `.claude/full-system-context/Updates/new-updates.txt`: the tablet is the reference. No schema change and no native change.
+
+| What | How |
+| --- | --- |
+| The picker behind Open Session | `ShellWideContext` moved above `PaperProvider`, so a Dialog drawn at Paper's root `Portal.Host` reads the real width. Every root-Portal Dialog gains: `SearchSelect` opens its Dialog on top, half fields sit side by side, a confirm from a Dialog is a Dialog |
+| Complete order's lines | `OrderLines` in `src/screens/register/cart.tsx`: read-only, at both widths. The controls stay on the cart card, where they always were: no width had lost them |
+| Home | One header, the tablet's tile cards and the pill at both widths. The phone keeps its tabs, so its pill leaves Access Codes out (`wideOnly`) |
+| Employees | Permissions at both widths; `MemberList` is the wide left pane and the phone's page. The phone's role and employee pages carry the footer's Delete Role and Discard Changes, and ask before Back drops changes |
+| Delete Role | `useDeleteRole` (`src/screens/employees/role.tsx`) for the page and the pane |
+| Sales Taxes row | The table's Tax Category in the row's subtitle |
+| A refused Save below the fold | `ControlledText` hands react-hook-form its input's ref: `handleSubmit` focuses the field, and Android scrolls to it |
+
+What stays different on purpose (frontend.md §4.4): tables are rows, two panes are pages, the rail is a drawer, Dialogs are pages or sheets, the Register's panes are tabs, and Save stays in the phone's footer within a thumb's reach (the human, 2026-11-07).
+
+Rejected: editable quantity and discount in Complete order (a second place to change a line; the human chose a summary); the phone's Home losing its tabs for the tablet's Account icon and pill alone; Save in the phone's header (the human); passing `wide` into each Dialog instead of moving the provider.
 
 ## Store Guide
 

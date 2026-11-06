@@ -25,6 +25,7 @@ import type { PosOpeningEntry } from '../../features/pos-opening-entries/queries
 import type { PosProfile } from '../../features/pos-profiles/queries';
 import { APPLY_DISCOUNT_ON } from '../../features/pos-profiles/schema';
 import { useUomsQuery } from '../../features/uoms/queries';
+import type { Uom } from '../../features/uoms/queries';
 import { useShellWide } from '../../lib/columns';
 import { failureMessage, mutationNotice, postingRefusal } from '../../lib/errors';
 import type { Notice } from '../../lib/errors';
@@ -133,7 +134,7 @@ type DialogProps = {
 };
 
 /**
- * Complete order: the sale's Additional Discount, its totals, an amount per payment method and what that settles —
+ * Complete order: the sale's lines, its Additional Discount, its totals, an amount per payment method and what that settles —
  * then Complete Order, which sends the sale as calculated here and lets the database check and post it
  * (public.pos_checkout). A Dialog over the Register wide, the native sheet narrow. Paid, the profile's receipt opens
  * as the sale's page (`after=sale`); with none, "Order completed" takes the payment's place.
@@ -166,8 +167,10 @@ type PaymentProps = Omit<DialogProps, 'merchant'> & {
 function Payment(props: PaymentProps) {
   const sale = useSaleSetup(props.merchant, props.profile);
   const modes = useModesOfPaymentQuery({ merchantId: props.merchant.id }).data;
+  // Read here, not in OrderLines: a Dialog's content is drawn at Paper's root Portal, above the QueryClient's provider.
+  const uoms = useUomsQuery({ merchantId: props.merchant.id }).data;
 
-  return sale && modes ? <PaymentForm {...props} sale={sale} modes={modes} /> : <Loading inSheet={props.inSheet} onDismiss={props.onDismiss} />;
+  return sale && modes ? <PaymentForm {...props} sale={sale} modes={modes} uoms={uoms} /> : <Loading inSheet={props.inSheet} onDismiss={props.onDismiss} />;
 }
 
 /** What stands between the cart and Complete Order, in words; null when it can be paid. */
@@ -180,8 +183,9 @@ function whatStops(sale: Sale, settled: Settled, profile: PosProfile, typesRates
 
 // The quick amounts under the default method: the exact total, then the notes a customer hands over that cover it.
 const NOTES = [100, 200, 500, 1000];
+const quickMethod = (profile: PosProfile) => (profile.pos_profile_payments.find((method) => method.is_default) ?? profile.pos_profile_payments[0])?.mode_of_payment_id;
 
-function PaymentForm({ merchant, session, profile, sale, modes, inSheet, onDismiss, onSold }: PaymentProps & { sale: SaleData; modes: ModeOfPayment[] }) {
+function PaymentForm({ merchant, session, profile, sale, modes, uoms, inSheet, onDismiss, onSold }: PaymentProps & { sale: SaleData; modes: ModeOfPayment[]; uoms: Uom[] | undefined }) {
   const { setup, engines } = sale;
   const { typesRates, typesDiscounts } = typing(profile, setup);
   const lines = useCart(session.id);
@@ -200,7 +204,7 @@ function PaymentForm({ merchant, session, profile, sale, modes, inSheet, onDismi
   );
   const gap = whatStops(built, settled, profile, typesRates, money);
   const inFlight = checkout.isPending && !checkout.isPaused;
-  const quick = (profile.pos_profile_payments.find((method) => method.is_default) ?? profile.pos_profile_payments[0])?.mode_of_payment_id;
+  const quick = quickMethod(profile);
 
   // Made per render, not per tap: sendOnce's guard is the handler two quick taps share. The total and change are this
   // render's, the one the tap was made in.
@@ -240,6 +244,7 @@ function PaymentForm({ merchant, session, profile, sale, modes, inSheet, onDismi
       }
     >
       <Muted text={countOf(lines)} />
+      <OrderLines lines={built.lines} uoms={uoms} money={money} />
       {typesDiscounts ? <AdditionalDiscount sessionId={session.id} discount={discount} applyOn={built.applyDiscountOn} /> : null}
       <Totals sale={built} rounded={!setup.roundedTotalDisabled} money={money} />
       <Heading title="Payment" hint="What the customer hands over, by payment method" />
@@ -322,6 +327,34 @@ function Heading({ title, hint }: { title: string; hint: string }) {
         {hint}
       </Text>
     </View>
+  );
+}
+
+/** What is being paid for, line by line: quantity, discount and amount. Read-only: a line changes on its cart card. */
+function OrderLines({ lines, uoms, money }: { lines: Sale['lines']; uoms: Uom[] | undefined; money: Money }) {
+  const unitName = (id: string) => uoms?.find((uom) => uom.id === id)?.uom_name;
+
+  if (lines.length === 0) return null;
+
+  return (
+    <>
+      <Heading title="Items" hint="Change a line in the cart" />
+      <SampleBox>
+        {lines.map((line) => (
+          <SampleLine
+            key={`${line.cartIndex}:${line.itemId}`}
+            label={line.itemName}
+            value={money(line.amount)}
+            sub={[
+              ['Qty', line.qty, unitName(line.uomId)].filter(Boolean).join(' '),
+              line.discountAmount > 0 ? `${Number(line.discountPercentage.toFixed(2))}% off (${money(line.discountAmount * line.qty)})` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          />
+        ))}
+      </SampleBox>
+    </>
   );
 }
 
